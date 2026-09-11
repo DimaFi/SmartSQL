@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.rsuser
+TestResults/
+coverage/
+*.ncrunch*
+_ReSharper*/
+*.DotSettings.user
+.dotnet-temp/
