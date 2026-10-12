@@ -11,9 +11,9 @@ public sealed class CsvPreviewDialog : Window
 {
     private sealed record PreviewRow(IReadOnlyList<string> Cells);
 
-    public CsvPreviewDialog(CsvImportPreview preview)
+    public CsvPreviewDialog(CsvImportPreview preview, string format = "CSV")
     {
-        Title = "Предварительный просмотр CSV · SmartSQL";
+        Title = $"Предварительный просмотр {format} · SmartSQL";
         Width = 800;
         Height = 480;
         MinWidth = 600;

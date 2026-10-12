@@ -31,10 +31,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        var directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SmartSQL");
         try
         {
-            SetWorkspace(Path.Combine(directory, "smartsql.db"));
+            SetWorkspace(WorkspacePaths.DefaultDatabasePath);
         }
         catch (Exception exception)
         {
@@ -84,6 +83,9 @@ public partial class MainWindow : Window
         ExportButton.IsEnabled = false;
         ImportJsonButton.IsEnabled = false;
         ExportJsonButton.IsEnabled = false;
+        ImportXlsxButton.IsEnabled = false;
+        ExportXlsxButton.IsEnabled = false;
+        PasteRowsButton.IsEnabled = false;
         DeleteButton.IsEnabled = false;
         PreviousButton.IsEnabled = false;
         NextButton.IsEnabled = false;
@@ -129,6 +131,7 @@ public partial class MainWindow : Window
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Создать базу SmartSQL",
                 SuggestedFileName = "Новая база.db",
                 DefaultExtension = "db"
@@ -152,6 +155,7 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Открыть базу SmartSQL",
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("Базы SmartSQL") { Patterns = ["*.db"] }]
@@ -177,6 +181,7 @@ public partial class MainWindow : Window
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Создать резервную копию",
                 SuggestedFileName = $"{Path.GetFileNameWithoutExtension(_workspace.FilePath)}-backup.db",
                 DefaultExtension = "db"
@@ -201,6 +206,7 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Выбрать резервную копию SmartSQL",
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("Базы SmartSQL") { Patterns = ["*.db"] }]
@@ -251,6 +257,7 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Создать таблицу из CSV",
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }]
@@ -386,6 +393,9 @@ public partial class MainWindow : Window
         ExportButton.IsEnabled = _currentTable is not null;
         ImportJsonButton.IsEnabled = _currentTable is not null;
         ExportJsonButton.IsEnabled = _currentTable is not null;
+        ImportXlsxButton.IsEnabled = _currentTable is not null;
+        ExportXlsxButton.IsEnabled = _currentTable is not null;
+        PasteRowsButton.IsEnabled = _currentTable is not null;
         RecordsGrid.Columns.Clear();
         if (_currentTable is null)
         {
@@ -492,6 +502,7 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Импортировать CSV в выбранную таблицу",
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }]
@@ -547,6 +558,7 @@ public partial class MainWindow : Window
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Экспортировать CSV для Excel",
                 SuggestedFileName = $"{_currentTable.Name}.csv",
                 DefaultExtension = "csv"
@@ -589,6 +601,7 @@ public partial class MainWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Импортировать JSON в выбранную таблицу",
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("JSON SmartSQL") { Patterns = ["*.json"] }]
@@ -638,6 +651,7 @@ public partial class MainWindow : Window
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
+                SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory),
                 Title = "Экспортировать таблицу в JSON",
                 SuggestedFileName = $"{_currentTable.Name}.json",
                 DefaultExtension = "json"

@@ -48,12 +48,15 @@
             <MenuItem Header="Импорт">
               <MenuItem x:Name="ImportButton" Header="CSV в эту таблицу…" IsEnabled="False" Click="OnImportCsv" />
               <MenuItem x:Name="ImportJsonButton" Header="JSON в эту таблицу…" IsEnabled="False" Click="OnImportJson" />
+              <MenuItem x:Name="ImportXlsxButton" Header="XLSX в эту таблицу…" IsEnabled="False" Click="OnImportXlsx" />
+              <MenuItem x:Name="PasteRowsButton" Header="Вставить строки из Excel…" IsEnabled="False" Click="OnPasteRows" />
               <Separator />
               <MenuItem Header="Новая таблица из CSV…" Click="OnCreateTableFromCsv" />
             </MenuItem>
             <MenuItem Header="Экспорт">
               <MenuItem x:Name="ExportButton" Header="CSV для Excel…" IsEnabled="False" Click="OnExportCsv" />
               <MenuItem x:Name="ExportJsonButton" Header="JSON с типами данных…" IsEnabled="False" Click="OnExportJson" />
+              <MenuItem x:Name="ExportXlsxButton" Header="Книга Excel (XLSX)…" IsEnabled="False" Click="OnExportXlsx" />
             </MenuItem>
             <MenuItem Header="Структура">
               <MenuItem x:Name="EditSchemaButton" Header="Переименовать таблицу и поля…" IsEnabled="False" Click="OnEditSchema" />

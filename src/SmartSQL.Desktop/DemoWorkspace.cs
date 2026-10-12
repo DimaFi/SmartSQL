@@ -8,9 +8,7 @@ internal static class DemoWorkspace
 {
     public static (string Path, Guid MainTableId) OpenOrCreate()
     {
-        var directory = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SmartSQL");
-        var path = Path.Combine(directory, "pedagogical-practice-demo.db");
+        var path = WorkspacePaths.DemoDatabasePath;
         var workspace = new SqliteWorkspace(path);
         var existing = workspace.GetTables();
         if (existing.Count > 0)

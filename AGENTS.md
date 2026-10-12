@@ -23,12 +23,16 @@ University teaching-practice management is the primary diploma validation scenar
 13. Run build/tests after each meaningful stage.
 14. Do not silently change accepted architectural decisions.
 15. Record significant architectural decisions in `docs/DECISIONS.md`.
+16. Keep project-created data, backups, caches, build/test temporaries, and test results on D:. Use the workspace scripts `scripts/Build.ps1`, `scripts/Test.ps1`, and `scripts/Run.ps1`. Main workspace: `D:\Code\SmartSQL`; isolated local-assistant workspace: `D:\Code\SmartSQL-model`. Local databases, model weights, and test artifacts must remain ignored by Git. Do not change installed tools or global user settings.
+17. Commit completed, verified stages in Git; exclude local data and runtime files.
+18. Use parallel subagents for independent important tasks with disjoint file ownership when available. Coordinate integration, builds/tests, and Git in the parent agent.
+19. Develop toward a universal database client in the DBeaver direction: common desktop workflows across DBMS providers, including exploration of ordinary existing databases. Retain approachable UI and safe operations.
 
 ## Current Stage
 
-Stage 5/6 - Local Desktop UI and first CSV exchange.
+Stage 5/6 - Local Desktop UI and CSV/JSON/XLSX exchange.
 
-Avalonia 12 on .NET 10 is the selected cross-platform desktop framework. The local SQLite editor supports typed fields (text, number, date, Boolean), adding/renaming/safely deleting fields and tables, paged CRUD, search/sort, combined reusable saved filters, file selection, manual/automatic backups and validated restore, and CSV mapping/preview/import/export. Next prioritize additional portable exchange formats. Do not add AI or server work before those workflows are stable.
+Avalonia 12 on .NET 10 is the selected cross-platform desktop framework. The local SQLite editor supports typed fields (text, number, date, Boolean), adding/renaming/safely deleting fields and tables, paged CRUD, search/sort, combined reusable saved filters, file selection, manual/automatic backups and validated restore, CSV/JSON/XLSX preview/import/export, and validated bulk paste from Excel. Next prioritize connection management and a first PostgreSQL browsing/provider slice after stabilizing exchange. Experimental local-assistant source remains isolated in `D:\Code\SmartSQL-model`; do not integrate AI or add server mode before desktop workflows are stable.
 
 ## Dependency Direction
 

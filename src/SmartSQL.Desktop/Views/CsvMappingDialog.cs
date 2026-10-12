@@ -12,6 +12,7 @@ public sealed class CsvMappingDialog : Window
     private readonly TableDefinition _table;
     private readonly string _content;
     private CsvImportSource _source;
+    private readonly string _format;
     private readonly StackPanel _mappings = new() { Spacing = 8 };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _warning = new() { Foreground = Brushes.DarkOrange, TextWrapping = TextWrapping.Wrap };
@@ -27,12 +28,14 @@ public sealed class CsvMappingDialog : Window
 
     private sealed record MappingRow(int SourceIndex, ComboBox Target);
 
-    public CsvMappingDialog(TableDefinition table, string content, CsvImportSource source)
+    public CsvMappingDialog(TableDefinition table, string content, CsvImportSource source,
+        string format = "CSV", bool allowDelimiter = true)
     {
         _table = table;
         _content = content;
         _source = source;
-        Title = "Сопоставление CSV · SmartSQL";
+        _format = format;
+        Title = $"Сопоставление {format} · SmartSQL";
         Width = 780;
         Height = 570;
         MinWidth = 630;
@@ -61,7 +64,7 @@ public sealed class CsvMappingDialog : Window
         layout.Children.Add(new TextBlock { Text = "Сопоставление столбцов", FontSize = 24, FontWeight = FontWeight.SemiBold });
         var description = new TextBlock
         {
-            Text = "Выберите поле SmartSQL для каждого столбца CSV. После этого появится предварительный просмотр.",
+            Text = $"Выберите поле SmartSQL для каждого столбца {format}. После этого появится предварительный просмотр.",
             TextWrapping = TextWrapping.Wrap
         };
         Grid.SetRow(description, 1);
@@ -70,8 +73,9 @@ public sealed class CsvMappingDialog : Window
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
-            Children = { new TextBlock { Text = "Разделитель", VerticalAlignment = VerticalAlignment.Center }, delimiter, _summary }
+            Children = { new TextBlock { Text = "Разделитель", IsVisible = allowDelimiter, VerticalAlignment = VerticalAlignment.Center }, delimiter, _summary }
         };
+        delimiter.IsVisible = allowDelimiter;
         Grid.SetRow(delimiterBar, 2);
         layout.Children.Add(delimiterBar);
         var scroll = new ScrollViewer { Content = _mappings };
@@ -116,7 +120,9 @@ public sealed class CsvMappingDialog : Window
         _rows.Clear();
         _mappings.Children.Clear();
         _continue.IsEnabled = true;
-        _summary.Text = $"Определено: {_source.Delimiter} · строк: {_source.RowCount}";
+        _summary.Text = _format == "CSV"
+            ? $"Определено: {_source.Delimiter} · строк: {_source.RowCount}"
+            : $"Строк: {_source.RowCount} · столбцов: {_source.Headers.Count}";
         var choices = new[] { new FieldChoice(null, "Не импортировать") }
             .Concat(_table.Fields.Select(field => new FieldChoice(field.Id, $"{field.Name} · {TypeLabel(field.Type)}"))).ToArray();
         var suggested = _source.SuggestMapping();

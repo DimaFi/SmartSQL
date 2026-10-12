@@ -4,7 +4,9 @@
 
 This document records the current architecture and planned extensions.
 
-The first model and SQLite provider are implemented. Field types, relationships, import/export, backup, and AI integrations remain later stages.
+The first universal model, SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard bulk paste, and local backup/restore are implemented. Relationships, safe type conversion, additional DBMS providers, and integrated AI remain later stages.
+
+The product direction includes a common database-client interface for ordinary existing databases across supported DBMSs. The current SQLite workspace owns SmartSQL metadata and generated physical tables; it must not be mistaken for an existing-database catalog browser. The next PostgreSQL slice validates connection/catalog browsing before editing external schemas. Native provider differences remain explicit through capability and compatibility reporting.
 
 ## Layered Architecture
 
@@ -135,4 +137,4 @@ The architecture should allow later implementation of:
 - migration compatibility checks;
 - data portability diagnostics.
 
-These concepts are not implemented yet.
+Manual/automatic local safety backups, validated restore, import/schema transactions, one-step cell undo, and format diagnostics are implemented. General action audit, broader undo, and cross-provider migration diagnostics remain planned.

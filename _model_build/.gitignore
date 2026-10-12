@@ -1,7 +1,0 @@
-bin/
-obj/
-TestResults/
-benchmark-results/
-model-profiles.json
-*.gguf
-

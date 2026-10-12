@@ -169,3 +169,27 @@ Status: Accepted
 The desktop writes CSV and JSON exports to a unique temporary file beside the destination. Infrastructure flushes and closes the file, then moves it into place without overwriting an existing destination. Failures remove the temporary file. Transfer work runs in the background with workspace controls temporarily disabled so the target cannot change mid-operation.
 
 Status: Accepted
+
+## D029 - Workspace-Local Data and Development Artifacts
+
+For this development workspace, application data lives under `D:\Code\SmartSQL\data\local`, and caches, temporary files, test data/results and migration manifests live under ignored `.workspace` directories on D:. Process-scoped helper scripts initialize .NET, NuGet, app and test paths without changing global user settings. Desktop direct launches discover the checkout or use a portable directory beside the executable; explicit invalid paths fail rather than silently reverting to AppData. Migration is copy-first with hashes and read-only database integrity validation; C: originals are retained as recovery copies. The isolated assistant experiment is maintained separately at `D:\Code\SmartSQL-model`.
+
+Status: Accepted
+
+## D030 - Bounded Data-Only XLSX Adapter
+
+Infrastructure reads/writes the ordinary ZIP/XML spreadsheet format without a DBMS dependency or new package. Worksheet values pass through existing provider-independent mapping, validation, preview and transactional commit. Formulas, macros, external references, merged cells, ambiguous date/time formats and unsupported cell capabilities are rejected. Detected losses of workbook presentation/metadata are disclosed before import. Decimal values beyond Excel's 15 significant digits are exported as exact text and counted for disclosure. Sanitized/truncated worksheet names are reported. Export uses the atomic file publication boundary. XLSX exchanges one table's values, not a whole project, relationships or saved filters.
+
+Status: Accepted
+
+## D031 - Validated Clipboard Batch Append
+
+Tab-separated spreadsheet clipboard input supports quoted tabs/newlines and optional headers. Users review mapping, explicitly acknowledge skipped columns/empty target fields, and confirm a preview. All values are validated before a single atomic `AddRecords`; the preview snapshots schema and prevents repeated/concurrent commits. Text that the current model would silently turn into null is rejected explicitly. Limits bound rows, columns, cells and characters. The first workflow appends records rather than overwriting the selected grid region.
+
+Status: Accepted
+
+## D032 - Universal Database Client Product Direction
+
+Multiple DBMS support is a central product goal. SmartSQL will provide a common desktop connection/table/data workflow in the DBeaver direction while preserving safe operations and accessible UI. A provider that only stores SmartSQL-managed projects is insufficient to deliver ordinary existing-database exploration. The first PostgreSQL milestone therefore validates connection, catalog/type/key inspection and paged read-only browsing before editing external tables. Native limitations must be reported rather than hidden or forced into a lowest-common-denominator model. Implementation contracts will be added against that concrete milestone; the core remains independent of DBMS/SQL/UI.
+
+Status: Accepted

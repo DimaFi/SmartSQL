@@ -299,7 +299,7 @@ public sealed class JsonTableTransferTests
         Xunit.Assert.Equal(0, workspace.CountRecords(table.Id));
     }
 
-    private static SqliteWorkspace NewWorkspace() => new(Path.Combine(Path.GetTempPath(), "smartsql-tests", $"{Guid.NewGuid():N}.db"));
+    private static SqliteWorkspace NewWorkspace() => new(Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db"));
 
     private static string Document(string fields, string records, string additionalProperty = "") =>
         $"{{\"format\":\"SmartSQL.Table.v1\",\"fields\":{fields},\"records\":{records}{additionalProperty}}}";

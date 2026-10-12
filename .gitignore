@@ -12,3 +12,11 @@ coverage/
 _ReSharper*/
 *.DotSettings.user
 .dotnet-temp/
+.workspace/
+data/
+*.db
+*.db-wal
+*.db-shm
+*.gguf
+*.safetensors
+_model_build/

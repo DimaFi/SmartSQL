@@ -10,7 +10,7 @@ To see a populated application immediately, launch it and click **Открыть
 
 The **Запрос словами · прототип** bar accepts a deliberately limited Russian grammar, for example `Покажи записи, где Документы = Нет и Курс = 3`. It translates recognized conditions into the same structured filters as the visual UI; it does not generate or execute arbitrary SQL. This is a deterministic interaction prototype, **not a language model**. Unsupported requests produce an explanation instead of a guessed operation.
 
-The application creates a local SQLite database on first launch. Users can also create, open, back up, and restore database files; create, rename, and safely delete tables with typed fields; add, rename, or safely delete fields; add/edit/delete records; search, sort, combine and save reusable field filters; and browse records in pages of 100. The last cell edit can be undone. CSV files can be mapped, previewed, and imported into an existing table or exported for Excel. Typed JSON table exchange is also available. Relations, field type conversion, XLSX exchange, a local language model, additional DBMS providers, and server mode are not implemented yet.
+The application creates a local SQLite database on first launch. Users can also create, open, back up, and restore database files; create, rename, and safely delete tables with typed fields; add, rename, or safely delete fields; add/edit/delete records; search, sort, combine and save reusable field filters; and browse records in pages of 100. The last cell edit can be undone. CSV files can be mapped, previewed, and imported into an existing table or exported for Excel. Typed JSON table exchange is also available. XLSX table exchange and bulk paste from Excel are available. Relations, field type conversion, a local language model, additional DBMS providers, and server mode are not implemented yet.
 
 Database actions are grouped under **База**, and selected-table actions under **Импорт**, **Экспорт**, and **Структура**. The natural-language prototype expands on demand. File reading and writing run in the background while the workspace controls are temporarily unavailable, preventing table switches during an operation.
 
@@ -28,9 +28,15 @@ CSV import accepts UTF-8 files with comma or semicolon separators. The delimiter
 
 JSON exchange uses the portable `SmartSQL.Table.v1` format described in [docs/JSON_TABLE_FORMAT.md](docs/JSON_TABLE_FORMAT.md). It preserves field names and types, nulls, text, exact decimal numbers, ISO dates, and Boolean values. Import appends to an existing table whose field names and types match, with a preview of the first five rows and all-or-nothing confirmation. Unknown capabilities and properties are rejected rather than ignored. It does not transfer saved filters, relationships, record identifiers, or an entire database.
 
-Both CSV and JSON export include the **entire selected table**, regardless of the current page, search, or filters. They write to a temporary file beside the destination and publish the destination only after successful completion. Existing files are never overwritten, and a failed export removes its own temporary file.
+CSV, JSON, and XLSX exports include the **entire selected table**, regardless of the current page, search, or filters. They write to a temporary file beside the destination and publish the destination only after successful completion. Existing files are never overwritten, and a failed export removes its own temporary file.
 
 ## Solution Structure
+
+**XLSX** exports the whole selected table and imports one selected worksheet into an existing table through mapping, compatibility warnings and preview. Text stays literal, dates/Boolean have native Excel cells, and numbers beyond Excel's 15 significant digits are stored as exact text with a visible count. Worksheet names adapted to Excel's limits are reported. Formulas, macros, merged cells, external links and unsupported values are rejected. Formatting, comments, validation and workbook structure are not table data and their detected loss is disclosed before import. The adapter is bounded to 100,000 rows and 2 million cells.
+
+**Импорт → Вставить строки из Excel…** reads a copied rectangular tab-separated range. Review whether the first row contains headers, map columns and confirm a preview. It appends records atomically; it does not overwrite the selected grid region. Formula-like text remains literal. Local clipboard/test data is never tracked in Git.
+
+The next product milestone is connection management and browsing ordinary existing PostgreSQL databases, followed by safe editing and additional DBMS providers. See [roadmap](docs/ROADMAP.md).
 
 ```text
 src/
@@ -52,15 +58,15 @@ docs/
 ## Build
 
 ```powershell
-dotnet build SmartSQL.sln
+./scripts/Build.ps1
 ```
 
-Run the desktop app with `dotnet run --project src/SmartSQL.Desktop/SmartSQL.Desktop.csproj`. The default data file is created at `%LOCALAPPDATA%/SmartSQL/smartsql.db` on Windows or the equivalent local application-data directory on other systems. Use the **База** menu to create, open, or back up other database files.
+Run the desktop app with `./scripts/Run.ps1`. In this checkout the default data file is `D:\Code\SmartSQL\data\local\smartsql.db`; the demo and automatic backups also remain on D:. Development caches, temporary files, and test results are excluded from Git. See [workspace storage](docs/WORKSPACE_STORAGE.md) for migration and model-workspace details. Use the **База** menu to create, open, or back up other database files.
 
 ## Test
 
 ```powershell
-dotnet test SmartSQL.sln
+./scripts/Test.ps1
 ```
 
-The tests cover the model, SQLite persistence, search, safe migration, CSV/JSON exchange, decimal precision, and atomic file export.
+The tests cover the model, SQLite persistence, search, safe migration, CSV/JSON/XLSX exchange, clipboard paste, decimal precision, and atomic file export. Add `-Offline` to the helper scripts when using the prepared local NuGet cache.

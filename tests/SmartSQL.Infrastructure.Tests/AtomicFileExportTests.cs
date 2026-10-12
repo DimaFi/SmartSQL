@@ -4,7 +4,7 @@ namespace SmartSQL.Infrastructure.Tests;
 
 public sealed class AtomicFileExportTests : IDisposable
 {
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), "smartsql-export-tests", $"{Guid.NewGuid():N}");
+    private readonly string _directory = Path.Combine(TestPaths.Root, "smartsql-export-tests", $"{Guid.NewGuid():N}");
 
     public AtomicFileExportTests() => Directory.CreateDirectory(_directory);
 
