@@ -1,0 +1,171 @@
+# Architecture Decision Log
+
+This file records significant architectural decisions. New decisions should be added without silently rewriting accepted decisions.
+
+## D001 - C# / .NET 10 LTS
+
+The project uses C# and targets .NET 10 LTS.
+
+Status: Accepted
+
+## D002 - SQLite as Default Local DBMS
+
+SQLite is planned as the default embedded local DBMS.
+
+Status: Accepted
+
+## D003 - SQLite Through Provider
+
+SQLite is not part of the Domain architecture and must be connected through a provider.
+
+Status: Accepted
+
+## D004 - Dapper as Preliminary SQL Access Choice
+
+Dapper is the preliminary choice for SQL access in future infrastructure providers.
+
+Status: Accepted
+
+## D005 - Local-First Design
+
+The system is designed as local-first.
+
+Status: Accepted
+
+## D006 - Data Portability
+
+Data portability is a key requirement.
+
+Status: Accepted
+
+## D007 - No Direct Arbitrary SQL Execution by AI
+
+AI must not directly execute arbitrary SQL.
+
+Status: Accepted
+
+## D008 - User Confirmation for AI Mutations
+
+By default, mutating AI actions require user confirmation.
+
+Status: Accepted
+
+## D009 - Teaching Practice as Validation Scenario
+
+The main diploma validation domain is organizing university students' teaching practice, but the architecture remains universal.
+
+Status: Accepted
+
+## D010 - Product Name Is SmartSQL
+
+The product, project files, and code namespaces use the SmartSQL name.
+
+Status: Accepted
+
+## D011 - Avalonia 12 as Cross-Platform Desktop UI
+
+The desktop client uses Avalonia 12 on .NET 10 so one UI codebase can target Windows, Linux, and macOS. Only the MIT-licensed Avalonia framework is required; paid tooling and controls are optional and are not part of the baseline architecture.
+
+Status: Accepted
+
+## D012 - SQLite Physical Tables for User Data
+
+Each user table has its own physical SQLite table and stable generated identifiers for fields. User-provided labels are stored as parameterized metadata, not interpolated into SQL. The first slice supports text fields only; field types and schema changes require separate design.
+
+Status: Accepted
+
+## D013 - Safe Local Database Evolution
+
+SQLite `user_version` tracks the SmartSQL schema. An existing pre-versioned SmartSQL database is backed up using SQLite's online backup API before migration. Newer schema versions and unrelated SQLite files are rejected rather than modified.
+
+Status: Accepted
+
+## D014 - Paged Desktop Editing
+
+The first editable desktop table uses the MIT-licensed Avalonia DataGrid and loads at most 100 records per page. User-facing operations go through the provider-independent workspace contract. An edit is persisted when a cell commit updates its bound value; one-step cell undo is available.
+
+Status: Accepted
+
+## D015 - Transactional CSV Exchange
+
+The first import format is UTF-8 CSV with comma or semicolon delimiters and exact field-name matching. The entire file is parsed and validated before a single SQLite transaction inserts its rows. The Excel-oriented export uses a leading apostrophe on formula-like cell values to reduce spreadsheet formula-injection risk; this safety transform is deliberately documented as non-round-tripping.
+
+Status: Accepted
+
+## D016 - Typed Fields Without Rewriting Existing Data Tables
+
+The first typed fields are Text, Number, Date, and Boolean. Stable type metadata is added in schema version 2, with older fields defaulting to Text after an automatic backup. Values are validated and canonicalized at the provider boundary while the physical SQLite columns remain TEXT. This preserves existing records and supports adding nullable fields without a table rewrite. Numeric sorting uses a decimal-aware collation rather than lexical order.
+
+Status: Accepted
+
+## D017 - Structured Field Filters
+
+The application contract represents filters as field ID, operator, and value rather than SQL text. The SQLite provider validates field IDs and allowed operations, binds values as parameters, and combines filters with AND and global search. The desktop offers a visual multi-condition builder; no arbitrary SQL is accepted from users or future AI features.
+
+Status: Accepted
+
+## D018 - Explicit CSV Import Confirmation
+
+CSV is parsed, mapped by exact header names, and type-validated before a read-only preview is shown. Import writes only after user confirmation, in a transaction. The preview object checks that the table schema has not changed and prevents accidental repeated commit.
+
+Status: Accepted
+
+## D019 - Explicit CSV Column Mapping
+
+CSV parsing and column mapping are separate operations. Automatic mapping uses case-insensitive exact names, while the user may map columns manually, change the detected comma/semicolon delimiter, or explicitly skip source columns. A target field may be used only once. Skipped source data and target fields that will remain empty are displayed and require confirmation before validation and preview. Import size is bounded to 100,000 rows and 50 MB for the current in-memory workflow.
+
+Status: Accepted
+
+## D020 - Non-Destructive Schema Renaming
+
+Table and field names are editable metadata associated with stable generated IDs. Renaming is performed transactionally and does not rename or rebuild physical SQLite tables and columns, so values, types, filters, and future relationships can keep referring to stable identities. Field removal and type conversion are deliberately separate because they may lose data.
+
+Status: Accepted
+
+## D021 - Saved Filters Use Stable Field IDs
+
+Named filter presets are stored per table in schema version 3. Each condition references a stable field ID and structured operator rather than a field label or SQL fragment, so presets survive renaming and remain provider-independent. Saving with the same case-insensitive name replaces the existing preset. Deleting a preset does not change records or the currently active conditions.
+
+Status: Accepted
+
+## D022 - Destructive Schema Changes Require Safety Backup and Exact Confirmation
+
+Table and field deletion expose a structured impact summary before execution. The desktop requires the exact target name, and the provider creates a uniquely named SQLite backup before starting the deletion transaction. Removing a field deletes entire saved-filter presets that reference it rather than silently weakening their conditions. The final field cannot be removed separately because zero-field tables are outside the current data model.
+
+Status: Accepted
+
+## D023 - Restore Validates a Temporary Copy Before Replacement
+
+Restore never opens the selected source for mutation. SQLite copies it to a non-pooled temporary database, validates its SmartSQL metadata, and migrates the temporary copy when necessary. Only then is the current database backed up and replaced through SQLite's backup API. The UI requires the exact current filename. Invalid, unrelated, or newer incompatible sources are rejected before current data changes.
+
+Status: Accepted
+
+## D024 - Separate Editable Demonstration Database
+
+The teaching-practice scenario is seeded only by the Desktop project into a separate local SQLite file. The generic Domain and Application contracts retain no student-specific entities. Opening the demo never replaces the default user database, and reopening it preserves user edits.
+
+Status: Accepted
+
+## D025 - Restricted Natural-Language Interaction Prototype
+
+Before introducing a local language model, the Desktop exposes a small deterministic Russian query grammar. The parser resolves current table field labels to stable field IDs and returns structured read-only filter conditions. Unsupported language is rejected with feedback. No user text or future model output is executed as SQL; a later assistant must use the same validated action and permission boundary.
+
+Status: Accepted
+
+## D026 - Atomic CSV-to-New-Table Workflow
+
+Importing a CSV into a new table is separate from mapping CSV columns into an existing table. The user reviews names, types, delimiter, and sample values before committing. Application validates every value first; the provider creates table metadata, physical table, and records in one transaction, so a failed import leaves no partial table. This provider-independent operation is useful beyond CSV and retains the existing CSV size and row limits.
+
+Status: Accepted
+
+## D027 - Typed, Strict Single-Table JSON Exchange
+
+`SmartSQL.Table.v1` exchanges field names, types, and ordered record values independently of the DBMS. Import maps names case-insensitively into an existing table with the same complete set of field types. All rows are validated before preview; commit rechecks the schema and appends transactionally. Decimal values must be represented exactly, and unsupported properties, types, or values are rejected rather than silently discarded. Whole-database metadata is outside this format and documented explicitly.
+
+Status: Accepted
+
+## D028 - Publish Exports Only After Successful Writing
+
+The desktop writes CSV and JSON exports to a unique temporary file beside the destination. Infrastructure flushes and closes the file, then moves it into place without overwriting an existing destination. Failures remove the temporary file. Transfer work runs in the background with workspace controls temporarily disabled so the target cannot change mid-operation.
+
+Status: Accepted

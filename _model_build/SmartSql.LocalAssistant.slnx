@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SmartSql.LocalAssistant.Cli/SmartSql.LocalAssistant.Cli.csproj" />
+    <Project Path="src/SmartSql.LocalAssistant/SmartSql.LocalAssistant.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SmartSql.LocalAssistant.Tests/SmartSql.LocalAssistant.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Qwen3-0.6B Q8_0",
+    "endpoint": "http://localhost:8081/",
+    "model": "qwen3-0.6b",
+    "estimatedWorkingSetMiB": 900
+  },
+  {
+    "name": "Gemma-3-1B Q4_K_M",
+    "endpoint": "http://localhost:8082/",
+    "model": "gemma-3-1b-it",
+    "estimatedWorkingSetMiB": 1100
+  },
+  {
+    "name": "Qwen2.5-1.5B Q4_K_M",
+    "endpoint": "http://localhost:8083/",
+    "model": "qwen2.5-1.5b-instruct",
+    "estimatedWorkingSetMiB": 1400
+  }
+]

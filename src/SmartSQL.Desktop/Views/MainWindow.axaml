@@ -1,0 +1,129 @@
+<Window
+    x:Class="SmartSQL.Desktop.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="SmartSQL"
+    Width="1180"
+    Height="760"
+    MinWidth="820"
+    MinHeight="520">
+  <Grid x:Name="WorkspaceContent" RowDefinitions="Auto,*" ColumnDefinitions="220,*">
+    <Border Grid.ColumnSpan="2" Padding="18,12" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+        <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="22" FontWeight="Bold" Text="SmartSQL" />
+        <TextBlock x:Name="DatabaseNameText" Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+        <Button Grid.Column="2" Content="Открыть демо" Click="OnOpenDemo" />
+        <Menu Grid.Column="3" VerticalAlignment="Center">
+          <MenuItem Header="База">
+            <MenuItem Header="Новая база…" Click="OnCreateDatabase" />
+            <MenuItem Header="Открыть базу…" Click="OnOpenDatabase" />
+            <Separator />
+            <MenuItem Header="Резервная копия…" Click="OnBackupDatabase" />
+            <MenuItem Header="Восстановить…" Click="OnRestoreBackup" />
+          </MenuItem>
+        </Menu>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Padding="14" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+        <TextBlock FontWeight="SemiBold" Text="Таблицы" />
+        <ListBox x:Name="TablesList" Grid.Row="1" SelectionChanged="OnTableSelected" />
+        <StackPanel Grid.Row="2" Spacing="8">
+          <Button Content="+ Создать таблицу" HorizontalAlignment="Stretch" Click="OnCreateTable" />
+          <Button Content="Таблица из CSV…" HorizontalAlignment="Stretch" Click="OnCreateTableFromCsv" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" Grid.Column="1" Margin="20,18,20,12" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
+      <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
+        <StackPanel>
+          <TextBlock x:Name="CurrentTableText" FontSize="23" FontWeight="SemiBold" Text="Выберите или создайте таблицу" />
+          <TextBlock x:Name="TableSummaryText" Opacity="0.65" Text="Данные хранятся локально" />
+        </StackPanel>
+        <WrapPanel Grid.Row="1" Orientation="Horizontal">
+          <Button x:Name="AddButton" Content="+ Новая запись" Margin="0,0,8,0" IsEnabled="False" Click="OnAddRecord" />
+          <Menu VerticalAlignment="Center" Margin="0,0,8,0">
+            <MenuItem Header="Импорт">
+              <MenuItem x:Name="ImportButton" Header="CSV в эту таблицу…" IsEnabled="False" Click="OnImportCsv" />
+              <MenuItem x:Name="ImportJsonButton" Header="JSON в эту таблицу…" IsEnabled="False" Click="OnImportJson" />
+              <Separator />
+              <MenuItem Header="Новая таблица из CSV…" Click="OnCreateTableFromCsv" />
+            </MenuItem>
+            <MenuItem Header="Экспорт">
+              <MenuItem x:Name="ExportButton" Header="CSV для Excel…" IsEnabled="False" Click="OnExportCsv" />
+              <MenuItem x:Name="ExportJsonButton" Header="JSON с типами данных…" IsEnabled="False" Click="OnExportJson" />
+            </MenuItem>
+            <MenuItem Header="Структура">
+              <MenuItem x:Name="EditSchemaButton" Header="Переименовать таблицу и поля…" IsEnabled="False" Click="OnEditSchema" />
+              <MenuItem x:Name="AddFieldButton" Header="Добавить поле…" IsEnabled="False" Click="OnAddField" />
+              <Separator />
+              <MenuItem x:Name="DeleteFieldButton" Header="Удалить поле…" IsEnabled="False" Click="OnDeleteField" />
+              <MenuItem x:Name="DeleteTableButton" Header="Удалить таблицу…" IsEnabled="False" Click="OnDeleteTable" />
+            </MenuItem>
+          </Menu>
+          <Button x:Name="DeleteButton" Content="Удалить выбранную" IsEnabled="False" Click="OnDeleteRecord" />
+        </WrapPanel>
+      </Grid>
+
+      <StackPanel Grid.Row="1" Spacing="8">
+        <Expander Header="Запрос словами · прототип" HorizontalAlignment="Stretch">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox x:Name="NaturalQueryBox" IsEnabled="False"
+                     PlaceholderText="Покажи записи, где Документы = Нет и Курс = 3"
+                     KeyDown="OnNaturalQueryKeyDown" />
+            <Button x:Name="NaturalQueryButton" Grid.Column="1" Content="Показать" IsEnabled="False" Click="OnNaturalQuery" />
+          </Grid>
+        </Expander>
+        <WrapPanel Orientation="Horizontal">
+          <TextBox x:Name="SearchBox" Width="220" Margin="0,0,8,8" PlaceholderText="Поиск в таблице" KeyDown="OnSearchKeyDown" />
+          <Button Content="Найти" Margin="0,0,8,8" Click="OnSearch" />
+          <Button Content="Сбросить поиск" Margin="0,0,8,8" Click="OnClearSearch" />
+          <Button x:Name="FilterButton" Content="Фильтры" Margin="0,0,8,8" IsEnabled="False" Click="OnEditFilters" />
+          <Button x:Name="ClearFiltersButton" Content="Сбросить фильтры" Margin="0,0,8,8" IsEnabled="False" Click="OnClearFilters" />
+        </WrapPanel>
+        <WrapPanel Orientation="Horizontal">
+          <TextBlock Text="Сортировка" VerticalAlignment="Center" Opacity="0.7" />
+          <ComboBox x:Name="SortFieldBox" Width="170" Margin="8,0" SelectionChanged="OnSortChanged" />
+          <CheckBox x:Name="DescendingBox" Content="По убыванию" Margin="0,0,16,0" Click="OnSortChanged" />
+          <TextBlock Text="Сохранённые" VerticalAlignment="Center" Opacity="0.7" />
+          <ComboBox x:Name="SavedFilterBox" Width="180" Margin="8,0" SelectionChanged="OnSavedFilterSelected" />
+          <Button x:Name="SaveFilterButton" Content="Сохранить текущие" Margin="0,0,8,0" IsEnabled="False" Click="OnSaveFilter" />
+          <Button x:Name="DeleteSavedFilterButton" Content="Удалить набор" IsEnabled="False" Click="OnDeleteSavedFilter" />
+        </WrapPanel>
+      </StackPanel>
+
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+        <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <Button x:Name="UndoButton" Grid.Column="1" Content="↶ Отменить" IsEnabled="False" Click="OnUndo" />
+        <Button x:Name="PreviousButton" Grid.Column="2" Content="← Назад" IsEnabled="False" Click="OnPreviousPage" />
+        <Button x:Name="NextButton" Grid.Column="3" Content="Далее →" IsEnabled="False" Click="OnNextPage" />
+      </Grid>
+
+      <Grid Grid.Row="3">
+        <StackPanel x:Name="WelcomePanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Spacing="14" MaxWidth="440">
+          <TextBlock Text="Работайте с данными без SQL" FontSize="25" FontWeight="SemiBold" TextAlignment="Center" />
+          <TextBlock Text="Создайте свою таблицу или откройте готовый пример организации педагогической практики. Данные примера хранятся в отдельной базе."
+                     TextWrapping="Wrap" TextAlignment="Center" Opacity="0.7" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+            <Button Content="Открыть демо" Click="OnOpenDemo" />
+            <Button Content="Создать таблицу" Click="OnCreateTable" />
+            <Button Content="Таблица из CSV" Click="OnCreateTableFromCsv" />
+          </StackPanel>
+        </StackPanel>
+        <TextBlock x:Name="EmptyStateText" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Opacity="0.65" Text="Таблица пуста. Нажмите «+ Новая запись»." />
+        <DataGrid x:Name="RecordsGrid" IsVisible="False" AutoGenerateColumns="False" CanUserReorderColumns="True"
+                  CanUserResizeColumns="True" CanUserSortColumns="False" GridLinesVisibility="Horizontal"
+                  SelectionMode="Single" SelectionChanged="OnRecordSelected" />
+      </Grid>
+
+      <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
+        <TextBlock x:Name="DatabasePathText" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+        <TextBlock Grid.Column="1" Text="● Все изменения сохранены" Opacity="0.7" />
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>
