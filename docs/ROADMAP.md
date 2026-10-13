@@ -40,7 +40,7 @@ Status: first usable slice implemented (records, individual cells, adding, renam
 
 Build the first usable local interface with Avalonia 12 and an Excel-like data grid workflow.
 
-Status: first usable slice implemented (typed table constructor, grid editing, paging, search, sort, combined reusable saved filters, one-step undo, validated bulk paste from Excel).
+Status: first usable slice implemented (typed table constructor, grid editing, paging, search, sort, combined reusable saved filters, one-step undo, validated bulk paste from Excel). A shared light green theme, Russian shell resources and simple/expanded modes provide grouped commands and a structure inspector; presentation is separate from data operations.
 
 ## Stage 6 - Import/Export CSV/JSON/XLSX
 
@@ -52,7 +52,7 @@ Status: CSV column mapping, preview, import, and export for existing tables, ato
 
 Add PostgreSQL support through the provider architecture. First deliver an existing-database connection and read-only catalog/record browser, without assuming private SmartSQL metadata. Report unsupported types/features; follow with parameterized editing and safe operations where reliable keys are available.
 
-Status: first read-only slice implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata and pages of records. Real dedicated PostgreSQL integration covers permissions, exact native values, quoted identifiers, read-only transactions, cancellation/disposal and bounded large cells. External editing remains next.
+Status: first read-only slice implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search and explicit text sorting. Real dedicated PostgreSQL integration covers permissions, exact native values, quoted identifiers, read-only transactions, cancellation/disposal, search/sort and bounded large cells. External editing remains next.
 
 ## Stage 8 - MySQL/MariaDB Provider
 
@@ -66,17 +66,17 @@ Add Microsoft SQL Server support.
 
 Detect provider and format capability differences before data movement.
 
-## Stage 11 - Natural-Language Command Model
+## Stage 11 - Permission/Action Confirmation System
 
-Design a structured command model for natural-language requests.
+Implement granular permissions, validated actions and confirmation flows before AI-assisted execution.
 
-## Stage 12 - Local Lightweight AI
+## Stage 12 - Natural-Language Command Model
 
-Investigate and integrate local lightweight AI capabilities where practical.
+Design a structured command model for natural-language requests through the established action boundary.
 
-## Stage 13 - Permission/Action Confirmation System
+## Stage 13 - Local Lightweight AI
 
-Implement granular permissions and confirmation flows for AI-assisted actions.
+Investigate and integrate local lightweight AI capabilities only after desktop workflows and permission/action controls are stable.
 
 ## Stage 14 - Backup and Recovery
 

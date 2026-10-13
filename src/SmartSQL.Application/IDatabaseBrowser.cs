@@ -10,6 +10,16 @@ public interface IDatabaseBrowser : IAsyncDisposable
         CancellationToken cancellationToken = default);
     Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
         CancellationToken cancellationToken = default);
+
+    Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
+        DatabaseBrowseQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        query.Validate();
+        if (!string.IsNullOrEmpty(query.SearchText) || query.SortColumn is not null)
+            throw new DatabaseBrowserException("browse_query_unsupported", "Провайдер пока не поддерживает поиск и выбранную сортировку.");
+        return ReadPageAsync(table, offset, pageSize, cancellationToken);
+    }
 }
 
 public static class DatabaseBrowseLimits

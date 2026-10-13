@@ -19,6 +19,69 @@ public sealed class DedicatedPostgresFactAttribute : FactAttribute
 public sealed class PostgresDatabaseBrowserIntegrationTests
 {
     [DedicatedPostgresFact]
+    public async Task SearchFiltersBeforePagingPreservesNativeValuesAndClearingRestoresOldApi()
+    {
+        await using var browser = await PostgresDatabaseBrowser.OpenAsync(Profile(), string.Empty);
+        var table = Assert.Single(await browser.GetTablesAsync(), item => item.Name == "browser_rows");
+        // The dedicated C-locale database folds ASCII case only; preserve the fixture's Cyrillic case.
+        // ASCII case folding is verified independently against the read-only probe below.
+        var query = new DatabaseBrowseQuery("Тестовая строка 20");
+        var first = await browser.ReadPageAsync(table, 0, 3, query);
+        var second = await browser.ReadPageAsync(table, 3, 3, query);
+        var last = await browser.ReadPageAsync(table, 6, 3, query);
+        var all = await browser.ReadPageAsync(table, 0, 100, query);
+        Assert.Equal(7, all.Rows.Count);
+        Assert.True(first.HasMore);
+        Assert.True(second.HasMore);
+        Assert.False(last.HasMore);
+        Assert.Single(last.Rows);
+        var id = all.Columns.Single(column => column.Name == "id").Ordinal;
+        Assert.Equal(all.Rows.Select(row => row.Values[id]), first.Rows.Concat(second.Rows).Concat(last.Rows).Select(row => row.Values[id]));
+        var amount = all.Columns.Single(column => column.Name == "amount").Ordinal;
+        Assert.All(all.Rows, row => Assert.Equal("1234567890123456789012345678901234567890.12345678901234567890", row.Values[amount]));
+        var old = await browser.ReadPageAsync(table, 0, 100);
+        var cleared = await browser.ReadPageAsync(table, 0, 100, new DatabaseBrowseQuery(string.Empty));
+        Assert.Equal(old.Rows.Select(row => row.Values[id]), cleared.Rows.Select(row => row.Values[id]));
+        Assert.DoesNotContain(cleared.Diagnostics, item => item.Code == "native_text_search");
+        foreach (var literal in new[] { "%", "_", "'", "\"; DROP TABLE browser_rows; --" })
+            Assert.Empty((await browser.ReadPageAsync(table, 0, 100, new DatabaseBrowseQuery(literal))).Rows);
+        Assert.Equal(100, (await browser.ReadPageAsync(table, 0, 100, new DatabaseBrowseQuery("\\x00ff"))).Rows.Count);
+        // Quotes in PostgreSQL JSON text are literal searchable characters, not SQL delimiters.
+        Assert.Equal(100, (await browser.ReadPageAsync(table, 0, 100, new DatabaseBrowseQuery("\"value\""))).Rows.Count);
+        var numeric = await browser.ReadPageAsync(table, 0, 100, new DatabaseBrowseQuery("7890.12345678901234567890"));
+        Assert.Equal(100, numeric.Rows.Count);
+        Assert.True(numeric.HasMore);
+    }
+
+    [DedicatedPostgresFact]
+    public async Task ExplicitSortUsesHonestTextOrderingNativeMetadataAndReadOnlyQueries()
+    {
+        await using var browser = await PostgresDatabaseBrowser.OpenAsync(Profile(), string.Empty);
+        var tables = await browser.GetTablesAsync();
+        var table = Assert.Single(tables, item => item.Name == "browser_rows");
+        var ascending = await browser.ReadPageAsync(table, 0, 500, new DatabaseBrowseQuery(SortColumn: "id"));
+        var descending = await browser.ReadPageAsync(table, 0, 500, new DatabaseBrowseQuery(SortColumn: "id", Descending: true));
+        var id = ascending.Columns.Single(column => column.Name == "id").Ordinal;
+        var values = ascending.Rows.Select(row => row.Values[id]!).ToArray();
+        Assert.Equal(values.OrderBy(value => value, StringComparer.Ordinal), values);
+        Assert.Equal(values.Reverse(), descending.Rows.Select(row => row.Values[id]!));
+        Assert.Equal(new[] { "1", "10", "100" }, values.Take(3));
+        Assert.Contains(ascending.Diagnostics, item => item.Code == "selected_text_sort");
+        Assert.Equal("integer", ascending.Columns[id].NativeType);
+        // Native json and array values need no native ordering operators for the selected sort.
+        var json = await browser.ReadPageAsync(table, 0, 2, new DatabaseBrowseQuery(SortColumn: "document"));
+        Assert.Equal(2, json.Rows.Count);
+        var failure = await Assert.ThrowsAsync<DatabaseBrowserException>(() => browser.ReadPageAsync(table, 0, 100,
+            new DatabaseBrowseQuery(SortColumn: "id\"; DROP TABLE browser_rows; --")));
+        Assert.Equal("sort_column_unavailable", failure.Code);
+        var probe = Assert.Single(tables, item => item.Name == "browser_readonly_probe");
+        var readOnly = await browser.ReadPageAsync(probe, 0, 1, new DatabaseBrowseQuery("ON", "read_only", true));
+        Assert.Equal("on", Assert.Single(readOnly.Rows).Values[readOnly.Columns.Single(column => column.Name == "read_only").Ordinal]);
+        var quoted = Assert.Single(tables, item => item.Schema == "Кавычки \" схема");
+        Assert.Single((await browser.ReadPageAsync(quoted, 0, 1, new DatabaseBrowseQuery("🌍", "ключ \" ."))).Rows);
+    }
+
+    [DedicatedPostgresFact]
     public async Task CatalogAndMetadataPreserveNativeTypesNullableColumnsAndCompositeKeyOrder()
     {
         await using var browser = await PostgresDatabaseBrowser.OpenAsync(Profile(), string.Empty);

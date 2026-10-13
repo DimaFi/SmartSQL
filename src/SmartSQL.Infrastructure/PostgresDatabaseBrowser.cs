@@ -126,18 +126,26 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
     }
 
     public Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize = PostgresBrowserSql.DefaultPageSize,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ReadPageAsync(table, offset, pageSize, new DatabaseBrowseQuery(), cancellationToken);
+
+    public Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
+        DatabaseBrowseQuery query, CancellationToken cancellationToken = default)
     {
         ValidateTable(table);
         PostgresBrowserSql.ValidatePage(offset, pageSize);
+        ArgumentNullException.ThrowIfNull(query);
+        query.Validate();
         return ReadAsync(async (connection, transaction, token) =>
         {
             var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
             var columns = await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
             var rows = new List<DatabaseDisplayRow>(pageSize);
-            await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns), connection, transaction);
+            await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query), connection, transaction);
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, Value = pageSize + 1 });
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, Value = offset });
+            if (!string.IsNullOrEmpty(query.SearchText))
+                command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = query.SearchText });
             await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token).ConfigureAwait(false);
             var hasMore = false;
             var pageCharacters = 0;
@@ -170,7 +178,7 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
                 rows.Add(new DatabaseDisplayRow(values));
             }
             return new DatabasePage(relation.Table, columns, rows, offset, pageSize, hasMore,
-                PostgresBrowserSql.Diagnostics(relation.Table, columns, relation.RowLevelSecurity, relation.HasSubclasses));
+                PostgresBrowserSql.Diagnostics(relation.Table, columns, relation.RowLevelSecurity, relation.HasSubclasses, query));
         }, cancellationToken);
     }
 

@@ -6,6 +6,7 @@ namespace SmartSQL.Desktop.Views;
 public sealed class EditableRow
 {
     public Guid Id { get; }
+    public int Position { get; init; }
     public IReadOnlyList<EditableCell> Cells { get; }
 
     public EditableRow(Guid id, IReadOnlyList<EditableCell> cells)

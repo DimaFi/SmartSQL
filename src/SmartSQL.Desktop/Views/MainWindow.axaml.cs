@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Data;
 using Avalonia.Interactivity;
 using Avalonia.Input;
@@ -31,6 +32,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        InitializePresentation();
         try
         {
             SetWorkspace(WorkspacePaths.DefaultDatabasePath);
@@ -71,7 +73,7 @@ public partial class MainWindow : Window
         AddButton.IsEnabled = false;
         FilterButton.IsEnabled = false;
         ClearFiltersButton.IsEnabled = false;
-        FilterButton.Content = "Фильтры";
+        SetFilterCaption(0);
         SavedFilterBox.ItemsSource = null;
         SaveFilterButton.IsEnabled = false;
         DeleteSavedFilterButton.IsEnabled = false;
@@ -90,6 +92,7 @@ public partial class MainWindow : Window
         PreviousButton.IsEnabled = false;
         NextButton.IsEnabled = false;
         RefreshTables();
+        RefreshPresentation();
     }
 
     private void RefreshTables() => TablesList.ItemsSource = _workspace?.GetTables().ToArray();
@@ -382,7 +385,7 @@ public partial class MainWindow : Window
         NaturalQueryButton.IsEnabled = _currentTable is not null;
         FilterButton.IsEnabled = _currentTable is not null;
         ClearFiltersButton.IsEnabled = false;
-        FilterButton.Content = "Фильтры";
+        SetFilterCaption(0);
         SaveFilterButton.IsEnabled = false;
         DeleteSavedFilterButton.IsEnabled = false;
         AddFieldButton.IsEnabled = _currentTable is not null;
@@ -405,6 +408,7 @@ public partial class MainWindow : Window
             RecordsGrid.IsVisible = false;
             EmptyStateText.IsVisible = false;
             WelcomePanel.IsVisible = true;
+            RefreshPresentation();
             return;
         }
         WelcomePanel.IsVisible = false;
@@ -415,13 +419,36 @@ public partial class MainWindow : Window
         _updatingSort = false;
         RefreshSavedFilters();
         CurrentTableText.Text = _currentTable.Name;
+        RecordsGrid.Columns.Add(new DataGridTemplateColumn
+        {
+            Header = "№", IsReadOnly = true, Width = new DataGridLength(46), CanUserResize = false,
+            CellTemplate = new FuncDataTemplate<EditableRow>((row, _) => new TextBlock
+            {
+                Text = row?.Position.ToString(), Classes = { "caption" },
+                VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center
+            })
+        });
         for (var index = 0; index < _currentTable.Fields.Count; index++)
         {
+            var field = _currentTable.Fields[index];
             RecordsGrid.Columns.Add(new DataGridTextColumn
             {
-                Header = $"{_currentTable.Fields[index].Name} · {TypeLabel(_currentTable.Fields[index].Type)}",
+                Header = CreateFieldHeader(field, index),
                 Binding = new Binding($"Cells[{index}].Value") { Mode = BindingMode.TwoWay },
-                Width = new DataGridLength(180)
+                MinWidth = field.Type switch
+                {
+                    FieldType.Number => 100,
+                    FieldType.Boolean => 115,
+                    FieldType.Date => 135,
+                    _ => 160
+                },
+                Width = field.Type switch
+                {
+                    FieldType.Number => new DataGridLength(100),
+                    FieldType.Boolean => new DataGridLength(115),
+                    FieldType.Date => new DataGridLength(135),
+                    _ => new DataGridLength(1, DataGridLengthUnitType.Star)
+                }
             });
         }
         RefreshRecords();
@@ -436,7 +463,7 @@ public partial class MainWindow : Window
             var tableId = _currentTable.Id;
             var fields = _currentTable.Fields;
             var records = _workspace.QueryRecords(tableId, _offset, PageSize, _search, _sortFieldId, _sortDescending, _filters);
-            RecordsGrid.ItemsSource = records.Select(record =>
+            RecordsGrid.ItemsSource = records.Select((record, rowIndex) =>
                 new EditableRow(record.Id, fields.Select(field =>
                     new EditableCell(ForDisplay(field.Type, record.Values.GetValueOrDefault(field.Id)),
                         (oldValue, value) =>
@@ -446,7 +473,7 @@ public partial class MainWindow : Window
                             UndoButton.IsEnabled = true;
                             StatusText.Text = string.Empty;
                         },
-                        message => StatusText.Text = message)).ToArray())).ToArray();
+                        message => StatusText.Text = message)).ToArray()) { Position = _offset + rowIndex + 1 }).ToArray();
             var count = _workspace.CountRecords(tableId, _search, _filters);
             TableSummaryText.Text = $"{count} записей{(string.IsNullOrWhiteSpace(_search) && _filters.Count == 0 ? "" : " найдено")} · страница {_offset / PageSize + 1}";
             PreviousButton.IsEnabled = _offset > 0;
@@ -458,6 +485,8 @@ public partial class MainWindow : Window
                 ? "Таблица пуста. Нажмите «+ Новая запись»."
                 : "По вашему запросу ничего не найдено.";
             DeleteButton.IsEnabled = false;
+            RefreshColumnHeaders();
+            RefreshPresentation();
         }
         catch (Exception exception)
         {
@@ -476,7 +505,7 @@ public partial class MainWindow : Window
             _search = null;
             _filters = [];
             SearchBox.Text = string.Empty;
-            FilterButton.Content = "Фильтры";
+            SetFilterCaption(0);
             ClearFiltersButton.IsEnabled = false;
             SaveFilterButton.IsEnabled = false;
             _updatingSavedFilters = true;
@@ -775,7 +804,7 @@ public partial class MainWindow : Window
             _search = null;
             SearchBox.Text = string.Empty;
             _offset = 0;
-            FilterButton.Content = $"Фильтры: {_filters.Count}";
+            SetFilterCaption(_filters.Count);
             ClearFiltersButton.IsEnabled = true;
             SaveFilterButton.IsEnabled = true;
             _updatingSavedFilters = true;
@@ -817,7 +846,7 @@ public partial class MainWindow : Window
                 return;
             _filters = filters;
             _offset = 0;
-            FilterButton.Content = _filters.Count == 0 ? "Фильтры" : $"Фильтры: {_filters.Count}";
+            SetFilterCaption(_filters.Count);
             ClearFiltersButton.IsEnabled = _filters.Count > 0;
             SaveFilterButton.IsEnabled = _filters.Count > 0;
             _updatingSavedFilters = true;
@@ -836,7 +865,7 @@ public partial class MainWindow : Window
     {
         _filters = [];
         _offset = 0;
-        FilterButton.Content = "Фильтры";
+        SetFilterCaption(0);
         ClearFiltersButton.IsEnabled = false;
         SaveFilterButton.IsEnabled = false;
         _updatingSavedFilters = true;
@@ -866,7 +895,7 @@ public partial class MainWindow : Window
         }
         _filters = saved.Filters.ToArray();
         _offset = 0;
-        FilterButton.Content = $"Фильтры: {_filters.Count}";
+        SetFilterCaption(_filters.Count);
         ClearFiltersButton.IsEnabled = true;
         SaveFilterButton.IsEnabled = true;
         DeleteSavedFilterButton.IsEnabled = true;

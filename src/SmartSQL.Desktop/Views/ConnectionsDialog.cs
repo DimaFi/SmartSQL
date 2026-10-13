@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using SmartSQL.Application;
@@ -24,12 +25,12 @@ public sealed class ConnectionsDialog : Window
     private readonly TextBox _username = new() { PlaceholderText = "Пользователь PostgreSQL" };
     private readonly TextBox _password = new() { PasswordChar = '●', PlaceholderText = "Пароль для этого подключения" };
     private readonly ComboBox _ssl = new();
-    private readonly TextBlock _sslHint = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.8 };
+    private readonly TextBlock _sslHint = new() { TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick };
-    private readonly Button _save = new() { Content = "Сохранить профиль" };
-    private readonly Button _delete = new() { Content = "Удалить профиль", IsEnabled = false };
-    private readonly Button _add = new() { Content = "+ Новый профиль" };
-    private readonly Button _connect = new() { Content = "Подключиться" };
+    private readonly Button _save = new() { Content = "Сохранить профиль", Classes = { "secondary" } };
+    private readonly Button _delete = new() { Content = "Удалить профиль", IsEnabled = false, Classes = { "quiet", "danger" } };
+    private readonly Button _add = new() { Content = "+ Новый профиль", Classes = { "secondary" }, HorizontalAlignment = HorizontalAlignment.Stretch };
+    private readonly Button _connect = new() { Content = "Подключиться", Classes = { "primary" } };
     private readonly StackPanel _editor = new() { Spacing = 9 };
     private readonly TextBlock _providerLabel = new() { Text = "PostgreSQL · просмотр базы", FontSize = 19, FontWeight = FontWeight.SemiBold };
     private IReadOnlyList<ConnectionProfile> _profiles = [];
@@ -62,11 +63,12 @@ public sealed class ConnectionsDialog : Window
     public ConnectionsDialog(IConnectionProfileStore store)
     {
         _store = store;
+        Classes.Add("dialog");
         Title = "Подключения · SmartSQL";
-        Width = 880;
+        Width = 960;
         Height = 760;
-        MinWidth = 750;
-        MinHeight = 620;
+        MinWidth = 740;
+        MinHeight = 500;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         _ssl.ItemsSource = SslChoices;
         _ssl.SelectedIndex = 0;
@@ -76,7 +78,7 @@ public sealed class ConnectionsDialog : Window
         _save.Click += async (_, _) => await SaveProfileAsync();
         _delete.Click += async (_, _) => await DeleteProfileAsync();
         _connect.Click += (_, _) => Connect();
-        var cancel = new Button { Content = "Отмена" };
+        var cancel = new Button { Content = "Отмена", Classes = { "quiet" } };
         cancel.Click += (_, _) => Close(null);
         Opened += async (_, _) => await LoadProfilesAsync();
         Closed += (_, _) =>
@@ -87,8 +89,10 @@ public sealed class ConnectionsDialog : Window
             _lifetime.Dispose();
         };
 
-        var profilePane = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 10 };
-        profilePane.Children.Add(new TextBlock { Text = "Сохранённые подключения", FontWeight = FontWeight.SemiBold });
+        _profilesList.Classes.Add("navigation");
+        _profilesList.SetValue(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled);
+        var profilePane = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
+        profilePane.Children.Add(new TextBlock { Text = "Сохранённые подключения", Classes = { "sectionTitle" }, TextWrapping = TextWrapping.Wrap });
         Add(profilePane, _profilesList, 1);
         Add(profilePane, _add, 2);
         _editor.Children.Add(_providerLabel);
@@ -108,27 +112,42 @@ public sealed class ConnectionsDialog : Window
         _editor.Children.Add(new TextBlock
         {
             Text = "Пароль используется только для текущего подключения и не сохраняется. Просмотр внешней базы не изменяет её таблицы и записи.",
-            TextWrapping = TextWrapping.Wrap, Opacity = 0.8
+            TextWrapping = TextWrapping.Wrap, Classes = { "muted" }
         });
-        _editor.Children.Add(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _save, _delete } });
+        _save.Margin = new Thickness(0, 0, 8, 8);
+        _delete.Margin = new Thickness(0, 0, 0, 8);
+        _editor.Children.Add(new WrapPanel { Orientation = Orientation.Horizontal, Children = { _save, _delete } });
         _editor.Children.Add(new TextBlock
         {
             Text = "Удаление профиля удаляет только параметры подключения из SmartSQL.",
-            TextWrapping = TextWrapping.Wrap, Opacity = 0.7
+            TextWrapping = TextWrapping.Wrap, Classes = { "caption" }
         });
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("270,*"), ColumnSpacing = 22 };
-        body.Children.Add(profilePane);
-        var editorScroll = new ScrollViewer { Content = _editor };
-        Grid.SetColumn(editorScroll, 1);
-        body.Children.Add(editorScroll);
+        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("240,*"), ColumnSpacing = 16 };
+        body.Children.Add(new Border { Classes = { "card" }, Child = profilePane });
+        var editorScroll = new ScrollViewer
+        {
+            Content = _editor,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+        var editorCard = new Border { Classes = { "card" }, Child = editorScroll };
+        Grid.SetColumn(editorCard, 1);
+        body.Children.Add(editorCard);
         var layout = new Grid { Margin = new Thickness(24), RowDefinitions = new RowDefinitions("Auto,*,Auto,Auto"), RowSpacing = 14 };
-        layout.Children.Add(new TextBlock { Text = "Подключения к базам данных", FontSize = 24, FontWeight = FontWeight.SemiBold });
+        var heading = new StackPanel { Spacing = 5 };
+        heading.Children.Add(new TextBlock { Text = "Подключения к базам данных", Classes = { "pageTitle" }, TextWrapping = TextWrapping.Wrap });
+        heading.Children.Add(new TextBlock { Text = "Выберите сохранённый профиль или укажите параметры сервера.", Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
+        layout.Children.Add(heading);
         Add(layout, body, 1);
         Add(layout, _status, 2);
-        Add(layout, new StackPanel
+        Add(layout, new Border
         {
-            Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
-            Spacing = 8, Children = { cancel, _connect }
+            Classes = { "card" }, Padding = new Thickness(12),
+            Child = new StackPanel
+            {
+                Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right,
+                Spacing = 8, Children = { cancel, _connect }
+            }
         }, 3);
         Content = layout;
         UpdateSslHint();

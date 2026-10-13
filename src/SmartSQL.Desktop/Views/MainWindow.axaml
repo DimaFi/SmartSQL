@@ -2,132 +2,374 @@
     x:Class="SmartSQL.Desktop.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:domain="using:SmartSQL.Domain"
     Title="SmartSQL"
-    Width="1180"
-    Height="760"
-    MinWidth="820"
-    MinHeight="520">
-  <Grid x:Name="WorkspaceContent" RowDefinitions="Auto,*" ColumnDefinitions="220,*">
-    <Border Grid.ColumnSpan="2" Padding="18,12" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
-        <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="22" FontWeight="Bold" Text="SmartSQL" />
-        <TextBlock x:Name="DatabaseNameText" Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-        <Button Grid.Column="2" Content="Открыть демо" Click="OnOpenDemo" />
-        <Menu Grid.Column="3" VerticalAlignment="Center">
-          <MenuItem Header="База">
-            <MenuItem Header="Подключения к СУБД…" Click="OnOpenConnections" />
-            <Separator />
-            <MenuItem Header="Новая база…" Click="OnCreateDatabase" />
-            <MenuItem Header="Открыть базу…" Click="OnOpenDatabase" />
-            <Separator />
-            <MenuItem Header="Резервная копия…" Click="OnBackupDatabase" />
-            <MenuItem Header="Восстановить…" Click="OnRestoreBackup" />
-          </MenuItem>
-        </Menu>
-      </Grid>
-    </Border>
-
-    <Border Grid.Row="1" Padding="14" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,1,0">
-      <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
-        <TextBlock FontWeight="SemiBold" Text="Таблицы" />
-        <ListBox x:Name="TablesList" Grid.Row="1" SelectionChanged="OnTableSelected" />
-        <StackPanel Grid.Row="2" Spacing="8">
-          <Button Content="+ Создать таблицу" HorizontalAlignment="Stretch" Click="OnCreateTable" />
-          <Button Content="Таблица из CSV…" HorizontalAlignment="Stretch" Click="OnCreateTableFromCsv" />
-        </StackPanel>
-      </Grid>
-    </Border>
-
-    <Grid Grid.Row="1" Grid.Column="1" Margin="20,18,20,12" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
-      <Grid RowDefinitions="Auto,Auto" RowSpacing="10">
-        <StackPanel>
-          <TextBlock x:Name="CurrentTableText" FontSize="23" FontWeight="SemiBold" Text="Выберите или создайте таблицу" />
-          <TextBlock x:Name="TableSummaryText" Opacity="0.65" Text="Данные хранятся локально" />
-        </StackPanel>
-        <WrapPanel Grid.Row="1" Orientation="Horizontal">
-          <Button x:Name="AddButton" Content="+ Новая запись" Margin="0,0,8,0" IsEnabled="False" Click="OnAddRecord" />
-          <Menu VerticalAlignment="Center" Margin="0,0,8,0">
-            <MenuItem Header="Импорт">
-              <MenuItem x:Name="ImportButton" Header="CSV в эту таблицу…" IsEnabled="False" Click="OnImportCsv" />
-              <MenuItem x:Name="ImportJsonButton" Header="JSON в эту таблицу…" IsEnabled="False" Click="OnImportJson" />
-              <MenuItem x:Name="ImportXlsxButton" Header="XLSX в эту таблицу…" IsEnabled="False" Click="OnImportXlsx" />
-              <MenuItem x:Name="PasteRowsButton" Header="Вставить строки из Excel…" IsEnabled="False" Click="OnPasteRows" />
-              <Separator />
-              <MenuItem Header="Новая таблица из CSV…" Click="OnCreateTableFromCsv" />
-            </MenuItem>
-            <MenuItem Header="Экспорт">
-              <MenuItem x:Name="ExportButton" Header="CSV для Excel…" IsEnabled="False" Click="OnExportCsv" />
-              <MenuItem x:Name="ExportJsonButton" Header="JSON с типами данных…" IsEnabled="False" Click="OnExportJson" />
-              <MenuItem x:Name="ExportXlsxButton" Header="Книга Excel (XLSX)…" IsEnabled="False" Click="OnExportXlsx" />
-            </MenuItem>
-            <MenuItem Header="Структура">
-              <MenuItem x:Name="EditSchemaButton" Header="Переименовать таблицу и поля…" IsEnabled="False" Click="OnEditSchema" />
-              <MenuItem x:Name="AddFieldButton" Header="Добавить поле…" IsEnabled="False" Click="OnAddField" />
-              <Separator />
-              <MenuItem x:Name="DeleteFieldButton" Header="Удалить поле…" IsEnabled="False" Click="OnDeleteField" />
-              <MenuItem x:Name="DeleteTableButton" Header="Удалить таблицу…" IsEnabled="False" Click="OnDeleteTable" />
-            </MenuItem>
-          </Menu>
-          <Button x:Name="DeleteButton" Content="Удалить выбранную" IsEnabled="False" Click="OnDeleteRecord" />
-        </WrapPanel>
-      </Grid>
-
-      <StackPanel Grid.Row="1" Spacing="8">
-        <Expander Header="Запрос словами · прототип" HorizontalAlignment="Stretch">
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-            <TextBox x:Name="NaturalQueryBox" IsEnabled="False"
-                     PlaceholderText="Покажи записи, где Документы = Нет и Курс = 3"
-                     KeyDown="OnNaturalQueryKeyDown" />
-            <Button x:Name="NaturalQueryButton" Grid.Column="1" Content="Показать" IsEnabled="False" Click="OnNaturalQuery" />
-          </Grid>
-        </Expander>
-        <WrapPanel Orientation="Horizontal">
-          <TextBox x:Name="SearchBox" Width="220" Margin="0,0,8,8" PlaceholderText="Поиск в таблице" KeyDown="OnSearchKeyDown" />
-          <Button Content="Найти" Margin="0,0,8,8" Click="OnSearch" />
-          <Button Content="Сбросить поиск" Margin="0,0,8,8" Click="OnClearSearch" />
-          <Button x:Name="FilterButton" Content="Фильтры" Margin="0,0,8,8" IsEnabled="False" Click="OnEditFilters" />
-          <Button x:Name="ClearFiltersButton" Content="Сбросить фильтры" Margin="0,0,8,8" IsEnabled="False" Click="OnClearFilters" />
-        </WrapPanel>
-        <WrapPanel Orientation="Horizontal">
-          <TextBlock Text="Сортировка" VerticalAlignment="Center" Opacity="0.7" />
-          <ComboBox x:Name="SortFieldBox" Width="170" Margin="8,0" SelectionChanged="OnSortChanged" />
-          <CheckBox x:Name="DescendingBox" Content="По убыванию" Margin="0,0,16,0" Click="OnSortChanged" />
-          <TextBlock Text="Сохранённые" VerticalAlignment="Center" Opacity="0.7" />
-          <ComboBox x:Name="SavedFilterBox" Width="180" Margin="8,0" SelectionChanged="OnSavedFilterSelected" />
-          <Button x:Name="SaveFilterButton" Content="Сохранить текущие" Margin="0,0,8,0" IsEnabled="False" Click="OnSaveFilter" />
-          <Button x:Name="DeleteSavedFilterButton" Content="Удалить набор" IsEnabled="False" Click="OnDeleteSavedFilter" />
-        </WrapPanel>
-      </StackPanel>
-
-      <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
-        <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap" />
-        <Button x:Name="UndoButton" Grid.Column="1" Content="↶ Отменить" IsEnabled="False" Click="OnUndo" />
-        <Button x:Name="PreviousButton" Grid.Column="2" Content="← Назад" IsEnabled="False" Click="OnPreviousPage" />
-        <Button x:Name="NextButton" Grid.Column="3" Content="Далее →" IsEnabled="False" Click="OnNextPage" />
-      </Grid>
-
-      <Grid Grid.Row="3">
-        <StackPanel x:Name="WelcomePanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Spacing="14" MaxWidth="440">
-          <TextBlock Text="Работайте с данными без SQL" FontSize="25" FontWeight="SemiBold" TextAlignment="Center" />
-          <TextBlock Text="Создайте свою таблицу или откройте готовый пример организации педагогической практики. Данные примера хранятся в отдельной базе."
-                     TextWrapping="Wrap" TextAlignment="Center" Opacity="0.7" />
-          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
-            <Button Content="Открыть демо" Click="OnOpenDemo" />
-            <Button Content="Создать таблицу" Click="OnCreateTable" />
-            <Button Content="Таблица из CSV" Click="OnCreateTableFromCsv" />
+    Width="1480"
+    Height="900"
+    WindowStartupLocation="CenterScreen"
+    MinWidth="860"
+    MinHeight="560"
+    Background="{DynamicResource UiCanvasBrush}"
+    Foreground="{DynamicResource UiTextBrush}">
+  <Grid x:Name="WorkspaceContent" RowDefinitions="Auto,*">
+    <Border Grid.Row="0" Classes="toolbar" Padding="22,12">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+          <PathIcon Width="38" Height="38" Foreground="{DynamicResource UiAccentBrush}"
+                    Data="{DynamicResource UiIconBrand}" />
+          <StackPanel VerticalAlignment="Center" Spacing="0">
+            <TextBlock FontSize="21" FontWeight="Bold" Text="SmartSQL" />
+            <TextBlock x:Name="BrandTaglineText" Classes="caption" Text="{DynamicResource UiTextBrandTagline}" />
           </StackPanel>
         </StackPanel>
-        <TextBlock x:Name="EmptyStateText" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Opacity="0.65" Text="Таблица пуста. Нажмите «+ Новая запись»." />
-        <DataGrid x:Name="RecordsGrid" IsVisible="False" AutoGenerateColumns="False" CanUserReorderColumns="True"
-                  CanUserResizeColumns="True" CanUserSortColumns="False" GridLinesVisibility="Horizontal"
-                  SelectionMode="Single" SelectionChanged="OnRecordSelected" />
-      </Grid>
 
-      <Grid Grid.Row="4" ColumnDefinitions="*,Auto">
-        <TextBlock x:Name="DatabasePathText" Opacity="0.6" TextTrimming="CharacterEllipsis" />
-        <TextBlock Grid.Column="1" Text="● Все изменения сохранены" Opacity="0.7" />
+        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <Button Classes="secondary" Click="OnOpenDatabase">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconFolderOpen}" />
+                <TextBlock Text="{DynamicResource UiTextOpenDatabaseCaption}" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="QuickImportXlsxButton" Classes="secondary" IsEnabled="False" Click="OnImportXlsx">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconExcel}" />
+                <TextBlock Text="{DynamicResource UiTextImportExcelCaption}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="navitem active">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconTable}" />
+                <TextBlock Text="{DynamicResource UiTextTables}" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="FilterButton" Classes="secondary" IsEnabled="False" Click="OnEditFilters">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconFilter}" />
+                <TextBlock x:Name="FilterCaptionText" Text="{DynamicResource UiTextFilter}" />
+              </StackPanel>
+            </Button>
+            <Border Classes="chip" Padding="8,0">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconSort}" />
+                <ComboBox x:Name="SortFieldBox" Width="150" MinHeight="34" SelectionChanged="OnSortChanged" />
+                <CheckBox x:Name="DescendingBox" Content="↓" ToolTip.Tip="{DynamicResource UiTextDescending}"
+                          VerticalAlignment="Center" Click="OnSortChanged" />
+              </StackPanel>
+            </Border>
+            <Menu Classes="toolbarMenu" VerticalAlignment="Center">
+              <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextDatabaseMenu}">
+                <MenuItem Header="{DynamicResource UiTextConnectionsMenu}" Click="OnOpenConnections" />
+                <Separator />
+                <MenuItem Header="{DynamicResource UiTextNewDatabase}" Click="OnCreateDatabase" />
+                <MenuItem Header="{DynamicResource UiTextOpenDatabase}" Click="OnOpenDatabase" />
+                <MenuItem Header="{DynamicResource UiTextOpenDemo}" Click="OnOpenDemo" />
+                <Separator />
+                <MenuItem Header="{DynamicResource UiTextCreateBackup}" Click="OnBackupDatabase" />
+                <MenuItem Header="{DynamicResource UiTextRestore}" Click="OnRestoreBackup" />
+              </MenuItem>
+            </Menu>
+          </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <Border Classes="chip" Width="225" Padding="8,0">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="7">
+              <PathIcon Width="18" Height="18" VerticalAlignment="Center" Data="{DynamicResource UiIconSearch}" />
+              <TextBox x:Name="SearchBox" Grid.Column="1" MinHeight="34" BorderThickness="0"
+                       Background="Transparent" PlaceholderText="{DynamicResource UiTextTableSearchPlaceholder}" KeyDown="OnSearchKeyDown" />
+              <Button Grid.Column="2" Classes="iconButton" Width="30" Height="30"
+                      ToolTip.Tip="{DynamicResource UiTextFind}" Click="OnSearch">
+                <PathIcon Width="15" Height="15" Data="{DynamicResource UiIconSearch}" />
+              </Button>
+            </Grid>
+          </Border>
+          <ToggleSwitch x:Name="PresentationModeToggle"
+                        OffContent="{DynamicResource UiTextSimpleModeCaption}"
+                        OnContent="{DynamicResource UiTextAdvancedModeCaption}"
+                        IsCheckedChanged="OnPresentationModeChanged" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="248,*">
+      <Border Grid.Column="0" Classes="sidebar" Padding="16,18,14,14">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+          <Border Grid.Row="0" Padding="10" CornerRadius="9" Background="{DynamicResource UiSurfaceMutedBrush}">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
+              <PathIcon Width="22" Height="22" Foreground="{DynamicResource UiAccentBrush}"
+                        Data="{DynamicResource UiIconDatabase}" />
+              <StackPanel Grid.Column="1" Spacing="1">
+                <TextBlock x:Name="DatabaseNameText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                <TextBlock x:Name="HeaderDatabasePathText" Classes="caption" Text="{DynamicResource UiTextLocalDatabase}"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <StackPanel Grid.Row="1" Spacing="4">
+            <Button Classes="navitem active">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <PathIcon Width="19" Height="19" Data="{DynamicResource UiIconTable}" />
+                <TextBlock Text="{DynamicResource UiTextMyTables}" FontWeight="SemiBold" />
+              </StackPanel>
+            </Button>
+            <Button Classes="navitem" Click="OnOpenConnections">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <PathIcon Width="19" Height="19" Data="{DynamicResource UiIconDatabase}" />
+                <TextBlock Text="{DynamicResource UiTextConnections}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="7">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="navsection" Text="{DynamicResource UiTextTables}" VerticalAlignment="Center" />
+              <TextBlock x:Name="TableCountText" Grid.Column="1" Classes="caption" Text="{DynamicResource UiTextNoTables}" />
+            </Grid>
+            <ListBox x:Name="TablesList" Grid.Row="1" Classes="navigation"
+                     SelectionChanged="OnTableSelected">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="domain:TableDefinition">
+                  <StackPanel Orientation="Horizontal" Spacing="9">
+                    <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconTable}" />
+                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+
+          <StackPanel Grid.Row="3" Spacing="7">
+            <Button Classes="secondary" HorizontalAlignment="Stretch" Click="OnCreateTable">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconPlus}" />
+                <TextBlock Text="{DynamicResource UiTextAddTableCaption}" />
+              </StackPanel>
+            </Button>
+            <Button Classes="quiet" HorizontalAlignment="Stretch" Click="OnCreateTableFromCsv">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconUpload}" />
+                <TextBlock Text="{DynamicResource UiTextCreateCsvCaption}" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" Margin="14,14,16,12" RowDefinitions="*,Auto" RowSpacing="10">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+          <Border Grid.Column="0" Classes="card" Padding="0" ClipToBounds="True">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+              <Grid Grid.Row="0" Margin="18,14,18,10" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Grid MinWidth="120" ColumnDefinitions="Auto,*" ColumnSpacing="11" ClipToBounds="True">
+                  <Border Width="42" Height="42" CornerRadius="9" Background="{DynamicResource UiAccentSoftBrush}">
+                    <PathIcon Width="23" Height="23" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconTable}" />
+                  </Border>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1" MinWidth="0">
+                    <TextBlock x:Name="CurrentTableText" Classes="pageTitle" Text="{DynamicResource UiTextSelectTableCaption}"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="TableSummaryText" Classes="muted" Text="{DynamicResource UiTextLocalDataCaption}"
+                               TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </Grid>
+                <WrapPanel x:Name="HeaderActionsPanel" Grid.Column="1" Orientation="Horizontal"
+                           HorizontalAlignment="Right" VerticalAlignment="Center">
+                  <Button x:Name="AddButton" Classes="primary" IsEnabled="False" Click="OnAddRecord">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconPlus}" />
+                      <TextBlock x:Name="AddButtonCaption" Text="{DynamicResource UiTextNewRowCaption}" />
+                    </StackPanel>
+                  </Button>
+                  <Button x:Name="QuickPasteRowsButton" Classes="secondary" Margin="7,0,0,0"
+                          IsEnabled="False" Click="OnPasteRows">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                      <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconClipboard}" />
+                      <TextBlock Text="{DynamicResource UiTextPasteExcelCaption}" />
+                    </StackPanel>
+                  </Button>
+                  <Button x:Name="UndoButton" Classes="iconButton" Margin="7,0,0,0" IsEnabled="False"
+                          ToolTip.Tip="{DynamicResource UiTextUndo}" Click="OnUndo">
+                    <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconClock}" />
+                  </Button>
+                </WrapPanel>
+              </Grid>
+
+              <Border Grid.Row="1" Padding="12,7" BorderBrush="{DynamicResource UiBorderBrush}"
+                      BorderThickness="0,1" Background="{DynamicResource UiSurfaceMutedBrush}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <WrapPanel Orientation="Horizontal">
+                    <Button x:Name="ClearFiltersButton" Classes="quiet" Content="{DynamicResource UiTextClearFilters}"
+                            Margin="0,0,6,0" IsEnabled="False" Click="OnClearFilters" />
+                    <Button Classes="quiet" Content="{DynamicResource UiTextClearSearch}" Click="OnClearSearch" />
+                  </WrapPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <Menu Classes="toolbarMenu">
+                      <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextImport}">
+                        <MenuItem x:Name="ImportButton" Header="{DynamicResource UiTextImportCsv}" IsEnabled="False" Click="OnImportCsv" />
+                        <MenuItem x:Name="ImportJsonButton" Header="{DynamicResource UiTextImportJson}" IsEnabled="False" Click="OnImportJson" />
+                        <MenuItem x:Name="ImportXlsxButton" Header="{DynamicResource UiTextImportXlsx}" IsEnabled="False" Click="OnImportXlsx" />
+                        <MenuItem x:Name="PasteRowsButton" Header="{DynamicResource UiTextPasteRows}" IsEnabled="False" Click="OnPasteRows" />
+                        <Separator />
+                        <MenuItem Header="{DynamicResource UiTextNewTableCsv}" Click="OnCreateTableFromCsv" />
+                      </MenuItem>
+                      <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextExport}">
+                        <MenuItem x:Name="ExportButton" Header="{DynamicResource UiTextExportCsv}" IsEnabled="False" Click="OnExportCsv" />
+                        <MenuItem x:Name="ExportJsonButton" Header="{DynamicResource UiTextExportJson}" IsEnabled="False" Click="OnExportJson" />
+                        <MenuItem x:Name="ExportXlsxButton" Header="{DynamicResource UiTextExportXlsx}" IsEnabled="False" Click="OnExportXlsx" />
+                      </MenuItem>
+                      <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextStructure}">
+                        <MenuItem x:Name="EditSchemaButton" Header="{DynamicResource UiTextRenameSchema}" IsEnabled="False" Click="OnEditSchema" />
+                        <MenuItem x:Name="AddFieldButton" Header="{DynamicResource UiTextAddField}" IsEnabled="False" Click="OnAddField" />
+                        <Separator />
+                        <MenuItem x:Name="DeleteFieldButton" Header="{DynamicResource UiTextDeleteField}" IsEnabled="False" Click="OnDeleteField" />
+                        <MenuItem x:Name="DeleteTableButton" Header="{DynamicResource UiTextDeleteTable}" IsEnabled="False" Click="OnDeleteTable" />
+                      </MenuItem>
+                    </Menu>
+                    <Button x:Name="DeleteButton" Classes="danger" Content="{DynamicResource UiTextDelete}"
+                            ToolTip.Tip="{DynamicResource UiTextDeleteSelectedRowTooltip}" IsEnabled="False" Click="OnDeleteRecord" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+
+              <Grid Grid.Row="2" MinHeight="180">
+                <StackPanel x:Name="WelcomePanel" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="12" MaxWidth="490" Margin="24">
+                  <Border Width="62" Height="62" CornerRadius="18" HorizontalAlignment="Center"
+                          Background="{DynamicResource UiAccentSoftBrush}">
+                    <PathIcon Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconTable}" />
+                  </Border>
+                  <TextBlock Classes="pageTitle" Text="{DynamicResource UiTextWelcomeTitle}" TextAlignment="Center" />
+                  <TextBlock Classes="muted" TextWrapping="Wrap" TextAlignment="Center"
+                             Text="{DynamicResource UiTextWelcomeInstruction}" />
+                  <WrapPanel HorizontalAlignment="Center">
+                    <Button Classes="primary" Content="{DynamicResource UiTextOpenDemo}" Margin="0,0,8,0" Click="OnOpenDemo" />
+                    <Button Classes="secondary" Content="{DynamicResource UiTextCreateTableCaption}" Click="OnCreateTable" />
+                  </WrapPanel>
+                </StackPanel>
+                <TextBlock x:Name="EmptyStateText" IsVisible="False" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Classes="muted"
+                           Text="{DynamicResource UiTextEmptyTableInstruction}" />
+                <DataGrid x:Name="RecordsGrid" Classes="flatgrid" IsVisible="False"
+                          AutoGenerateColumns="False" CanUserReorderColumns="True"
+                          CanUserResizeColumns="True" CanUserSortColumns="False"
+                          GridLinesVisibility="All" SelectionMode="Single"
+                          SelectionChanged="OnRecordSelected" />
+              </Grid>
+
+              <Border Grid.Row="3" Padding="12,8" BorderBrush="{DynamicResource UiBorderBrush}"
+                      BorderThickness="0,1,0,0">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                  <StackPanel Grid.Column="0" MinWidth="70" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText" TextWrapping="Wrap" Foreground="{DynamicResource UiAccentBrush}" />
+                    <TextBlock x:Name="DatabasePathText" Classes="caption" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                    <PathIcon Width="15" Height="15" Foreground="{DynamicResource UiAccentBrush}"
+                              Data="{DynamicResource UiIconCheck}" />
+                    <TextBlock Classes="caption" Text="{DynamicResource UiTextSaved}" />
+                  </StackPanel>
+                  <Button x:Name="PreviousButton" Grid.Column="2" Classes="iconButton"
+                          IsEnabled="False" ToolTip.Tip="{DynamicResource UiTextPreviousPage}" Click="OnPreviousPage">
+                    <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconChevronLeft}" />
+                  </Button>
+                  <TextBlock Grid.Column="3" Classes="caption" VerticalAlignment="Center" Text="{DynamicResource UiTextRowsPerPage100}" />
+                  <Button x:Name="NextButton" Grid.Column="4" Classes="iconButton"
+                          IsEnabled="False" ToolTip.Tip="{DynamicResource UiTextNextPage}" Click="OnNextPage">
+                    <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconChevronRight}" />
+                  </Button>
+                </Grid>
+              </Border>
+            </Grid>
+          </Border>
+
+          <Border x:Name="AdvancedToolsPanel" Grid.Column="1" Width="292"
+                  Classes="card" Padding="0" IsVisible="False" ClipToBounds="True">
+            <Grid RowDefinitions="Auto,*">
+              <StackPanel Margin="16,14,16,10" Spacing="2">
+                <TextBlock Classes="sectionTitle" Text="{DynamicResource UiTextInspector}" />
+                <TextBlock Classes="caption" Text="{DynamicResource UiTextInspectorDescription}" />
+              </StackPanel>
+              <TabControl x:Name="AdvancedTabs" Grid.Row="1">
+                <TabItem Header="{DynamicResource UiTextFilters}">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="14" Spacing="10">
+                      <TextBlock Classes="caption" Text="{DynamicResource UiTextSavedFilterSetsSection}" />
+                      <ComboBox x:Name="SavedFilterBox" HorizontalAlignment="Stretch"
+                                SelectionChanged="OnSavedFilterSelected" />
+                      <WrapPanel>
+                        <Button x:Name="SaveFilterButton" Classes="secondary" Content="{DynamicResource UiTextSave}"
+                                Margin="0,0,6,6" IsEnabled="False" Click="OnSaveFilter" />
+                        <Button x:Name="DeleteSavedFilterButton" Classes="quiet" Content="{DynamicResource UiTextDeleteFilter}"
+                                Margin="0,0,0,6" IsEnabled="False" Click="OnDeleteSavedFilter" />
+                      </WrapPanel>
+                      <Border Height="1" Background="{DynamicResource UiBorderBrush}" />
+                      <TextBlock Classes="caption" Text="{DynamicResource UiTextNaturalQuerySection}" />
+                      <TextBox x:Name="NaturalQueryBox" IsEnabled="False" TextWrapping="Wrap"
+                               PlaceholderText="{DynamicResource UiTextNaturalQueryPlaceholder}"
+                               KeyDown="OnNaturalQueryKeyDown" />
+                      <Button x:Name="NaturalQueryButton" Classes="secondary" HorizontalAlignment="Left"
+                              Content="{DynamicResource UiTextShow}" IsEnabled="False" Click="OnNaturalQuery" />
+                    </StackPanel>
+                  </ScrollViewer>
+                </TabItem>
+                <TabItem Header="{DynamicResource UiTextStructure}">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="14" Spacing="10">
+                      <Border Padding="10" CornerRadius="8" Background="{DynamicResource UiAccentSoftBrush}">
+                        <StackPanel Spacing="3">
+                          <TextBlock x:Name="StructureTableNameText" FontWeight="SemiBold"
+                                     Text="{DynamicResource UiTextNoTableSelected}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock x:Name="StructureSummaryText" Classes="caption" Text="{DynamicResource UiTextSelectTableLeft}" />
+                        </StackPanel>
+                      </Border>
+                      <ItemsControl x:Name="StructureFieldsList">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border Margin="0,0,0,6" Padding="9,7" CornerRadius="7"
+                                    Background="{DynamicResource UiSurfaceMutedBrush}">
+                              <StackPanel Orientation="Horizontal" Spacing="7">
+                                <PathIcon Width="15" Height="15" Data="{DynamicResource UiIconStructure}" />
+                                <TextBlock Classes="caption" Text="{Binding}" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </ScrollViewer>
+                </TabItem>
+              </TabControl>
+            </Grid>
+          </Border>
+        </Grid>
+
+        <Border x:Name="BottomHintPanel" Grid.Row="1" Padding="14,10" CornerRadius="10"
+                BorderBrush="{DynamicResource UiBorderBrush}" BorderThickness="1"
+                Background="{DynamicResource UiAccentSoftBrush}">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+              <Border Width="38" Height="38" CornerRadius="19" Background="{DynamicResource UiSurfaceBrush}">
+                <PathIcon Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"
+                          Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconHelp}" />
+              </Border>
+              <StackPanel VerticalAlignment="Center" Spacing="1">
+                <TextBlock FontWeight="SemiBold" Text="{DynamicResource UiTextSortHintTitle}" />
+                <TextBlock Classes="caption" Text="{DynamicResource UiTextTableWorkHint}" />
+              </StackPanel>
+            </StackPanel>
+            <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="HintFilterButton" Classes="secondary" Content="{DynamicResource UiTextFilters}"
+                      Margin="0,0,7,0" IsEnabled="False" Click="OnEditFilters" />
+              <Button x:Name="HintStructureButton" Classes="secondary" Content="{DynamicResource UiTextStructure}"
+                      Margin="0,0,7,0" IsEnabled="False" Click="OnShowStructure" />
+              <Button x:Name="HintPasteButton" Classes="secondary" Content="{DynamicResource UiTextPasteExcelCaption}"
+                      IsEnabled="False" Click="OnPasteRows" />
+            </WrapPanel>
+          </Grid>
+        </Border>
       </Grid>
     </Grid>
   </Grid>

@@ -5,6 +5,18 @@ namespace SmartSQL.Application.Tests;
 public sealed class DatabaseBrowserContractTests
 {
     [Xunit.Fact]
+    public void BrowseQueryAcceptsLiteralUnicodeAndRejectsUnrepresentableOrUnboundedSearch()
+    {
+        new DatabaseBrowseQuery("%_\\'\" 🌍", "Ключ 🌍", true).Validate();
+        new DatabaseBrowseQuery(new string('x', DatabaseBrowseQuery.MaxSearchCharacters)).Validate();
+        string[] invalid = [new string('x', DatabaseBrowseQuery.MaxSearchCharacters + 1), "a\0b", new string((char)0xD800, 1), new string((char)0xDC00, 1)];
+        foreach (var value in invalid)
+            Xunit.Assert.ThrowsAny<ArgumentException>(() => new DatabaseBrowseQuery(value).Validate());
+        Xunit.Assert.ThrowsAny<ArgumentException>(() => new DatabaseBrowseQuery(SortColumn: string.Empty).Validate());
+        Xunit.Assert.ThrowsAny<ArgumentException>(() => new DatabaseBrowseQuery(SortColumn: "a\0b").Validate());
+    }
+
+    [Xunit.Fact]
     public void NativeCatalogAndDisplayValuesDoNotAssumeManagedFieldTypesOrRowIds()
     {
         var table = new DatabaseTableRef("customer data", "orders.with.dots", DatabaseObjectKind.View);

@@ -207,3 +207,15 @@ Status: Accepted
 Local profiles contain only structured connection parameters and TLS policy, with strict bounded JSON validation and atomic publication. Passwords are supplied for the current session through a driver callback, never saved in profiles or rendered by request formatting. Driver errors are mapped to safe messages without credential-bearing inner exceptions. PostgreSQL uses startup/session read-only settings and repeatable-read read-only transactions per operation, timeouts and cancellation. Paging uses catalog-confirmed quoted identifiers, parameterized offset/limit and a sentinel row; each page is a separate snapshot, with explicit identity/paging limitations. Native values stream as PostgreSQL text with exact numeric output and explicit refusal beyond cell/page limits. External editing and whole-database exchange are separate later work.
 
 Status: Accepted
+
+## D035 - Shared Desktop Presentation and Two Levels of Detail
+
+Desktop uses a small shared set of semantic colours, control styles and Russian string resources. Layout and presentation state stay in Desktop, separate from data operations and providers. The default simple workspace exposes table editing, search/filter/sort and exchange; the expanded mode adds saved filters, a structure inspector and the existing deterministic query prototype. Switching modes retains the selected table and active conditions. Command panels have bounded scrolling to preserve space for data. New controls join existing command groups and reuse styles; unsupported features are not represented by placeholder buttons. English will be introduced through complete string resources rather than mixed language labels; legacy dialog/status strings still require extraction when that work begins.
+
+Status: Accepted
+
+## D036 - Literal Native Text Search and Explicit Text Sorting
+
+`DatabaseBrowseQuery` adds a bounded literal search and optional catalog-confirmed sort column without exposing SQL in Application. PostgreSQL applies the parameterized search across native text representations before paging. Case conversion follows the server locale; C locale can retain case for non-Latin letters. Selected-column sorting uses text with C collation, NULL first, and existing key ordering to resolve ties. The UI names this text ordering and reports its difference from numeric/date ordering. Native typed sorting and typed external filters remain separate work; existing default primary-key paging is preserved.
+
+Status: Accepted

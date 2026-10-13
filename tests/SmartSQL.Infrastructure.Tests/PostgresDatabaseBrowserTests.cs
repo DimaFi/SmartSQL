@@ -7,6 +7,28 @@ namespace SmartSQL.Infrastructure.Tests;
 
 public sealed class PostgresDatabaseBrowserTests
 {
+    [Xunit.Fact]
+    public void SearchIsAParameterAndSelectedSortIsCatalogValidatedTextWithKeyTieBreakers()
+    {
+        var table = new DatabaseTableRef("public", "rows", DatabaseObjectKind.Table);
+        DatabaseColumn[] columns = [new("id", 0, "integer", false, 1), new("document\"", 1, "json", true, null)];
+        const string search = "%'_; DROP TABLE rows; --";
+        var query = new DatabaseBrowseQuery(search, "document\"", true);
+        var sql = PostgresBrowserSql.Page(table, columns, query);
+        Xunit.Assert.DoesNotContain(search, sql);
+        Xunit.Assert.DoesNotContain("LIKE", sql);
+        Xunit.Assert.Contains("pg_catalog.strpos(pg_catalog.lower(q.\"id\"::pg_catalog.text), pg_catalog.lower($3::pg_catalog.text)) > 0", sql);
+        Xunit.Assert.Contains("ORDER BY (q.\"document\"\"\"::pg_catalog.text) COLLATE pg_catalog.\"C\" DESC NULLS FIRST, q.\"id\" LIMIT $1 OFFSET $2", sql);
+        var diagnostics = PostgresBrowserSql.Diagnostics(table, columns, false, false, query);
+        Xunit.Assert.Contains(diagnostics, item => item.Code == "selected_text_sort");
+        Xunit.Assert.Contains(diagnostics, item => item.Code == "native_text_search");
+        var error = Xunit.Assert.Throws<DatabaseBrowserException>(() => PostgresBrowserSql.Page(table, columns,
+            new DatabaseBrowseQuery(SortColumn: "id\"; DROP TABLE rows; --")));
+        Xunit.Assert.Equal("sort_column_unavailable", error.Code);
+        Xunit.Assert.Throws<DatabaseBrowserException>(() => PostgresBrowserSql.Page(table, columns, new DatabaseBrowseQuery(SortColumn: "ID")));
+        Xunit.Assert.Equal(PostgresBrowserSql.Page(table, columns), PostgresBrowserSql.Page(table, columns, new DatabaseBrowseQuery(string.Empty)));
+    }
+
     [Xunit.Theory]
     [Xunit.InlineData("обычное", "\"обычное\"")]
     [Xunit.InlineData("Mixed Case 🌍", "\"Mixed Case 🌍\"")]

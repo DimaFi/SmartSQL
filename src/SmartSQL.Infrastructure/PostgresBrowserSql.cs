@@ -80,26 +80,43 @@ internal static class PostgresBrowserSql
     }
 
     // Only catalog-confirmed names reach this builder; values remain parameters.
-    internal static string Page(DatabaseTableRef table, IReadOnlyList<DatabaseColumn> columns)
+    internal static string Page(DatabaseTableRef table, IReadOnlyList<DatabaseColumn> columns,
+        DatabaseBrowseQuery? query = null)
     {
+        query ??= new DatabaseBrowseQuery();
+        query.Validate();
+        var selectedSort = query.SortColumn is null ? null
+            : columns.SingleOrDefault(column => string.Equals(column.Name, query.SortColumn, StringComparison.Ordinal));
+        if (query.SortColumn is not null && selectedSort is null)
+            throw new DatabaseBrowserException("sort_column_unavailable", "Столбец сортировки не найден. Обновите структуру таблицы и выберите существующий столбец.");
+        var filtering = string.IsNullOrEmpty(query.SearchText) ? string.Empty
+            : columns.Count == 0 ? " WHERE $3::pg_catalog.text IS NULL"
+            : " WHERE (" + string.Join(" OR ", columns.Select(column =>
+                $"pg_catalog.strpos(pg_catalog.lower(q.{QuoteIdentifier(column.Name)}::pg_catalog.text), pg_catalog.lower($3::pg_catalog.text)) > 0")) + ")";
         if (columns.Count == 0)
-            return $"SELECT NULL::pg_catalog.text FROM {QuoteIdentifier(table.Schema)}.{QuoteIdentifier(table.Name)} AS q LIMIT $1 OFFSET $2";
+            return $"SELECT NULL::pg_catalog.text FROM {QuoteIdentifier(table.Schema)}.{QuoteIdentifier(table.Name)} AS q{filtering} LIMIT $1 OFFSET $2";
         var projection = string.Join(", ", columns.Select(column => $"q.{QuoteIdentifier(column.Name)}::pg_catalog.text"));
         var primaryKey = columns.Where(column => column.PrimaryKeyOrder is not null).OrderBy(column => column.PrimaryKeyOrder).ToArray();
         var ordering = primaryKey.Length > 0
             ? string.Join(", ", primaryKey.Select(column => $"q.{QuoteIdentifier(column.Name)}"))
             : string.Join(", ", columns.Select(column => $"(q.{QuoteIdentifier(column.Name)}::pg_catalog.text) COLLATE pg_catalog.\"C\" NULLS FIRST"));
-        return $"SELECT {projection} FROM {QuoteIdentifier(table.Schema)}.{QuoteIdentifier(table.Name)} AS q ORDER BY {ordering} LIMIT $1 OFFSET $2";
+        if (selectedSort is not null)
+            ordering = $"(q.{QuoteIdentifier(selectedSort.Name)}::pg_catalog.text) COLLATE pg_catalog.\"C\" {(query.Descending ? "DESC" : "ASC")} NULLS FIRST, " + ordering;
+        return $"SELECT {projection} FROM {QuoteIdentifier(table.Schema)}.{QuoteIdentifier(table.Name)} AS q{filtering} ORDER BY {ordering} LIMIT $1 OFFSET $2";
     }
 
     internal static IReadOnlyList<DatabaseDiagnostic> Diagnostics(DatabaseTableRef table, IReadOnlyList<DatabaseColumn> columns,
-        bool rowLevelSecurity, bool hasSubclasses)
+        bool rowLevelSecurity, bool hasSubclasses, DatabaseBrowseQuery? query = null)
     {
         var diagnostics = new List<DatabaseDiagnostic>
         {
             new("native_text", "Значения показаны в текстовом представлении PostgreSQL без преобразования в локальные типы. Время с часовым поясом показано в UTC."),
             new("live_pagination", "Каждая страница читает отдельный снимок базы. Изменения на сервере между страницами могут сдвинуть строки.")
         };
+        if (query?.SortColumn is not null)
+            diagnostics.Add(new("selected_text_sort", "Выбранный столбец сортируется по текстовому представлению PostgreSQL (C), а не по его нативному типу; например, 10 идёт перед 2. NULL идут первыми. Совпадения упорядочены по ключу, если он подтверждён."));
+        if (!string.IsNullOrEmpty(query?.SearchText))
+            diagnostics.Add(new("native_text_search", "Поиск ищет буквальный фрагмент текстового представления во всех столбцах. Сопоставление регистра определяется локалью базы PostgreSQL; локаль C учитывает регистр нелатинских букв. NULL не совпадает; точное сравнение нативных типов не выполняется."));
         if (!columns.Any(column => column.PrimaryKeyOrder is not null))
         {
             diagnostics.Add(new("no_primary_key", "У объекта нет подтверждённого первичного ключа. Надёжная идентификация строк недоступна."));

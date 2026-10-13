@@ -27,6 +27,7 @@ University teaching-practice management is the primary diploma validation scenar
 17. Commit completed, verified stages in Git; exclude local data and runtime files.
 18. Use parallel subagents for independent important tasks with disjoint file ownership when available. Coordinate integration, builds/tests, and Git in the parent agent.
 19. Develop toward a universal database client in the DBeaver direction: common desktop workflows across DBMS providers, including exploration of ordinary existing databases. Retain approachable UI and safe operations.
+20. For delegated work prefer `gpt-5.6-sol` with high reasoning or `gpt-6.1-sol` with medium reasoning, as requested by the user. Do not use Astra or extra-high reasoning modes. Keep independent file ownership and integrate in the parent.
 
 ## Current Stage
 
