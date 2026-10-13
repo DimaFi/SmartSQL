@@ -84,6 +84,8 @@ Implement automatic backups, manual backups, restore, and project transfer suppo
 
 Status: local SQLite manual backup, automatic safety backup, and validated restore implemented; packaged project transfer remains.
 
+Future scope requested by the user: cloud drives and personal servers as backup destinations, with basic destination/access/schedule/retention settings, integrity checks and tested restore. Implement after external database workflows are stable; local synchronized folders/network storage can precede direct cloud/protocol adapters. Credentials and backup contents remain outside Git.
+
 ## Stage 15 - Diploma Use Case: Teaching Practice
 
 Validate the system with structured data for organizing university students' teaching practice.
