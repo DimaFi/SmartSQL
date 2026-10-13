@@ -193,3 +193,17 @@ Status: Accepted
 Multiple DBMS support is a central product goal. SmartSQL will provide a common desktop connection/table/data workflow in the DBeaver direction while preserving safe operations and accessible UI. A provider that only stores SmartSQL-managed projects is insufficient to deliver ordinary existing-database exploration. The first PostgreSQL milestone therefore validates connection, catalog/type/key inspection and paged read-only browsing before editing external tables. Native limitations must be reported rather than hidden or forced into a lowest-common-denominator model. Implementation contracts will be added against that concrete milestone; the core remains independent of DBMS/SQL/UI.
 
 Status: Accepted
+
+## D033 - Native Database Browsing Is Separate From Managed Workspaces
+
+`IDatabaseBrowser` describes native schema/table references, native column types/nullability/primary-key order, display-only rows and bounded async pages. It does not invent managed record GUIDs or convert external types to the four local editor types. `IDataWorkspace` remains the editable SmartSQL-managed project contract. The first native provider uses Npgsql in Infrastructure to inspect ordinary existing PostgreSQL databases. SQL, transactions and credentials remain outside Domain/Application; the Desktop composition root supplies a provider factory to the browser window.
+
+This slice uses the driver's direct ADO.NET API, following the current SQLite provider style. Dapper remains a preliminary option in D004; no ORM/query package is required for this concrete catalog/read-only workflow.
+
+Status: Accepted
+
+## D034 - Nonsecret Connection Profiles and Read-Only PostgreSQL Sessions
+
+Local profiles contain only structured connection parameters and TLS policy, with strict bounded JSON validation and atomic publication. Passwords are supplied for the current session through a driver callback, never saved in profiles or rendered by request formatting. Driver errors are mapped to safe messages without credential-bearing inner exceptions. PostgreSQL uses startup/session read-only settings and repeatable-read read-only transactions per operation, timeouts and cancellation. Paging uses catalog-confirmed quoted identifiers, parameterized offset/limit and a sentinel row; each page is a separate snapshot, with explicit identity/paging limitations. Native values stream as PostgreSQL text with exact numeric output and explicit refusal beyond cell/page limits. External editing and whole-database exchange are separate later work.
+
+Status: Accepted

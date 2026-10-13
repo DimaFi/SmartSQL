@@ -4,13 +4,13 @@ Universal intelligent structured data management system with an adaptive natural
 
 ## Status
 
-Working local database editor on Avalonia and SQLite.
+Working local SQLite editor and a first PostgreSQL existing-database browser on Avalonia.
 
 To see a populated application immediately, launch it and click **Открыть демо**. SmartSQL opens a separate editable database, `pedagogical-practice-demo.db`, with sample students, practice placements, organizations, and saved filters. Your default `smartsql.db` is not replaced. The demo button reopens the same file, so edits made there are preserved. A screenshot of the working query is in [docs/smartsql-demo-query.jpg](docs/smartsql-demo-query.jpg).
 
 The **Запрос словами · прототип** bar accepts a deliberately limited Russian grammar, for example `Покажи записи, где Документы = Нет и Курс = 3`. It translates recognized conditions into the same structured filters as the visual UI; it does not generate or execute arbitrary SQL. This is a deterministic interaction prototype, **not a language model**. Unsupported requests produce an explanation instead of a guessed operation.
 
-The application creates a local SQLite database on first launch. Users can also create, open, back up, and restore database files; create, rename, and safely delete tables with typed fields; add, rename, or safely delete fields; add/edit/delete records; search, sort, combine and save reusable field filters; and browse records in pages of 100. The last cell edit can be undone. CSV files can be mapped, previewed, and imported into an existing table or exported for Excel. Typed JSON table exchange is also available. XLSX table exchange and bulk paste from Excel are available. Relations, field type conversion, a local language model, additional DBMS providers, and server mode are not implemented yet.
+The application creates a local SQLite database on first launch. Users can also create, open, back up, and restore database files; create, rename, and safely delete tables with typed fields; add, rename, or safely delete fields; add/edit/delete records; search, sort, combine and save reusable field filters; and browse records in pages of 100. The last cell edit can be undone. CSV files can be mapped, previewed, and imported into an existing table or exported for Excel. Typed JSON table exchange is also available. XLSX table exchange and bulk paste from Excel are available. A read-only PostgreSQL browser is available. Relations, field type conversion, external-table editing, MySQL/MariaDB/SQL Server, a local language model, and server mode are not implemented yet.
 
 Database actions are grouped under **База**, and selected-table actions under **Импорт**, **Экспорт**, and **Структура**. The natural-language prototype expands on demand. File reading and writing run in the background while the workspace controls are temporarily unavailable, preventing table switches during an operation.
 
@@ -36,7 +36,7 @@ CSV, JSON, and XLSX exports include the **entire selected table**, regardless of
 
 **Импорт → Вставить строки из Excel…** reads a copied rectangular tab-separated range. Review whether the first row contains headers, map columns and confirm a preview. It appends records atomically; it does not overwrite the selected grid region. Formula-like text remains literal. Local clipboard/test data is never tracked in Git.
 
-The next product milestone is connection management and browsing ordinary existing PostgreSQL databases, followed by safe editing and additional DBMS providers. See [roadmap](docs/ROADMAP.md).
+**База → Подключения к СУБД…** manages nonsecret PostgreSQL profiles and opens a separate read-only browser of ordinary existing databases. The browser lists accessible schemas/tables/views, shows native types, nullability and composite primary keys, and reads pages of 100 records. Passwords are entered per session and never saved; errors, cancellation and large values have explicit limits. The SQLite editor remains the editable local workflow. See [PostgreSQL browser](docs/POSTGRESQL_BROWSER.md) and [work plan](docs/WORK_PLAN.md).
 
 ```text
 src/

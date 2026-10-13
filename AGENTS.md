@@ -30,9 +30,9 @@ University teaching-practice management is the primary diploma validation scenar
 
 ## Current Stage
 
-Stage 5/6 - Local Desktop UI and CSV/JSON/XLSX exchange.
+Stage 7 - Local SQLite editor, portable exchange, and first PostgreSQL browser.
 
-Avalonia 12 on .NET 10 is the selected cross-platform desktop framework. The local SQLite editor supports typed fields (text, number, date, Boolean), adding/renaming/safely deleting fields and tables, paged CRUD, search/sort, combined reusable saved filters, file selection, manual/automatic backups and validated restore, CSV/JSON/XLSX preview/import/export, and validated bulk paste from Excel. Next prioritize connection management and a first PostgreSQL browsing/provider slice after stabilizing exchange. Experimental local-assistant source remains isolated in `D:\Code\SmartSQL-model`; do not integrate AI or add server mode before desktop workflows are stable.
+Avalonia 12 on .NET 10 is the selected cross-platform desktop framework. The local SQLite editor supports typed fields (text, number, date, Boolean), adding/renaming/safely deleting fields and tables, paged CRUD, search/sort, combined reusable saved filters, file selection, manual/automatic backups and validated restore, CSV/JSON/XLSX preview/import/export, and validated bulk paste from Excel. The first PostgreSQL browser supports ordinary existing databases, native metadata and paged read-only viewing with nonsecret connection profiles. Next prioritize safe external-table editing by confirmed keys. Experimental local-assistant source remains isolated in `D:\Code\SmartSQL-model`; do not integrate AI or add server mode before desktop workflows are stable.
 
 ## Dependency Direction
 

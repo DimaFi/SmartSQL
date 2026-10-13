@@ -52,6 +52,8 @@ Status: CSV column mapping, preview, import, and export for existing tables, ato
 
 Add PostgreSQL support through the provider architecture. First deliver an existing-database connection and read-only catalog/record browser, without assuming private SmartSQL metadata. Report unsupported types/features; follow with parameterized editing and safe operations where reliable keys are available.
 
+Status: first read-only slice implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata and pages of records. Real dedicated PostgreSQL integration covers permissions, exact native values, quoted identifiers, read-only transactions, cancellation/disposal and bounded large cells. External editing remains next.
+
 ## Stage 8 - MySQL/MariaDB Provider
 
 Add MySQL and MariaDB support.

@@ -4,9 +4,9 @@
 
 This document records the current architecture and planned extensions.
 
-The first universal model, SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard bulk paste, and local backup/restore are implemented. Relationships, safe type conversion, additional DBMS providers, and integrated AI remain later stages.
+The universal model, editable SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard paste, and local backup/restore are implemented. A provider-independent native catalog/page contract and a read-only PostgreSQL provider/browser are also implemented. Relationships, safe type conversion, external-table editing, other DBMS providers, and integrated AI remain later stages.
 
-The product direction includes a common database-client interface for ordinary existing databases across supported DBMSs. The current SQLite workspace owns SmartSQL metadata and generated physical tables; it must not be mistaken for an existing-database catalog browser. The next PostgreSQL slice validates connection/catalog browsing before editing external schemas. Native provider differences remain explicit through capability and compatibility reporting.
+The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns SmartSQL-managed metadata and physical tables; `IDatabaseBrowser` supplies native schema/table/column metadata and read-only pages without managed identifiers or type conversion. PostgreSQL validates this existing-database workflow before external editing. Native provider differences remain explicit through diagnostics and future capability/compatibility reporting.
 
 ## Layered Architecture
 
