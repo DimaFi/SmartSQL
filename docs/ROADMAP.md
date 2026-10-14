@@ -54,7 +54,7 @@ Status: CSV column mapping, preview, import, and export for existing tables, ato
 
 PostgreSQL support uses native browsing and explicitly enabled keyed updates without private SmartSQL metadata. The next slices add safe inserts/deletes, typed querying and native exchange; unsupported capabilities remain explicit.
 
-Status: native browsing and an explicit single-cell editor implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search and explicit text sorting. Editing defaults off, requires a reliable primary key and supported fields, rechecks metadata/permissions/row versions, and rolls back precision loss. Real dedicated PostgreSQL integration covers native values, permissions, conflicts, protected/unsupported metadata and transient handles. External inserts/deletes and a general undo workflow remain next.
+Status: native browsing and an explicit single-cell editor implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search and explicit text sorting. Editing defaults off, requires a reliable primary key and supported fields, rechecks metadata/permissions/row versions, and rolls back precision loss. Real dedicated PostgreSQL integration covers native values, permissions, conflicts, protected/unsupported metadata and transient handles. Single-row insertion and ordinary SQLite read-only browsing are now implemented. External deletion and general undo remain next.
 
 ## Stage 8 - MySQL/MariaDB Provider
 

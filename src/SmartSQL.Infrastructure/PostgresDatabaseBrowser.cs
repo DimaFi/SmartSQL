@@ -10,7 +10,7 @@ using SmartSQL.Domain;
 namespace SmartSQL.Infrastructure;
 
 /// <summary>Existing PostgreSQL database access with explicit, restricted opt-in cell editing.</summary>
-public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor
+public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabaseRowCreator
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly TransientCredential _credential;
@@ -357,6 +357,7 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor
             try
             {
                 InvalidateEditSnapshots();
+                InvalidateInsertConfirmation();
                 _credential.Clear();
                 await _dataSource.DisposeAsync().ConfigureAwait(false);
             }

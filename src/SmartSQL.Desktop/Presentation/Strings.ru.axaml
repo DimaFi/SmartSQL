@@ -67,6 +67,7 @@
   <x:String x:Key="UiTextFilter">Фильтр</x:String>
   <x:String x:Key="UiTextDatabaseMenu">База</x:String>
   <x:String x:Key="UiTextConnectionsMenu">Подключения…</x:String>
+  <x:String x:Key="UiTextOpenNativeSqlite">SQLite-файл для просмотра…</x:String>
   <x:String x:Key="UiTextTableSearchPlaceholder">Поиск в таблице…</x:String>
   <x:String x:Key="UiTextSimpleModeCaption">Простой</x:String>
   <x:String x:Key="UiTextAdvancedModeCaption">Расширенный</x:String>

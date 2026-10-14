@@ -6,7 +6,13 @@ namespace SmartSQL.Infrastructure;
 internal static class PostgresEditingSql
 {
     internal const string TableSafety = """
-        WITH expressions(classid,objid,node) AS (
+        WITH protective_lock AS (
+          SELECT c.oid,
+                 (CASE WHEN pg_catalog.current_setting('server_version_num')::pg_catalog.int4>=170000
+                   THEN pg_catalog.has_table_privilege(c.oid,'MAINTAIN') ELSE false END
+                  OR pg_catalog.has_table_privilege(c.oid,'UPDATE,DELETE,TRUNCATE')) AS allowed
+          FROM pg_catalog.pg_class c WHERE c.oid=$1),
+        expressions(classid,objid,node) AS (
           SELECT 'pg_catalog.pg_constraint'::pg_catalog.regclass,k.oid,k.conbin::pg_catalog.text
             FROM pg_catalog.pg_constraint k WHERE k.conrelid=$1 AND k.contype='c'
           UNION ALL
@@ -58,14 +64,15 @@ internal static class PostgresEditingSql
                  WHERE p.pronamespace <> 'pg_catalog'::pg_catalog.regnamespace OR p.provolatile='v'
                    OR EXISTS(SELECT 1 FROM pg_catalog.pg_cast z JOIN pg_catalog.pg_proc f ON f.oid=z.castfunc
                       WHERE z.castsource=t.oid AND z.casttarget=25 AND (f.pronamespace <> 'pg_catalog'::pg_catalog.regnamespace OR f.provolatile='v')))
+               AND l.allowed
                AND pg_catalog.has_table_privilege(c.oid,'SELECT') AND pg_catalog.has_table_privilege(c.oid,'UPDATE'),
                pg_catalog.jsonb_build_object(
                  'relation', pg_catalog.jsonb_build_array(c.oid,c.relkind,c.relispartition,c.relrowsecurity,c.relforcerowsecurity),
                  'columns', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(a.attnum,a.attname,a.atttypid,a.atttypmod,a.attnotnull,a.attidentity,a.attgenerated,a.attcollation) ORDER BY a.attnum)
                     FROM pg_catalog.pg_attribute a WHERE a.attrelid=c.oid AND a.attnum>0 AND NOT a.attisdropped),
-                 'generated', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(d.adnum,pg_catalog.pg_get_expr(d.adbin,d.adrelid)) ORDER BY d.adnum)
+                 'defaults', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(d.oid,d.adnum,d.adbin::pg_catalog.text,pg_catalog.pg_get_expr(d.adbin,d.adrelid)) ORDER BY d.adnum)
                     FROM pg_catalog.pg_attrdef d JOIN pg_catalog.pg_attribute a ON a.attrelid=d.adrelid AND a.attnum=d.adnum
-                    WHERE d.adrelid=c.oid AND a.attgenerated<>''),
+                    WHERE d.adrelid=c.oid),
                  'constraints', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(p.oid,p.contype,p.convalidated,p.condeferrable,pg_catalog.pg_get_constraintdef(p.oid)) ORDER BY p.oid)
                     FROM pg_catalog.pg_constraint p WHERE p.conrelid=c.oid),
                  'indexes', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(i.indexrelid,i.indisvalid,i.indisready,i.indislive,i.indimmediate,i.indclass::pg_catalog.text,i.indcollation::pg_catalog.text,pg_catalog.pg_get_indexdef(i.indexrelid)) ORDER BY i.indexrelid)
@@ -73,8 +80,9 @@ internal static class PostgresEditingSql
                  'triggers', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(t.oid,t.tgenabled,pg_catalog.pg_get_triggerdef(t.oid)) ORDER BY t.oid)
                     FROM pg_catalog.pg_trigger t WHERE t.tgrelid=c.oid),
                  'rules', (SELECT pg_catalog.jsonb_agg(pg_catalog.jsonb_build_array(r.oid,pg_catalog.pg_get_ruledef(r.oid)) ORDER BY r.oid)
-                    FROM pg_catalog.pg_rewrite r WHERE r.ev_class=c.oid))::pg_catalog.text
-        FROM pg_catalog.pg_class c WHERE c.oid=$1
+                    FROM pg_catalog.pg_rewrite r WHERE r.ev_class=c.oid))::pg_catalog.text,
+               l.allowed
+        FROM pg_catalog.pg_class c JOIN protective_lock l ON l.oid=c.oid WHERE c.oid=$1
         """;
 
     internal const string Columns = """

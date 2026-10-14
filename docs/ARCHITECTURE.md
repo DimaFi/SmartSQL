@@ -4,9 +4,9 @@
 
 This document records the current architecture and planned extensions.
 
-The universal model, editable SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard paste, and local backup/restore are implemented. Native browsing and explicitly enabled keyed single-cell PostgreSQL editing are implemented. External inserts/deletes, ordinary SQLite browsing, relationships, safe type conversion, other DBMS providers, and integrated AI remain later stages. See the [capability matrix](CAPABILITY_MATRIX.md) and [development plan](WORK_PLAN.md).
+The universal model, editable SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard paste, and local backup/restore are implemented. Native PostgreSQL browsing, explicitly enabled keyed cell updates and single-row insertion are implemented. Ordinary SQLite browsing is read-only and separate from managed workspaces. External deletion, relationships, type conversion, other providers and integrated AI remain later stages. See the [capability matrix](CAPABILITY_MATRIX.md) and [development plan](WORK_PLAN.md).
 
-The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns managed metadata and physical tables; `IDatabaseBrowser` supplies native metadata and pages without managed identifiers or type conversion. `IDatabaseEditor` adds optional provider-confirmed cell updates; it does not imply INSERT/DELETE or schema-edit capabilities. Native provider differences remain explicit.
+The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns managed metadata and physical tables; `IDatabaseBrowser` supplies native metadata and pages without managed identifiers or type conversion. `IDatabaseEditor` adds optional provider-confirmed cell updates; `IDatabaseRowCreator` adds independent single-row insertion. Neither implies DELETE or schema editing. Native provider differences remain explicit.
 
 ## Layered Architecture
 

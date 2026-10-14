@@ -60,6 +60,7 @@
             <Menu Classes="toolbarMenu" VerticalAlignment="Center">
               <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextDatabaseMenu}">
                 <MenuItem Header="{DynamicResource UiTextConnectionsMenu}" Click="OnOpenConnections" />
+                <MenuItem Header="{DynamicResource UiTextOpenNativeSqlite}" Click="OnOpenNativeSqlite" />
                 <Separator />
                 <MenuItem Header="{DynamicResource UiTextNewDatabase}" Click="OnCreateDatabase" />
                 <MenuItem Header="{DynamicResource UiTextOpenDatabase}" Click="OnOpenDatabase" />

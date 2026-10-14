@@ -13,12 +13,14 @@ using SmartSQL.Desktop.Presentation;
 
 namespace SmartSQL.Desktop.Views;
 
-/// <summary>Provider-neutral database browser with optional, explicitly enabled single-cell editing.</summary>
+/// <summary>Provider-neutral database browser with optional, explicitly enabled safe editing operations.</summary>
 public sealed class DatabaseBrowserWindow : Window
 {
     private const int PageSize = 100;
-    private readonly ConnectionProfile _profile;
-    private readonly Func<ConnectionProfile, string, CancellationToken, Task<IDatabaseBrowser>> _connectAsync;
+    private readonly string _providerLabel;
+    private readonly ConnectionProfile? _profile;
+    private readonly Func<ConnectionProfile, string, CancellationToken, Task<IDatabaseBrowser>>? _profileConnectAsync;
+    private readonly Func<CancellationToken, Task<IDatabaseBrowser>>? _directConnectAsync;
     private readonly CancellationTokenSource _lifetime = new();
     private readonly ComboBox _schemas = new();
     private readonly ListBox _tables = new();
@@ -43,19 +45,22 @@ public sealed class DatabaseBrowserWindow : Window
     private readonly Button _refreshCatalog = new() { Content = "Обновить каталог", IsEnabled = false };
     private readonly Button _cancelOperation = new() { Content = "Отмена", IsEnabled = false };
     private readonly Button _editCell = new() { Content = "Изменить значение", IsEnabled = false, IsVisible = false };
+    private readonly Button _insertRow = new() { Content = "+ Новая запись", IsEnabled = false, IsVisible = false };
     private readonly TextBlock _mode = new() { VerticalAlignment = VerticalAlignment.Center };
     private IReadOnlyList<DatabaseTableRef> _catalog = [];
     private IDatabaseBrowser? _browser;
     private IDatabaseEditor? _editor;
+    private IDatabaseRowCreator? _rowCreator;
     private DatabasePage? _page;
     private DatabaseEditCapabilities? _editCapabilities;
+    private DatabaseInsertCapabilities? _insertCapabilities;
     private CancellationTokenSource? _operation;
-    private string _password;
+    private string _password = string.Empty;
     private bool _busy;
     private bool _closed;
     private bool _ignoreSelections;
     private bool _connectionStarted;
-    private bool _reloadRequiredBeforeEdit;
+    private bool _reloadRequiredBeforeWrite;
     private DatabaseBrowseQuery _query = new();
 
     private sealed record SortChoice(string? Name)
@@ -75,15 +80,32 @@ public sealed class DatabaseBrowserWindow : Window
 
     private sealed record DisplayRow(IReadOnlyList<string?> Values, Guid? EditHandle);
     private sealed record ColumnRow(int Position, string Name, string NativeType, string Nullable,
-        string PrimaryKey, string Editability);
+        string PrimaryKey, string Editability, string Insertability);
 
     public DatabaseBrowserWindow(ConnectionProfile profile, string password,
         Func<ConnectionProfile, string, CancellationToken, Task<IDatabaseBrowser>> connectAsync)
+        : this(profile?.Name ?? throw new ArgumentNullException(nameof(profile)), "PostgreSQL",
+            $"{profile.Host}:{profile.Port} · {profile.Database}")
     {
         _profile = profile;
-        _password = password;
-        _connectAsync = connectAsync;
-        Title = $"{profile.Name} · PostgreSQL · SmartSQL";
+        _password = password ?? string.Empty;
+        _profileConnectAsync = connectAsync ?? throw new ArgumentNullException(nameof(connectAsync));
+    }
+
+    public DatabaseBrowserWindow(string connectionName, string providerLabel, string endpoint,
+        Func<CancellationToken, Task<IDatabaseBrowser>> connectAsync)
+        : this(connectionName, providerLabel, endpoint)
+    {
+        _directConnectAsync = connectAsync ?? throw new ArgumentNullException(nameof(connectAsync));
+    }
+
+    private DatabaseBrowserWindow(string connectionName, string providerLabel, string endpoint)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(providerLabel);
+        ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
+        _providerLabel = providerLabel;
+        Title = $"{connectionName} · {providerLabel} · SmartSQL";
         Width = 1360;
         Height = 760;
         MinWidth = 850;
@@ -97,6 +119,7 @@ public sealed class DatabaseBrowserWindow : Window
         _refreshTable.Click += async (_, _) => await RefreshTableAsync();
         _refreshCatalog.Click += async (_, _) => await RefreshCatalogAsync();
         _editCell.Click += async (_, _) => await EditSelectedCellAsync();
+        _insertRow.Click += async (_, _) => await InsertRowAsync();
         _data.SelectionChanged += (_, _) => UpdateControls();
         _applyQuery.Click += async (_, _) => await ApplyQueryAsync();
         _clearQuery.Click += async (_, _) =>
@@ -115,12 +138,13 @@ public sealed class DatabaseBrowserWindow : Window
         _cancelOperation.Click += (_, _) =>
         {
             _operation?.Cancel();
-            _status.Text = "Отмена загрузки…";
+            _status.Text = "Отмена операции…";
         };
         var disconnect = new Button { Content = "Отключиться" };
         disconnect.Classes.Add("quiet");
         _applyQuery.Classes.Add("primary");
         _editCell.Classes.Add("primary");
+        _insertRow.Classes.Add("primary");
         _applyQuery.Content = IconLabel("UiIconSearch", "Применить");
         _refreshTable.Content = IconLabel("UiIconRefresh", "Обновить");
         _refreshCatalog.Content = IconLabel("UiIconRefresh", "Обновить каталог");
@@ -180,8 +204,12 @@ public sealed class DatabaseBrowserWindow : Window
             Children = { _previous, _paging, _next }
         };
         var dataActions = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+        var mutationActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        _insertRow.Margin = new Thickness(0, 8, 0, 0);
         _editCell.Margin = new Thickness(0, 8, 0, 0);
-        dataActions.Children.Add(_editCell);
+        mutationActions.Children.Add(_insertRow);
+        mutationActions.Children.Add(_editCell);
+        dataActions.Children.Add(mutationActions);
         Grid.SetColumn(pagingControls, 1);
         dataActions.Children.Add(pagingControls);
         Add(dataTab, dataActions, 1);
@@ -202,8 +230,8 @@ public sealed class DatabaseBrowserWindow : Window
                 templated.FontSize = 13;
             queryBar.Children.Add(control);
         }
-        ToolTip.SetTip(_sortColumn, "Текстовая сортировка: 10 идёт перед 2; NULL идут первыми. Применяется ко всей таблице.");
-        ToolTip.SetTip(_search, "Буквальный поиск по всем полям. Обработка регистра зависит от локали PostgreSQL. Enter — применить.");
+        ToolTip.SetTip(_sortColumn, "Сортировка применяется ко всей таблице. Точные правила текста и NULL зависят от провайдера.");
+        ToolTip.SetTip(_search, "Буквальный поиск по всем полям. Обработка регистра зависит от провайдера. Enter — применить.");
         var detail = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*,Auto,Auto"), RowSpacing = 10 };
         detail.Children.Add(new StackPanel { Spacing = 3, Margin = new Thickness(2, 0, 0, 4), Children = { _identity, _objectKind } });
         Add(detail, Surface(queryBar, "UiSurfaceMutedBrush", new Thickness(10, 8, 2, 2), 8), 1);
@@ -227,8 +255,8 @@ public sealed class DatabaseBrowserWindow : Window
                 new TextBlock { Text = "Исследуйте свои данные", Classes = { "caption" } }
             }
         });
-        var connectionLabel = new TextBlock { Text = $"PostgreSQL · {profile.Name}", FontSize = 13, FontWeight = FontWeight.Medium, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300 };
-        ToolTip.SetTip(connectionLabel, $"{profile.Name}\n{profile.Host}:{profile.Port} · {profile.Database}");
+        var connectionLabel = new TextBlock { Text = $"{providerLabel} · {connectionName}", FontSize = 13, FontWeight = FontWeight.Medium, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300 };
+        ToolTip.SetTip(connectionLabel, $"{connectionName}\n{endpoint}");
         var connectionChip = Surface(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = {
             UiIcon.Create("UiIconDatabase", 17), connectionLabel
         } }, "UiSurfaceMutedBrush", new Thickness(14, 10), 18);
@@ -247,7 +275,7 @@ public sealed class DatabaseBrowserWindow : Window
         Add(layout, body, 1);
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         footer.Children.Add(_status);
-        _mode.Text = "Только чтение · PostgreSQL · UTF-8";
+        _mode.Text = $"Только чтение · {providerLabel}";
         var modeLabel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7,
             Children = { UiIcon.Create("UiIconLock", 16), _mode } };
         Grid.SetColumn(modeLabel, 1);
@@ -289,7 +317,8 @@ public sealed class DatabaseBrowserWindow : Window
             ("Тип СУБД", nameof(ColumnRow.NativeType), 230),
             ("Допускает NULL", nameof(ColumnRow.Nullable), 120),
             ("Первичный ключ", nameof(ColumnRow.PrimaryKey), 130),
-            ("Редактирование", nameof(ColumnRow.Editability), 280)
+            ("Изменение ячейки", nameof(ColumnRow.Editability), 250),
+            ("Новая запись", nameof(ColumnRow.Insertability), 280)
         })
             _structure.Columns.Add(new DataGridTextColumn
             {
@@ -307,7 +336,13 @@ public sealed class DatabaseBrowserWindow : Window
         _password = string.Empty;
         await RunOperationAsync(async cancellationToken =>
         {
-            var browser = await _connectAsync(_profile, password, cancellationToken);
+            IDatabaseBrowser browser;
+            if (_profile is not null && _profileConnectAsync is not null)
+                browser = await _profileConnectAsync(_profile, password, cancellationToken);
+            else if (_directConnectAsync is not null)
+                browser = await _directConnectAsync(cancellationToken);
+            else
+                throw new InvalidOperationException("Фабрика подключения не настроена.");
             if (_closed || cancellationToken.IsCancellationRequested)
             {
                 await browser.DisposeAsync();
@@ -317,10 +352,13 @@ public sealed class DatabaseBrowserWindow : Window
             _browser = browser;
             var editor = browser as IDatabaseEditor;
             _editor = editor is { EditingEnabled: true } ? editor : null;
+            var rowCreator = browser as IDatabaseRowCreator;
+            _rowCreator = rowCreator is { EditingEnabled: true } ? rowCreator : null;
             _editCell.IsVisible = _editor is not null;
-            _mode.Text = _editor is null
-                ? "Только чтение · PostgreSQL · UTF-8"
-                : "Редактирование включено · одна ячейка · PostgreSQL";
+            _insertRow.IsVisible = _rowCreator is not null;
+            _mode.Text = _editor is null && _rowCreator is null
+                ? $"Только чтение · {_providerLabel}"
+                : $"Безопасное редактирование включено · {_providerLabel}";
             await LoadCatalogCoreAsync(cancellationToken);
         }, "Подключение и загрузка списка таблиц…");
     }
@@ -441,7 +479,7 @@ public sealed class DatabaseBrowserWindow : Window
 
     private async Task EditSelectedCellAsync()
     {
-        if (_busy || _closed || _reloadRequiredBeforeEdit || _editor is null
+        if (_busy || _closed || _reloadRequiredBeforeWrite || _editor is null
             || _page is not { } page || _editCapabilities is not { CanUpdate: true } capabilities
             || capabilities.Table != page.Table || _data.SelectedItem is not DisplayRow { EditHandle: { } editHandle } row)
             return;
@@ -477,34 +515,40 @@ public sealed class DatabaseBrowserWindow : Window
             {
                 if (_closed)
                     return;
-                _reloadRequiredBeforeEdit = true;
+                _reloadRequiredBeforeWrite = true;
                 _status.Foreground = Brushes.Firebrick;
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Запись изменилась · SmartSQL", "Изменение не применено",
                         exception.Message,
                         "SmartSQL не повторяет запись автоматически. Перезагрузите страницу, чтобы увидеть актуальные данные.")
                     && !_closed)
-                    await LoadTableCoreAsync(table, offset, cancellationToken);
+                    await ReloadAfterSpecialResultAsync(table, offset, cancellationToken,
+                        "Изменение не применено. Страница обновлена.",
+                        "Изменение не применено, но обновление страницы отменено. Обновите страницу перед следующим изменением.",
+                        "Изменение не применено, но обновить страницу не удалось.");
                 return;
             }
             catch (DatabaseBrowserException exception) when (IsCommitUnknown(exception))
             {
                 if (_closed)
                     return;
-                _reloadRequiredBeforeEdit = true;
+                _reloadRequiredBeforeWrite = true;
                 _status.Foreground = Brushes.Firebrick;
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Результат записи неизвестен · SmartSQL", "Проверьте значение",
                         exception.Message,
                         "Не повторяйте изменение. Перезагрузите страницу и проверьте текущее значение ячейки.")
                     && !_closed)
-                    await LoadTableCoreAsync(table, offset, cancellationToken);
+                    await ReloadAfterSpecialResultAsync(table, offset, cancellationToken,
+                        "Страница обновлена. Проверьте текущее значение: результат предыдущей записи был неизвестен.",
+                        "Результат записи неизвестен, а обновление страницы отменено. Не повторяйте изменение; сначала обновите страницу.",
+                        "Результат записи неизвестен, и обновить страницу не удалось. Не повторяйте изменение;");
                 return;
             }
             catch (DatabaseBrowserException exception) when (RequiresReload(exception))
             {
                 if (!_closed)
-                    _reloadRequiredBeforeEdit = true;
+                    _reloadRequiredBeforeWrite = true;
                 throw;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -512,7 +556,7 @@ public sealed class DatabaseBrowserWindow : Window
                 // The provider may have committed before observing cancellation. Require an explicit reload
                 // before another edit so a consumed or stale row handle is never reused.
                 if (!_closed)
-                    _reloadRequiredBeforeEdit = true;
+                    _reloadRequiredBeforeWrite = true;
                 throw;
             }
 
@@ -527,7 +571,7 @@ public sealed class DatabaseBrowserWindow : Window
             {
                 if (!_closed)
                 {
-                    _reloadRequiredBeforeEdit = true;
+                    _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
                     _status.Text = "Ячейка сохранена, но обновление страницы отменено. Обновите страницу перед следующим изменением.";
                 }
@@ -537,7 +581,7 @@ public sealed class DatabaseBrowserWindow : Window
             {
                 if (!_closed)
                 {
-                    _reloadRequiredBeforeEdit = true;
+                    _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
                     _status.Text = $"Ячейка сохранена, но обновить страницу не удалось. {exception.Message}";
                 }
@@ -547,7 +591,7 @@ public sealed class DatabaseBrowserWindow : Window
             {
                 if (!_closed)
                 {
-                    _reloadRequiredBeforeEdit = true;
+                    _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
                     _status.Text = "Ячейка сохранена, но обновить страницу не удалось. Обновите страницу перед следующим изменением.";
                 }
@@ -556,6 +600,104 @@ public sealed class DatabaseBrowserWindow : Window
             if (!_closed)
                 _status.Text = $"Значение в столбце «{choice.Column.Name}» сохранено. Страница обновлена.";
         }, "Сохранение одной ячейки…");
+    }
+
+    private async Task InsertRowAsync()
+    {
+        if (_busy || _closed || _reloadRequiredBeforeWrite || _rowCreator is null
+            || _page is not { } page
+            || _insertCapabilities is not { CanInsert: true, ConfirmationHandle: { } confirmation } capabilities
+            || confirmation == Guid.Empty || capabilities.Table != page.Table)
+            return;
+        var creator = _rowCreator;
+
+        DatabaseInsertChoice? choice;
+        try
+        {
+            choice = await new DatabaseInsertDialog(capabilities).ShowDialog<DatabaseInsertChoice?>(this);
+        }
+        catch (ArgumentException exception)
+        {
+            _status.Foreground = Brushes.Firebrick;
+            _status.Text = exception.Message;
+            return;
+        }
+        if (choice is null || _closed)
+            return;
+
+        var table = page.Table;
+        var offset = page.Offset;
+        var request = new DatabaseInsertRequest(table, confirmation, choice.Values);
+        await RunOperationAsync(async cancellationToken =>
+        {
+            try
+            {
+                await creator.InsertRowAsync(request, cancellationToken);
+            }
+            catch (DatabaseBrowserException exception) when (IsInsertCommitUnknown(exception))
+            {
+                if (_closed)
+                    return;
+                _reloadRequiredBeforeWrite = true;
+                _status.Foreground = Brushes.Firebrick;
+                _status.Text = exception.Message;
+                if (await ConfirmReloadAsync("Результат добавления неизвестен · SmartSQL", "Проверьте новую запись",
+                        exception.Message,
+                        "Не повторяйте добавление. Перезагрузите страницу и проверьте, появилась ли запись.")
+                    && !_closed)
+                    await ReloadAfterSpecialResultAsync(table, offset, cancellationToken,
+                        "Страница обновлена. Проверьте данные: результат предыдущего добавления был неизвестен.",
+                        "Результат добавления неизвестен, а обновление страницы отменено. Не повторяйте добавление; сначала обновите страницу.",
+                        "Результат добавления неизвестен, и обновить страницу не удалось. Не повторяйте добавление;");
+                return;
+            }
+            catch (DatabaseBrowserException exception) when (InsertRequiresReload(exception))
+            {
+                if (!_closed)
+                    _reloadRequiredBeforeWrite = true;
+                throw;
+            }
+
+            if (_closed)
+                return;
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await LoadTableCoreAsync(table, offset, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                if (!_closed)
+                {
+                    _reloadRequiredBeforeWrite = true;
+                    _status.Foreground = Brushes.Firebrick;
+                    _status.Text = "Запись добавлена, но обновление страницы отменено. Обновите страницу перед следующей записью.";
+                }
+                return;
+            }
+            catch (DatabaseBrowserException exception)
+            {
+                if (!_closed)
+                {
+                    _reloadRequiredBeforeWrite = true;
+                    _status.Foreground = Brushes.Firebrick;
+                    _status.Text = $"Запись добавлена, но обновить страницу не удалось. {exception.Message}";
+                }
+                return;
+            }
+            catch (Exception)
+            {
+                if (!_closed)
+                {
+                    _reloadRequiredBeforeWrite = true;
+                    _status.Foreground = Brushes.Firebrick;
+                    _status.Text = "Запись добавлена, но обновить страницу не удалось. Обновите страницу перед следующей записью.";
+                }
+                return;
+            }
+            if (!_closed)
+                _status.Text = "Запись добавлена. Страница обновлена.";
+        }, "Добавление одной записи…");
     }
 
     private async Task<bool> ConfirmReloadAsync(string title, string heading, string message, string guidance)
@@ -600,6 +742,47 @@ public sealed class DatabaseBrowserWindow : Window
         return await dialog.ShowDialog<bool>(this);
     }
 
+    private async Task ReloadAfterSpecialResultAsync(DatabaseTableRef table, long offset,
+        CancellationToken cancellationToken, string successMessage, string canceledMessage, string failurePrefix)
+    {
+        try
+        {
+            await LoadTableCoreAsync(table, offset, cancellationToken);
+            if (!_closed)
+            {
+                _status.ClearValue(TextBlock.ForegroundProperty);
+                _status.Text = successMessage;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            if (!_closed)
+            {
+                _reloadRequiredBeforeWrite = true;
+                _status.Foreground = Brushes.Firebrick;
+                _status.Text = canceledMessage;
+            }
+        }
+        catch (DatabaseBrowserException exception)
+        {
+            if (!_closed)
+            {
+                _reloadRequiredBeforeWrite = true;
+                _status.Foreground = Brushes.Firebrick;
+                _status.Text = $"{failurePrefix} {exception.Message}";
+            }
+        }
+        catch (Exception)
+        {
+            if (!_closed)
+            {
+                _reloadRequiredBeforeWrite = true;
+                _status.Foreground = Brushes.Firebrick;
+                _status.Text = $"{failurePrefix} Обновите страницу перед следующей безопасной операцией.";
+            }
+        }
+    }
+
     private static bool IsEditConflict(DatabaseBrowserException exception) =>
         exception.Code is "edit_conflict" or "update_conflict" or "concurrent_update";
 
@@ -609,6 +792,12 @@ public sealed class DatabaseBrowserWindow : Window
     private static bool RequiresReload(DatabaseBrowserException exception) =>
         exception.Code is "edit_handle_expired" or "edit_schema_changed" or "edit_not_allowed";
 
+    private static bool IsInsertCommitUnknown(DatabaseBrowserException exception) =>
+        exception.Code == "insert_commit_unknown";
+
+    private static bool InsertRequiresReload(DatabaseBrowserException exception) =>
+        exception.Code is "insert_confirmation_expired" or "insert_schema_changed" or "insert_not_allowed";
+
     private async Task LoadTableCoreAsync(DatabaseTableRef table, long offset, CancellationToken cancellationToken)
     {
         if (_browser is null)
@@ -616,7 +805,7 @@ public sealed class DatabaseBrowserWindow : Window
         ClearTable();
         _identity.Text = table.Name;
         _objectKind.Text = $"{table.Schema}  /  {KindLabel(table.Kind)} · "
-            + (_editor is null ? "только чтение" : "проверка возможности изменения");
+            + (_editor is null && _rowCreator is null ? "только чтение" : "проверка безопасных операций");
         ToolTip.SetTip(_identity, $"{table.Schema}.{table.Name}");
         var columns = await _browser.GetColumnsAsync(table, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -632,8 +821,22 @@ public sealed class DatabaseBrowserWindow : Window
             if (capabilities.Table != table)
                 throw new InvalidOperationException("Провайдер вернул возможности редактирования другого объекта.");
         }
+        DatabaseInsertCapabilities? insertCapabilities = null;
+        if (_rowCreator is not null)
+        {
+            insertCapabilities = await _rowCreator.GetInsertCapabilitiesAsync(table, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_closed)
+                return;
+            if (insertCapabilities.Table != table)
+                throw new InvalidOperationException("Провайдер вернул возможности добавления для другого объекта.");
+            if (insertCapabilities.CanInsert
+                && (insertCapabilities.ConfirmationHandle is not { } handle || handle == Guid.Empty))
+                throw new InvalidOperationException("Провайдер не подтвердил метаданные для добавления записи.");
+        }
         _editCapabilities = capabilities;
-        ShowStructure(columns, capabilities);
+        _insertCapabilities = insertCapabilities;
+        ShowStructure(columns, capabilities, insertCapabilities);
         var page = await _browser.ReadPageAsync(table, offset, PageSize, _query, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         if (_closed)
@@ -641,18 +844,21 @@ public sealed class DatabaseBrowserWindow : Window
         if (page.Table != table || page.Offset != offset || page.PageSize != PageSize)
             throw new InvalidOperationException("Провайдер вернул страницу другого объекта.");
         _page = page;
-        _objectKind.Text = $"{table.Schema}  /  {KindLabel(table.Kind)} · " + (capabilities switch
+        var canUpdate = capabilities is { CanUpdate: true };
+        var canInsert = insertCapabilities is { CanInsert: true };
+        _objectKind.Text = $"{table.Schema}  /  {KindLabel(table.Kind)} · " + ((canUpdate, canInsert) switch
         {
-            { CanUpdate: true } => "можно изменить одну ячейку",
-            not null => "только чтение для этого объекта",
-            _ => "только чтение"
+            (true, true) => "можно добавлять записи и изменять ячейки",
+            (true, false) => "можно изменить одну ячейку",
+            (false, true) => "можно добавить одну запись",
+            _ => "только чтение для этого объекта"
         });
         _querySummary.Text = (_query.SortColumn is { } sort
-            ? $"Текстовая сортировка: {sort} {(_query.Descending ? "↓" : "↑")} · NULL первыми · 10 перед 2"
+            ? $"Сортировка: {sort} {(_query.Descending ? "↓" : "↑")}"
             : "Исходный порядок")
             + (string.IsNullOrEmpty(_query.SearchText) ? "" : $" · поиск: {_query.SearchText}");
         ToolTip.SetTip(_querySummary, _querySummary.Text);
-        ShowStructure(page.Columns, capabilities);
+        ShowStructure(page.Columns, capabilities, insertCapabilities);
         var choices = new[] { new SortChoice(null) }.Concat(page.Columns.Select(column => new SortChoice(column.Name))).ToArray();
         _sortColumn.ItemsSource = choices;
         _sortColumn.SelectedItem = choices.FirstOrDefault(choice => choice.Name == _query.SortColumn) ?? choices[0];
@@ -697,39 +903,69 @@ public sealed class DatabaseBrowserWindow : Window
         var diagnostics = page.Diagnostics.Select(diagnostic => diagnostic.Message).ToList();
         if (capabilities is not null)
             diagnostics.AddRange(capabilities.Diagnostics.Select(diagnostic => diagnostic.Message));
+        if (insertCapabilities is not null)
+            diagnostics.AddRange(insertCapabilities.Diagnostics.Select(diagnostic => diagnostic.Message));
         if (!page.Columns.Any(column => column.PrimaryKeyOrder is not null) && !diagnostics.Any(message => message.Contains("ключ", StringComparison.OrdinalIgnoreCase)))
             diagnostics.Add("У объекта нет первичного ключа: при изменении данных между загрузками записи на страницах могут повторяться или пропускаться.");
         _diagnostics.Text = string.Join("\n", diagnostics);
-        _status.Text = capabilities is { CanUpdate: true }
-            ? $"Загружено записей: {page.Rows.Count}. Выберите строку и нажмите «Изменить значение»."
-            : $"Загружено записей: {page.Rows.Count}. Данные доступны только для просмотра.";
+        _status.Text = (canUpdate, canInsert) switch
+        {
+            (true, true) => $"Загружено записей: {page.Rows.Count}. Можно добавить запись или изменить ячейку выбранной строки.",
+            (true, false) => $"Загружено записей: {page.Rows.Count}. Выберите строку и нажмите «Изменить значение».",
+            (false, true) => $"Загружено записей: {page.Rows.Count}. Можно добавить одну запись.",
+            _ => $"Загружено записей: {page.Rows.Count}. Данные доступны только для просмотра."
+        };
     }
 
-    private void ShowStructure(IReadOnlyList<DatabaseColumn> columns, DatabaseEditCapabilities? capabilities)
+    private void ShowStructure(IReadOnlyList<DatabaseColumn> columns, DatabaseEditCapabilities? capabilities,
+        DatabaseInsertCapabilities? insertCapabilities)
     {
         var editColumns = capabilities?.Columns.ToDictionary(column => column.Name, StringComparer.Ordinal)
             ?? new Dictionary<string, EditableDatabaseColumn>(StringComparer.Ordinal);
+        var insertColumns = insertCapabilities?.Columns.ToDictionary(column => column.Column.Name, StringComparer.Ordinal)
+            ?? new Dictionary<string, InsertableDatabaseColumn>(StringComparer.Ordinal);
         _structure.ItemsSource = columns.Select(column => new ColumnRow(column.Ordinal + 1, column.Name,
             column.NativeType, column.IsNullable ? "Да" : "Нет",
             column.PrimaryKeyOrder is { } order ? $"PK · {order}" : string.Empty,
             editColumns.TryGetValue(column.Name, out var editable)
                 ? editable.CanEdit ? "Можно изменять" : editable.ReadOnlyReason ?? "Только чтение"
-                : _editor is null ? "Редактирование не включено" : "Только чтение")).ToArray();
+                : _editor is null ? "Изменение не включено" : "Только чтение",
+            insertColumns.TryGetValue(column.Name, out var insertable)
+                ? DescribeInsert(insertable)
+                : _rowCreator is null ? "Добавление не включено" : "Только чтение")).ToArray();
+    }
+
+    private static string DescribeInsert(InsertableDatabaseColumn column)
+    {
+        if (column.MustUseDefault)
+            return column.DefaultDescription is { Length: > 0 }
+                ? $"Заполнит сервер · {column.DefaultDescription}"
+                : "Заполнит сервер";
+        var choices = new List<string> { "значение" };
+        if (column.Column.IsNullable)
+            choices.Add("NULL");
+        if (column.CanUseDefault)
+            choices.Add("сервер");
+        var description = string.Join(" / ", choices);
+        return column.ReadOnlyReason is { Length: > 0 }
+            ? $"{description} · {column.ReadOnlyReason}"
+            : description;
     }
 
     private void ClearTable()
     {
         _page = null;
         _editCapabilities = null;
-        _reloadRequiredBeforeEdit = false;
+        _insertCapabilities = null;
+        _reloadRequiredBeforeWrite = false;
         _data.SelectedItem = null;
         _data.ItemsSource = null;
         _data.Columns.Clear();
         _structure.ItemsSource = null;
         _identity.Text = "Выберите таблицу";
-        _objectKind.Text = _editor is null
+        _objectKind.Text = _editor is null && _rowCreator is null
             ? "Схемы, таблицы и представления · только чтение"
-            : "Схемы, таблицы и представления · редактирование по подтверждённому ключу";
+            : "Схемы, таблицы и представления · безопасные операции по подтверждённым возможностям";
         ToolTip.SetTip(_identity, null);
         _querySummary.Text = string.Empty;
         _diagnostics.Text = string.Empty;
@@ -755,7 +991,7 @@ public sealed class DatabaseBrowserWindow : Window
             if (!_closed)
                 _status.Text = _browser is null
                     ? "Подключение отменено. Откройте новое подключение, чтобы повторить."
-                    : _reloadRequiredBeforeEdit
+                    : _reloadRequiredBeforeWrite
                         ? "Операция отменена. Результат записи может быть неизвестен; обновите страницу перед следующим изменением."
                         : "Операция отменена. SmartSQL не повторяет изменения автоматически.";
         }
@@ -800,10 +1036,14 @@ public sealed class DatabaseBrowserWindow : Window
         _refreshTable.IsEnabled = connected && !_busy && _tables.SelectedItem is TableChoice;
         _previous.IsEnabled = !_busy && _page is { Offset: > 0 };
         _next.IsEnabled = !_busy && _page is { HasMore: true };
-        _editCell.IsEnabled = !_busy && !_reloadRequiredBeforeEdit && _editor is not null
+        _editCell.IsEnabled = !_busy && !_reloadRequiredBeforeWrite && _editor is not null
             && _page is { } page && _editCapabilities is { CanUpdate: true } capabilities
             && capabilities.Table == page.Table && capabilities.Columns.Any(column => column.CanEdit)
             && _data.SelectedItem is DisplayRow { EditHandle: not null };
+        _insertRow.IsEnabled = !_busy && !_reloadRequiredBeforeWrite && _rowCreator is not null
+            && _page is { } insertPage
+            && _insertCapabilities is { CanInsert: true, ConfirmationHandle: { } confirmation } insert
+            && confirmation != Guid.Empty && insert.Table == insertPage.Table;
         _cancelOperation.IsEnabled = _busy;
     }
 
@@ -818,7 +1058,9 @@ public sealed class DatabaseBrowserWindow : Window
         var browser = _browser;
         _browser = null;
         _editor = null;
+        _rowCreator = null;
         _editCapabilities = null;
+        _insertCapabilities = null;
         if (browser is not null)
         {
             try

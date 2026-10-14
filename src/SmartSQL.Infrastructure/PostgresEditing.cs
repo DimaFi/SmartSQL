@@ -137,7 +137,9 @@ public sealed partial class PostgresDatabaseBrowser
             await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken).ConfigureAwait(false);
             await using (var command = Command(PostgresBrowserSql.ConfigureReadOnlyTransaction.Replace("SET TRANSACTION READ ONLY;", "SET TRANSACTION READ WRITE;", StringComparison.Ordinal), connection, transaction))
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
-            await using (var command = Command($"LOCK TABLE ONLY {PostgresEditingSql.Qualified(update.Table)} IN ROW EXCLUSIVE MODE", connection, transaction))
+            // Also exclude SHARE UPDATE EXCLUSIVE (including concurrent index DDL)
+            // throughout the metadata check and write, while ordinary reads continue.
+            await using (var command = Command($"LOCK TABLE ONLY {PostgresEditingSql.Qualified(update.Table)} IN SHARE ROW EXCLUSIVE MODE", connection, transaction))
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             var relation = await ReadRelationAsync(update.Table, connection, transaction, cancellationToken).ConfigureAwait(false);
             var current = await ReadEditMetadataAsync(relation.Id, relation.Table, connection, transaction, cancellationToken).ConfigureAwait(false);

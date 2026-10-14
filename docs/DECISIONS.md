@@ -241,3 +241,27 @@ The target presentation uses one main window with a connection/object tree, tabl
 Russian workflows are completed first, then translated through full resources. This is an accepted future direction: persistence, onboarding and unified tabs are not yet implemented. Priorities and acceptance criteria are in [WORK_PLAN.md](WORK_PLAN.md).
 
 Status: Accepted direction; implementation planned.
+
+## D039 - Native Single-Row Creation Has Independent Capabilities
+
+`IDatabaseRowCreator` is separate from cell updating. Its explicit session opt-in, SELECT/INSERT rights, protective-lock rights, defaults, identity/generated rules and supported inputs are confirmed by the provider. A bounded, expiring private schema confirmation is rechecked before a parameterized one-row insertion; a successful or unconfirmed commit consumes it. Server default/omission, explicit NULL and exact values are separate input states. Supported keys and unique fields may be supplied on insertion even when they are protected from updates.
+
+Unsafe defaults can be bypassed with supported explicit input. Owned identity/serial sequences require confirmed rights and disclose nontransactional gaps after error/cancellation. Returned native values are checked for assignment precision/truncation before commit. Unknown commits are never repeated automatically. Bulk insertion and external deletion remain separate work.
+
+Status: Accepted
+
+## D040 - Native Writes Lock Against Concurrent Index DDL
+
+PostgreSQL cell updates and single-row inserts acquire `SHARE ROW EXCLUSIVE` before checking metadata and writing. The earlier `ROW EXCLUSIVE` lock permits concurrent index creation and cannot protect the safety check against a newly introduced expression index. The stronger guard prevents that race and briefly serializes writers while normal readers can continue. The transaction retains bounded statement/lock waits and cancellation.
+
+The lock requires MAINTAIN (PostgreSQL 17+) or UPDATE/DELETE/TRUNCATE; INSERT alone is insufficient. Creation capabilities report this restriction explicitly, without granting permissions or requiring UPDATE specifically. An actual integration test observes the granted protective lock, blocked concurrent index creation, cancellation and rollback. Lock conflicts and privileges follow [PostgreSQL locking](https://www.postgresql.org/docs/17/explicit-locking.html) and [LOCK permissions](https://www.postgresql.org/docs/17/sql-lock.html).
+
+Status: Accepted
+
+## D041 - Ordinary SQLite Browsing Does Not Create Managed Metadata
+
+`NativeSqliteDatabaseBrowser` implements the existing read contract for ordinary files independently of `SqliteWorkspace`. It opens only existing files for reading, uses query-only/trusted-schema restrictions, and adds no SmartSQL metadata or migrations. Storage-class-aware values preserve integer precision, round-trip REAL display, NULL/empty/whitespace and BLOB bytes; text decoding checks the source UTF-8/UTF-16 encoding and fails explicitly on invalid data. Unsupported virtual objects, width/value/page limits and unstable identities are reported.
+
+Live WAL remains visible; immutable reads that could ignore it are not used. SQLite may use/create source-side WAL/SHM auxiliary files, a disclosed engine limitation. No checkpoint is requested. Real tests check main/WAL hashes while a writer remains open. This slice is browse-only and does not make native files editable or backed up automatically.
+
+Status: Accepted
