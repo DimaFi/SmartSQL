@@ -4,7 +4,7 @@ Universal intelligent structured data management system with an adaptive natural
 
 ## Status
 
-Working local SQLite editor, ordinary SQLite browsing and PostgreSQL keyed updates/confirmed single-row insertion/deletion on Avalonia. Priorities and acceptance criteria: [development plan](docs/WORK_PLAN.md). Implemented capabilities and limitations: [matrix](docs/CAPABILITY_MATRIX.md). GitHub issue drafts: [plan and 25 tasks](docs/github-issues.json); publication requires repository access and is tracked separately in [HANDOFF](docs/HANDOFF.md).
+Working local SQLite editor, ordinary SQLite browsing and PostgreSQL keyed updates/confirmed single-row insertion/deletion on Avalonia. Priorities and acceptance criteria: [development plan](docs/WORK_PLAN.md). Implemented capabilities and limitations: [matrix](docs/CAPABILITY_MATRIX.md). Published GitHub [roadmap](https://github.com/DimaFi/SmartSQL/issues/1) and [25 tasks](docs/GITHUB_TASKS.md). Verified publication and continuation instructions: [HANDOFF](docs/HANDOFF.md).
 
 To see a populated application immediately, launch it and click **Открыть пример**. SmartSQL opens a separate editable database, `pedagogical-practice-demo.db`, with sample students, practice placements, organizations, and saved filters. Your default `smartsql.db` is not replaced. The demo button reopens the same file, so edits made there are preserved. A screenshot of the working query is in [docs/smartsql-demo-query.jpg](docs/smartsql-demo-query.jpg).
 
