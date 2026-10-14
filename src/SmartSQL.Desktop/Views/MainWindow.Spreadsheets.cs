@@ -29,12 +29,12 @@ public partial class MainWindow
             var table = _currentTable;
             StatusText.Text = "Чтение XLSX…";
             var workbook = await Task.Run(() => { using var stream = File.OpenRead(path); return XlsxTableTransfer.Read(stream); });
-            var sheet = await new XlsxSheetDialog(workbook).ShowDialog<string?>(this);
+            var sheet = await new XlsxSheetDialog(workbook).ShowDialog<string?>(GetDialogOwner());
             if (sheet is null) { StatusText.Text = "Импорт отменён. Данные не изменены."; return; }
             var source = await Task.Run(() => workbook.Inspect(table, sheet));
             var preview = await new CsvMappingDialog(table, workbook.GetCsvContent(sheet), source, "XLSX", allowDelimiter: false)
-                .ShowDialog<CsvImportPreview?>(this);
-            if (preview is null || !await new CsvPreviewDialog(preview, "XLSX").ShowDialog<bool>(this))
+                .ShowDialog<CsvImportPreview?>(GetDialogOwner());
+            if (preview is null || !await new CsvPreviewDialog(preview, "XLSX").ShowDialog<bool>(GetDialogOwner()))
             { StatusText.Text = "Импорт отменён. Данные не изменены."; return; }
             StatusText.Text = "Импорт XLSX…";
             var count = await Task.Run(() => preview.Commit(workspace));
@@ -87,8 +87,8 @@ public partial class MainWindow
             string? content = null;
             try { if (Clipboard is not null) content = await Clipboard.TryGetTextAsync(); }
             catch { StatusText.Text = "Буфер обмена недоступен. Вставьте ячейки в окно вручную."; }
-            var preview = await new ClipboardPasteDialog(table, content).ShowDialog<ClipboardImportPreview?>(this);
-            if (preview is null || !await new ClipboardPreviewDialog(preview).ShowDialog<bool>(this))
+            var preview = await new ClipboardPasteDialog(table, content).ShowDialog<ClipboardImportPreview?>(GetDialogOwner());
+            if (preview is null || !await new ClipboardPreviewDialog(preview).ShowDialog<bool>(GetDialogOwner()))
             { StatusText.Text = "Вставка отменена. Данные не изменены."; return; }
             StatusText.Text = "Добавление строк…";
             var count = await Task.Run(() => preview.Commit(workspace));

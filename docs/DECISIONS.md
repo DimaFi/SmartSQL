@@ -238,9 +238,9 @@ The user prioritizes comfortable PostgreSQL/SQLite workflows, values both approa
 
 The target presentation uses one main window with a connection/object tree, table/SQL tabs, an optional inspector and active-context status. Tabs retain separate query/page/loading state and explicit connection identities; session and cancellation ownership must be defined before replacing separate browser windows. This follows the connection tree documented by [DBeaver](https://dbeaver.com/docs/dbeaver/Database-Navigator/) and the object-tree/tabbed layout in [pgAdmin](https://www.pgadmin.org/docs/pgadmin4/latest/user_interface.html). Managed/native data boundaries remain; no plugin framework is introduced.
 
-Russian workflows are completed first, then translated through full resources. This is an accepted future direction: persistence, onboarding and unified tabs are not yet implemented. Priorities and acceptance criteria are in [WORK_PLAN.md](WORK_PLAN.md).
+Russian workflows are completed first, then translated through full resources. T07/T08 now implement persistence, onboarding and unified table tabs; manual UI acceptance remains open. Priorities and acceptance criteria are in [WORK_PLAN.md](WORK_PLAN.md).
 
-Status: Accepted direction; implementation planned.
+Status: Accepted; first implementation verified by build and automated tests, UI acceptance pending.
 
 ## D039 - Native Single-Row Creation Has Independent Capabilities
 
@@ -283,3 +283,13 @@ The user assigns future model development to `DimaFi/SmartSQL-ML` and requires e
 The desktop `-Model` compatibility switch delegates to the model initializer. The model can build/test independently of the desktop checkout. Environment changes affect only the calling process and child tools; installed tools and global settings remain unchanged. Stub tests do not imply a real model, training or Desktop integration. Future integration still requires stable data workflows and an accepted Action/Permission boundary. GitHub publication is currently deferred by the user.
 
 Status: Accepted
+
+## D044 - One Workspace Window with Independent Table Sessions
+
+`WorkspaceWindow` owns the connection/schema/object tree, table tabs, active-context status and presentation preference. The managed SQLite editor is embedded as a control; native browsing uses fixed-table controls. The old standalone browser window is removed. A connection entry has a fresh session identity even when profile names/endpoints coincide. Reopening the same object in that entry selects its existing tab; different entries never share tab state.
+
+Each native table tab acquires and owns a separate provider-browser instance. This keeps query/page/selection state, private edit/delete handles, insertion confirmations and cancellation independent. Catalog refresh uses a temporary browser and cannot invalidate table-tab handles. Disconnect stops new acquisitions, clears credential-capturing factories, cancels and drains catalog/open work, and awaits all associated tab closures. Closing a tab also cancels and drains its operation before disposing the provider; overlapping close/disconnect/exit requests await the same close task. Local import/export prevents closing its active tab until completion.
+
+Simple/Advanced are presentation preferences only. Switching updates existing controls without reloading data or changing provider capabilities/session write opt-in. First-run selection can be deferred. Only the chosen mode is stored in bounded, versioned JSON under the workspace data directory, with atomic replacement and explicit errors preserving damaged/unknown settings. Passwords, live sessions and open tabs are not persisted. SQL tabs remain T11; this slice introduces no model integration or provider changes.
+
+Status: Implemented; Debug build and 404 automated tests (including 41 real PostgreSQL checks) pass. Manual UI acceptance remains open in WORKSPACE_UI_ACCEPTANCE.md.

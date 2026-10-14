@@ -1,20 +1,14 @@
-<Window
+<UserControl
     x:Class="SmartSQL.Desktop.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:domain="using:SmartSQL.Domain"
-    Title="SmartSQL"
-    Width="1480"
-    Height="900"
-    WindowStartupLocation="CenterScreen"
-    MinWidth="860"
-    MinHeight="560"
     Background="{DynamicResource UiCanvasBrush}"
     Foreground="{DynamicResource UiTextBrush}">
   <Grid x:Name="WorkspaceContent" RowDefinitions="Auto,*">
     <Border Grid.Row="0" Classes="toolbar" Padding="22,12">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center" IsVisible="False">
           <PathIcon Width="38" Height="38" Foreground="{DynamicResource UiAccentBrush}"
                     Data="{DynamicResource UiIconBrand}" />
           <StackPanel VerticalAlignment="Center" Spacing="0">
@@ -25,7 +19,7 @@
 
         <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-            <Button Classes="secondary" Click="OnOpenDatabase">
+            <Button Classes="secondary" Click="OnOpenDatabase" IsVisible="False">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconFolderOpen}" />
                 <TextBlock Text="{DynamicResource UiTextOpenDatabaseCaption}" />
@@ -37,10 +31,10 @@
                 <TextBlock Text="{DynamicResource UiTextImportExcelCaption}" />
               </StackPanel>
             </Button>
-            <Button Classes="navitem active">
+            <Button Classes="secondary" Click="OnCreateTable">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconTable}" />
-                <TextBlock Text="{DynamicResource UiTextTables}" />
+                <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconPlus}" />
+                <TextBlock Text="{DynamicResource UiTextAddTableCaption}" />
               </StackPanel>
             </Button>
             <Button x:Name="FilterButton" Classes="secondary" IsEnabled="False" Click="OnEditFilters">
@@ -59,9 +53,9 @@
             </Border>
             <Menu Classes="toolbarMenu" VerticalAlignment="Center">
               <MenuItem Classes="toolbarMenuitem" Header="{DynamicResource UiTextDatabaseMenu}">
-                <MenuItem Header="{DynamicResource UiTextConnectionsMenu}" Click="OnOpenConnections" />
-                <MenuItem Header="{DynamicResource UiTextOpenNativeSqlite}" Click="OnOpenNativeSqlite" />
-                <Separator />
+                <MenuItem Header="{DynamicResource UiTextConnectionsMenu}" Click="OnOpenConnections" IsVisible="False" />
+                <MenuItem Header="{DynamicResource UiTextOpenNativeSqlite}" Click="OnOpenNativeSqlite" IsVisible="False" />
+                <Separator IsVisible="False" />
                 <MenuItem Header="{DynamicResource UiTextNewDatabase}" Click="OnCreateDatabase" />
                 <MenuItem Header="{DynamicResource UiTextOpenDatabase}" Click="OnOpenDatabase" />
                 <MenuItem Header="{DynamicResource UiTextOpenDemo}" Click="OnOpenDemo" />
@@ -86,6 +80,7 @@
             </Grid>
           </Border>
           <ToggleSwitch x:Name="PresentationModeToggle"
+                        IsVisible="False"
                         OffContent="{DynamicResource UiTextSimpleModeCaption}"
                         OnContent="{DynamicResource UiTextAdvancedModeCaption}"
                         IsCheckedChanged="OnPresentationModeChanged" />
@@ -93,8 +88,8 @@
       </Grid>
     </Border>
 
-    <Grid Grid.Row="1" ColumnDefinitions="248,*">
-      <Border Grid.Column="0" Classes="sidebar" Padding="16,18,14,14">
+    <Grid Grid.Row="1" ColumnDefinitions="0,*">
+      <Border Grid.Column="0" Classes="sidebar" Padding="16,18,14,14" IsVisible="False">
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
           <Border Grid.Row="0" Padding="10" CornerRadius="9" Background="{DynamicResource UiSurfaceMutedBrush}">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
@@ -115,7 +110,7 @@
                 <TextBlock Text="{DynamicResource UiTextMyTables}" FontWeight="SemiBold" />
               </StackPanel>
             </Button>
-            <Button Classes="navitem" Click="OnOpenConnections">
+            <Button Classes="navitem" Click="OnOpenConnections" IsVisible="False">
               <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="19" Height="19" Data="{DynamicResource UiIconDatabase}" />
                 <TextBlock Text="{DynamicResource UiTextConnections}" />
@@ -374,4 +369,4 @@
       </Grid>
     </Grid>
   </Grid>
-</Window>
+</UserControl>

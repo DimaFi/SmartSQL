@@ -2,7 +2,7 @@
 
 Созданы и проверены 15 октября 2026. [Общий план](https://github.com/DimaFi/SmartSQL/issues/1). Критерии и зависимости: [TASKS.md](TASKS.md), [WORK_PLAN.md](WORK_PLAN.md). Сопоставление для инструментов: [github-issues.json](github-issues.json).
 
-Первоначальная публикация полной локальной истории подтверждена коммитом [2dda16a](https://github.com/DimaFi/SmartSQL/commit/2dda16a48b44977253fc16cf6a6bd5e8835b69d1). Это SHA опубликованного среза; текущий HEAD проверяйте через Git. Код не менялся: последняя функциональная проверка — 374 теста, включая 41 PostgreSQL-проверку; UI-приёмка открыта.
+Первоначальная публикация полной локальной истории подтверждена коммитом [2dda16a](https://github.com/DimaFi/SmartSQL/commit/2dda16a48b44977253fc16cf6a6bd5e8835b69d1). Это SHA опубликованного среза; текущий HEAD проверяйте через Git. Текущий срез T07/T08: Debug без предупреждений, 404 теста, включая 41 PostgreSQL-проверку; ручная UI-приёмка открыта. Сценарии оболочки: [чек-лист](WORKSPACE_UI_ACCEPTANCE.md).
 
 | ID | GitHub | Задача | Состояние |
 | --- | --- | --- | --- |
@@ -12,8 +12,8 @@
 | T04 | [#5](https://github.com/DimaFi/SmartSQL/issues/5) | Ручная приёмка новых PostgreSQL/SQLite сценариев | Ручная приёмка открыта |
 | T05 | [#6](https://github.com/DimaFi/SmartSQL/issues/6) | Публикация плана и передачи работы в GitHub | Публикация выполнена |
 | T06 | [#7](https://github.com/DimaFi/SmartSQL/issues/7) | Безопасное удаление строки PostgreSQL | Код/автопроверки готовы; UI — T04 |
-| T07 | [#8](https://github.com/DimaFi/SmartSQL/issues/8) | Главное окно с деревом подключений и вкладками | Запланировано |
-| T08 | [#9](https://github.com/DimaFi/SmartSQL/issues/9) | Выбор режима при первом запуске и постоянный переключатель | Запланировано |
+| T07 | [#8](https://github.com/DimaFi/SmartSQL/issues/8) | Главное окно с деревом подключений и вкладками | Код/автопроверки готовы; UI — T04 |
+| T08 | [#9](https://github.com/DimaFi/SmartSQL/issues/9) | Выбор режима при первом запуске и постоянный переключатель | Код/автопроверки готовы; UI — T04 |
 | T09 | [#10](https://github.com/DimaFi/SmartSQL/issues/10) | Фильтры по типам и нативная сортировка | Запланировано |
 | T10 | [#11](https://github.com/DimaFi/SmartSQL/issues/11) | Изменения обычного SQLite по подтверждённым ключам | Запланировано |
 | T11 | [#12](https://github.com/DimaFi/SmartSQL/issues/12) | Ручной SQL сначала для чтения | Запланировано |

@@ -4,7 +4,7 @@ Universal intelligent structured data management system with an adaptive natural
 
 ## Status
 
-Working local SQLite editor, ordinary SQLite browsing and PostgreSQL keyed updates/confirmed single-row insertion/deletion on Avalonia. Priorities and acceptance criteria: [development plan](docs/WORK_PLAN.md). Implemented capabilities and limitations: [matrix](docs/CAPABILITY_MATRIX.md). Published GitHub [roadmap](https://github.com/DimaFi/SmartSQL/issues/1) and [25 tasks](docs/GITHUB_TASKS.md). Verified publication and continuation instructions: [HANDOFF](docs/HANDOFF.md).
+Working Avalonia workspace with one connection tree and tabbed managed SQLite, ordinary SQLite and PostgreSQL tables. PostgreSQL supports keyed updates and confirmed single-row insertion/deletion. T07/T08 shell and mode code passes automated verification; visual acceptance remains open in [workspace UI acceptance](docs/WORKSPACE_UI_ACCEPTANCE.md). Priorities and criteria: [development plan](docs/WORK_PLAN.md). Implemented capabilities and limitations: [matrix](docs/CAPABILITY_MATRIX.md). The existing GitHub [roadmap](https://github.com/DimaFi/SmartSQL/issues/1) and [25 tasks](docs/GITHUB_TASKS.md) retain their IDs; current publication state must be checked as described in [HANDOFF](docs/HANDOFF.md).
 
 To see a populated application immediately, launch it and click **Открыть пример**. SmartSQL opens a separate editable database, `pedagogical-practice-demo.db`, with sample students, practice placements, organizations, and saved filters. Your default `smartsql.db` is not replaced. The demo button reopens the same file, so edits made there are preserved. A screenshot of the working query is in [docs/smartsql-demo-query.jpg](docs/smartsql-demo-query.jpg).
 
@@ -30,7 +30,7 @@ JSON exchange uses the portable `SmartSQL.Table.v1` format described in [docs/JS
 
 CSV, JSON, and XLSX exports include the **entire selected table**, regardless of the current page, search, or filters. They write to a temporary file beside the destination and publish the destination only after successful completion. Existing files are never overwritten, and a failed export removes its own temporary file.
 
-The Russian desktop shell has simple and expanded modes, a warm shared theme, native vector icons and grouped commands. Expanded mode adds saved filters and a structure inspector without resetting table state. Column headers sort the entire local table. See [desktop interface](docs/DESKTOP_INTERFACE.md) for extension and localization guidelines.
+The Russian desktop uses one `WorkspaceWindow`: a shared connection tree on the left, independent table tabs in the center and a global Simple/Advanced switch. The first-run choice is stored atomically in local JSON. Switching mode keeps open tab state and never grants write access. Managed SQLite uses its existing editor inside the workspace; each native table tab owns a separate provider session, so equal table names from different connections do not collide and closing a loading tab cancels its work. Tabs and credentials are not persisted, and SQL has not been added. Expanded managed mode adds saved filters and a structure inspector. See [desktop interface](docs/DESKTOP_INTERFACE.md) and the open [visual acceptance checklist](docs/WORKSPACE_UI_ACCEPTANCE.md).
 
 ## Solution Structure
 
@@ -75,4 +75,4 @@ Run the desktop app with `./scripts/Run.ps1`. In this checkout the default data 
 ./scripts/Test.ps1
 ```
 
-The tests cover the model, SQLite persistence, search, safe migration, CSV/JSON/XLSX exchange, clipboard paste, decimal precision, and atomic file export. Add `-Offline` to the helper scripts when using the prepared local NuGet cache.
+The latest full verification passed a warning-free Debug build and **404 tests**: Domain 1, Application 113, Infrastructure 281 and Desktop 9. This includes all **41 real PostgreSQL facts**, with zero skipped tests. The suite covers SQLite persistence, search, safe migration, CSV/JSON/XLSX exchange, clipboard paste, decimal precision, atomic export, workspace identity/session isolation, cancellation and mode preferences. Visual acceptance is tracked separately. Add `-Offline` to the helper scripts when using the prepared local NuGet cache.

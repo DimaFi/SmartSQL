@@ -1,11 +1,28 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SmartSQL.Application;
 
 namespace SmartSQL.Desktop.Views;
 
 public partial class MainWindow
 {
     private bool _presentationInitialized;
+    private bool _settingPresentationMode;
+    private WorkspacePresentationMode _presentationMode = WorkspacePresentationMode.Simple;
+
+    public event Action<WorkspacePresentationMode>? PresentationModeChanged;
+
+    public void SetPresentationMode(WorkspacePresentationMode mode)
+    {
+        if (_presentationMode == mode && PresentationModeToggle.IsChecked == (mode == WorkspacePresentationMode.Advanced))
+            return;
+
+        _settingPresentationMode = true;
+        _presentationMode = mode;
+        PresentationModeToggle.IsChecked = mode == WorkspacePresentationMode.Advanced;
+        _settingPresentationMode = false;
+        ApplyPresentationMode();
+    }
 
     private void InitializePresentation()
     {
@@ -20,12 +37,19 @@ public partial class MainWindow
         if (!_presentationInitialized)
             return;
 
+        var mode = PresentationModeToggle.IsChecked == true
+            ? WorkspacePresentationMode.Advanced
+            : WorkspacePresentationMode.Simple;
+        var changed = _presentationMode != mode;
+        _presentationMode = mode;
         ApplyPresentationMode();
+        if (changed && !_settingPresentationMode)
+            PresentationModeChanged?.Invoke(mode);
     }
 
     private void ApplyPresentationMode()
     {
-        AdvancedToolsPanel.IsVisible = PresentationModeToggle.IsChecked == true;
+        AdvancedToolsPanel.IsVisible = _presentationMode == WorkspacePresentationMode.Advanced;
         UpdateResponsiveLayout();
     }
 
@@ -37,10 +61,10 @@ public partial class MainWindow
         if (!_presentationInitialized)
             return;
 
-        var width = Bounds.Width > 0 ? Bounds.Width : Width;
-        var height = Bounds.Height > 0 ? Bounds.Height : Height;
+        var width = Bounds.Width > 0 ? Bounds.Width : 1480;
+        var height = Bounds.Height > 0 ? Bounds.Height : 900;
         var compact = width < 1180;
-        var advanced = PresentationModeToggle.IsChecked == true;
+        var advanced = _presentationMode == WorkspacePresentationMode.Advanced;
 
         BrandTaglineText.IsVisible = !compact;
         QuickPasteRowsButton.IsVisible = !compact;

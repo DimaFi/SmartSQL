@@ -12,7 +12,7 @@ using SmartSQL.Infrastructure;
 
 namespace SmartSQL.Desktop.Views;
 
-public partial class MainWindow : Window
+public partial class MainWindow : UserControl
 {
     private const int PageSize = 100;
     private IDataWorkspace? _workspace;
@@ -29,13 +29,34 @@ public partial class MainWindow : Window
 
     private sealed record CellChange(Guid TableId, Guid RecordId, Guid FieldId, string? OldValue);
 
-    public MainWindow()
+    public event Action? OpenConnectionsRequested;
+    public event Action? OpenNativeSqliteRequested;
+    public event Action<string>? WorkspaceOpened;
+    public event Action? TablesChanged;
+    public event Action? SelectedTableChanged;
+
+    public string? WorkspacePath => _workspace?.FilePath;
+    public IReadOnlyList<TableDefinition> WorkspaceTables => _workspace?.GetTables() ?? [];
+    public Guid? SelectedTableId => _currentTable?.Id;
+    public bool CanClose => !_transferInProgress;
+
+    public MainWindow() : this(null, null)
+    {
+    }
+
+    public MainWindow(string? path, Guid? tableId = null)
     {
         InitializeComponent();
         InitializePresentation();
+        if (path is not null)
+        {
+            SetWorkspace(path, tableId);
+            return;
+        }
+
         try
         {
-            SetWorkspace(WorkspacePaths.DefaultDatabasePath);
+            SetWorkspace(WorkspacePaths.DefaultDatabasePath, tableId);
         }
         catch (Exception exception)
         {
@@ -43,7 +64,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void SetWorkspace(string path)
+    private void SetWorkspace(string path, Guid? tableId = null)
     {
         var workspace = new SqliteWorkspace(path);
         _workspace = workspace;
@@ -61,7 +82,6 @@ public partial class MainWindow : Window
         UndoButton.IsEnabled = false;
         DatabaseNameText.Text = Path.GetFileNameWithoutExtension(workspace.FilePath);
         DatabasePathText.Text = workspace.FilePath;
-        Title = $"SmartSQL — {Path.GetFileName(workspace.FilePath)}";
         CurrentTableText.Text = "Выберите или создайте таблицу";
         TableSummaryText.Text = "Данные хранятся локально";
         StatusText.Text = string.Empty;
@@ -92,10 +112,27 @@ public partial class MainWindow : Window
         PreviousButton.IsEnabled = false;
         NextButton.IsEnabled = false;
         RefreshTables();
+        if (tableId.HasValue)
+            TablesList.SelectedItem = (TablesList.ItemsSource as IEnumerable<TableDefinition>)?
+                .FirstOrDefault(table => table.Id == tableId.Value);
         RefreshPresentation();
     }
 
-    private void RefreshTables() => TablesList.ItemsSource = _workspace?.GetTables().ToArray();
+    private void RefreshTables()
+    {
+        TablesList.ItemsSource = _workspace?.GetTables().ToArray();
+        TablesChanged?.Invoke();
+    }
+
+    private TopLevel GetHostTopLevel() =>
+        TopLevel.GetTopLevel(this) ?? throw new InvalidOperationException("Редактор ещё не присоединён к окну.");
+
+    private Window GetDialogOwner() =>
+        GetHostTopLevel() as Window ?? throw new InvalidOperationException("Не удалось определить окно редактора.");
+
+    private IStorageProvider StorageProvider => GetHostTopLevel().StorageProvider;
+
+    private Avalonia.Input.Platform.IClipboard? Clipboard => GetHostTopLevel().Clipboard;
 
     private bool BeginTransfer()
     {
@@ -120,6 +157,7 @@ public partial class MainWindow : Window
             SetWorkspace(demo.Path);
             TablesList.SelectedItem = ((IEnumerable<TableDefinition>)TablesList.ItemsSource!)
                 .First(table => table.Id == demo.MainTableId);
+            WorkspaceOpened?.Invoke(demo.Path);
             StatusText.Text = "Демонстрационная база открыта. Вы можете редактировать записи и применять сохранённые фильтры.";
         }
         catch (Exception exception)
@@ -145,6 +183,7 @@ public partial class MainWindow : Window
             if (File.Exists(path))
                 throw new IOException("Файл уже существует. Чтобы открыть его, используйте «Открыть базу».");
             SetWorkspace(path);
+            WorkspaceOpened?.Invoke(path);
         }
         catch (Exception exception)
         {
@@ -169,6 +208,7 @@ public partial class MainWindow : Window
             if (!File.Exists(path))
                 throw new FileNotFoundException("Файл базы не найден.", path);
             SetWorkspace(path);
+            WorkspaceOpened?.Invoke(path);
         }
         catch (Exception exception)
         {
@@ -219,7 +259,7 @@ public partial class MainWindow : Window
             var sourcePath = files[0].TryGetLocalPath()
                 ?? throw new InvalidOperationException("Нужен локальный файл резервной копии.");
             var currentPath = _workspace.FilePath;
-            var result = await new RestoreBackupDialog(_workspace, sourcePath).ShowDialog<RestorationResult?>(this);
+            var result = await new RestoreBackupDialog(_workspace, sourcePath).ShowDialog<RestorationResult?>(GetDialogOwner());
             if (result is null)
                 return;
             SetWorkspace(currentPath);
@@ -237,7 +277,7 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var table = await new CreateTableDialog(_workspace).ShowDialog<TableDefinition?>(this);
+            var table = await new CreateTableDialog(_workspace).ShowDialog<TableDefinition?>(GetDialogOwner());
             if (table is null)
                 return;
             RefreshTables();
@@ -278,7 +318,7 @@ public partial class MainWindow : Window
             });
             var source = await Task.Run(() => CsvTransfer.InspectNewTable(content));
             var preview = await new CsvNewTableDialog(content, source, Path.GetFileNameWithoutExtension(path))
-                .ShowDialog<CsvNewTablePreview?>(this);
+                .ShowDialog<CsvNewTablePreview?>(GetDialogOwner());
             if (preview is null)
             {
                 StatusText.Text = "Создание таблицы отменено. Данные не изменены.";
@@ -308,7 +348,7 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var field = await new AddFieldDialog(_workspace, _currentTable.Id).ShowDialog<FieldDefinition?>(this);
+            var field = await new AddFieldDialog(_workspace, _currentTable.Id).ShowDialog<FieldDefinition?>(GetDialogOwner());
             if (field is null)
                 return;
             var tableId = _currentTable.Id;
@@ -328,7 +368,7 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var updated = await new EditSchemaDialog(_workspace, _currentTable).ShowDialog<TableDefinition?>(this);
+            var updated = await new EditSchemaDialog(_workspace, _currentTable).ShowDialog<TableDefinition?>(GetDialogOwner());
             if (updated is null)
                 return;
             RefreshTables();
@@ -347,7 +387,7 @@ public partial class MainWindow : Window
             return;
         var tableId = _currentTable.Id;
         var result = await new DeleteSchemaDialog(_workspace, _currentTable, deleteTable: false)
-            .ShowDialog<DestructiveChangeResult?>(this);
+            .ShowDialog<DestructiveChangeResult?>(GetDialogOwner());
         if (result is null)
             return;
         RefreshTables();
@@ -360,7 +400,7 @@ public partial class MainWindow : Window
         if (_workspace is null || _currentTable is null)
             return;
         var result = await new DeleteSchemaDialog(_workspace, _currentTable, deleteTable: true)
-            .ShowDialog<DestructiveChangeResult?>(this);
+            .ShowDialog<DestructiveChangeResult?>(GetDialogOwner());
         if (result is null)
             return;
         RefreshTables();
@@ -409,6 +449,7 @@ public partial class MainWindow : Window
             EmptyStateText.IsVisible = false;
             WelcomePanel.IsVisible = true;
             RefreshPresentation();
+            SelectedTableChanged?.Invoke();
             return;
         }
         WelcomePanel.IsVisible = false;
@@ -452,6 +493,7 @@ public partial class MainWindow : Window
             });
         }
         RefreshRecords();
+        SelectedTableChanged?.Invoke();
     }
 
     private void RefreshRecords()
@@ -550,13 +592,13 @@ public partial class MainWindow : Window
                 return reader.ReadToEnd();
             });
             var source = await Task.Run(() => CsvTransfer.Inspect(table, content));
-            var preview = await new CsvMappingDialog(table, content, source).ShowDialog<CsvImportPreview?>(this);
+            var preview = await new CsvMappingDialog(table, content, source).ShowDialog<CsvImportPreview?>(GetDialogOwner());
             if (preview is null)
             {
                 StatusText.Text = "Импорт отменён. Данные не изменены.";
                 return;
             }
-            if (!await new CsvPreviewDialog(preview).ShowDialog<bool>(this))
+            if (!await new CsvPreviewDialog(preview).ShowDialog<bool>(GetDialogOwner()))
             {
                 StatusText.Text = "Импорт отменён. Данные не изменены.";
                 return;
@@ -649,7 +691,7 @@ public partial class MainWindow : Window
                 return reader.ReadToEnd();
             });
             var preview = await Task.Run(() => JsonTableTransfer.PrepareImport(workspace, tableId, content));
-            if (!await new JsonPreviewDialog(preview, _currentTable).ShowDialog<bool>(this))
+            if (!await new JsonPreviewDialog(preview, _currentTable).ShowDialog<bool>(GetDialogOwner()))
             {
                 StatusText.Text = "Импорт отменён. Данные не изменены.";
                 return;
@@ -764,7 +806,7 @@ public partial class MainWindow : Window
                 new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Children = { cancel, delete } }
             }
         };
-        return await dialog.ShowDialog<bool>(this);
+        return await dialog.ShowDialog<bool>(GetDialogOwner());
     }
 
     private void OnPreviousPage(object? sender, RoutedEventArgs e)
@@ -841,7 +883,7 @@ public partial class MainWindow : Window
             return;
         try
         {
-            var filters = await new FilterDialog(_currentTable, _filters).ShowDialog<IReadOnlyList<RecordFilter>?>(this);
+            var filters = await new FilterDialog(_currentTable, _filters).ShowDialog<IReadOnlyList<RecordFilter>?>(GetDialogOwner());
             if (filters is null)
                 return;
             _filters = filters;
@@ -910,7 +952,7 @@ public partial class MainWindow : Window
         try
         {
             var suggested = (SavedFilterBox.SelectedItem as SavedFilterDefinition)?.Name;
-            var name = await new SaveFilterDialog(suggested).ShowDialog<string?>(this);
+            var name = await new SaveFilterDialog(suggested).ShowDialog<string?>(GetDialogOwner());
             if (name is null)
                 return;
             var saved = _workspace.SaveFilter(_currentTable.Id, name, _filters);

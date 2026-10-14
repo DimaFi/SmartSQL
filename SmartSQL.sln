@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartSQL.Application.Tests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartSQL.Infrastructure.Tests", "tests\SmartSQL.Infrastructure.Tests\SmartSQL.Infrastructure.Tests.csproj", "{D1D4EDCB-6C8B-4562-9FDB-AE0BE589D93A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmartSQL.Desktop.Tests", "tests\SmartSQL.Desktop.Tests\SmartSQL.Desktop.Tests.csproj", "{C1740690-5598-427F-B1E2-66DB33A6BB98}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,6 +32,10 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C1740690-5598-427F-B1E2-66DB33A6BB98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1740690-5598-427F-B1E2-66DB33A6BB98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1740690-5598-427F-B1E2-66DB33A6BB98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1740690-5598-427F-B1E2-66DB33A6BB98}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8F19A8DB-5D6D-40DD-B1FA-CDD8614F7F60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8F19A8DB-5D6D-40DD-B1FA-CDD8614F7F60}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F19A8DB-5D6D-40DD-B1FA-CDD8614F7F60}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -60,6 +66,7 @@ Global
 		{D1D4EDCB-6C8B-4562-9FDB-AE0BE589D93A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{C1740690-5598-427F-B1E2-66DB33A6BB98} = {F70DD578-4870-4917-AFA4-1E10F69424D1}
 		{8F19A8DB-5D6D-40DD-B1FA-CDD8614F7F60} = {C26CA9E9-8AE9-4428-8CFF-BA70466ADBD7}
 		{D58A8E00-1D90-401C-B0A8-87DC03C018EB} = {C26CA9E9-8AE9-4428-8CFF-BA70466ADBD7}
 		{FA515141-7515-47A2-82EF-949A10DE0ADE} = {C26CA9E9-8AE9-4428-8CFF-BA70466ADBD7}

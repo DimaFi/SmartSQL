@@ -14,18 +14,20 @@ using SmartSQL.Desktop.Presentation;
 namespace SmartSQL.Desktop.Views;
 
 /// <summary>Provider-neutral database browser with optional, explicitly enabled safe editing operations.</summary>
-public sealed class DatabaseBrowserWindow : Window
+public sealed class DatabaseTableView : UserControl, IAsyncDisposable
 {
     private const int PageSize = 100;
     private readonly string _databaseName;
     private readonly string _providerLabel;
-    private readonly ConnectionProfile? _profile;
-    private readonly Func<ConnectionProfile, string, CancellationToken, Task<IDatabaseBrowser>>? _profileConnectAsync;
-    private readonly Func<CancellationToken, Task<IDatabaseBrowser>>? _directConnectAsync;
+    private readonly DatabaseTableRef _table;
+    private Func<CancellationToken, Task<IDatabaseBrowser>>? _connectAsync;
+    private readonly Border _inspector = new();
+    private readonly CheckBox _showStructure = new() { Content = "Структура", VerticalAlignment = VerticalAlignment.Center };
+    private readonly HashSet<Window> _dialogs = [];
+    private Task? _initialization;
+    private Task? _disposal;
+    private TaskCompletionSource? _operationCompletion;
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly ComboBox _schemas = new();
-    private readonly ListBox _tables = new();
-    private readonly TextBox _objectSearch = new() { PlaceholderText = "Найти таблицу или схему…" };
     private readonly TextBox _search = new() { PlaceholderText = "Поиск по всем полям…", MaxLength = 256, Width = 225 };
     private readonly ComboBox _sortColumn = new() { Width = 190 };
     private readonly CheckBox _descending = new() { Content = "Убывание", VerticalAlignment = VerticalAlignment.Center };
@@ -35,7 +37,6 @@ public sealed class DatabaseBrowserWindow : Window
     private readonly DataGrid _structure = new() { AutoGenerateColumns = false, IsReadOnly = true };
     private readonly TextBlock _identity = new() { Text = "Выберите таблицу", FontSize = 22, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _objectKind = new() { Text = "Схемы, таблицы и представления", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _catalogCount = new() { Text = "КАТАЛОГ БАЗЫ", Classes = { "caption" } };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _querySummary = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _diagnostics = new() { TextWrapping = TextWrapping.Wrap };
@@ -43,13 +44,11 @@ public sealed class DatabaseBrowserWindow : Window
     private readonly Button _previous = new() { Content = "←", IsEnabled = false, Width = 38, Padding = new Thickness(0) };
     private readonly Button _next = new() { Content = "→", IsEnabled = false, Width = 38, Padding = new Thickness(0) };
     private readonly Button _refreshTable = new() { Content = "Обновить", IsEnabled = false };
-    private readonly Button _refreshCatalog = new() { Content = "Обновить каталог", IsEnabled = false };
     private readonly Button _cancelOperation = new() { Content = "Отмена", IsEnabled = false };
     private readonly Button _editCell = new() { Content = "Изменить значение", IsEnabled = false, IsVisible = false };
     private readonly Button _insertRow = new() { Content = "+ Новая запись", IsEnabled = false, IsVisible = false };
     private readonly Button _deleteRow = new() { Content = "Удалить строку", IsEnabled = false, IsVisible = false };
     private readonly TextBlock _mode = new() { VerticalAlignment = VerticalAlignment.Center };
-    private IReadOnlyList<DatabaseTableRef> _catalog = [];
     private IDatabaseBrowser? _browser;
     private IDatabaseEditor? _editor;
     private IDatabaseRowCreator? _rowCreator;
@@ -59,11 +58,8 @@ public sealed class DatabaseBrowserWindow : Window
     private DatabaseInsertCapabilities? _insertCapabilities;
     private DatabaseDeleteCapabilities? _deleteCapabilities;
     private CancellationTokenSource? _operation;
-    private string _password = string.Empty;
     private bool _busy;
     private bool _closed;
-    private bool _ignoreSelections;
-    private bool _connectionStarted;
     private bool _reloadRequiredBeforeWrite;
     private bool _deleteDialogOpen;
     private DatabaseBrowseQuery _query = new();
@@ -73,121 +69,48 @@ public sealed class DatabaseBrowserWindow : Window
         public override string ToString() => Name ?? "Исходный порядок";
     }
 
-    private sealed record SchemaChoice(string? Name)
-    {
-        public override string ToString() => Name ?? "Все схемы";
-    }
-
-    private sealed record TableChoice(DatabaseTableRef Table)
-    {
-        public override string ToString() => $"{Table.Schema} · {Table.Name}\n{KindLabel(Table.Kind)}";
-    }
-
     private sealed record DisplayRow(IReadOnlyList<string?> Values, Guid? EditHandle, Guid? DeleteHandle);
     private sealed record ColumnRow(int Position, string Name, string NativeType, string Nullable,
         string PrimaryKey, string Editability, string Insertability);
 
-    public DatabaseBrowserWindow(ConnectionProfile profile, string password,
-        Func<ConnectionProfile, string, CancellationToken, Task<IDatabaseBrowser>> connectAsync)
-        : this(profile?.Name ?? throw new ArgumentNullException(nameof(profile)), "PostgreSQL",
-            $"{profile.Host}:{profile.Port} · {profile.Database}", profile.Database)
-    {
-        _profile = profile;
-        _password = password ?? string.Empty;
-        _profileConnectAsync = connectAsync ?? throw new ArgumentNullException(nameof(connectAsync));
-    }
-
-    public DatabaseBrowserWindow(string connectionName, string providerLabel, string endpoint,
-        Func<CancellationToken, Task<IDatabaseBrowser>> connectAsync)
-        : this(connectionName, providerLabel, endpoint, connectionName)
-    {
-        _directConnectAsync = connectAsync ?? throw new ArgumentNullException(nameof(connectAsync));
-    }
-
-    private DatabaseBrowserWindow(string connectionName, string providerLabel, string endpoint, string databaseName)
+    public DatabaseTableView(string connectionName, string providerLabel, string endpoint, string databaseName,
+        DatabaseTableRef table, Func<CancellationToken, Task<IDatabaseBrowser>> connectAsync)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionName);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerLabel);
         ArgumentException.ThrowIfNullOrWhiteSpace(endpoint);
         ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
+        ArgumentNullException.ThrowIfNull(table);
+        _table = table;
         _databaseName = databaseName;
         _providerLabel = providerLabel;
-        Title = $"{connectionName} · {providerLabel} · SmartSQL";
-        Width = 1360;
-        Height = 760;
-        MinWidth = 850;
-        MinHeight = 550;
-        WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        _schemas.SelectionChanged += (_, _) => FilterTables();
-        _objectSearch.TextChanged += (_, _) => FilterTables();
-        _tables.SelectionChanged += async (_, _) => await TableSelectedAsync();
+        _connectAsync = connectAsync ?? throw new ArgumentNullException(nameof(connectAsync));
+        _identity.Text = table.Name;
         _previous.Click += async (_, _) => await ChangePageAsync(-PageSize);
         _next.Click += async (_, _) => await ChangePageAsync(PageSize);
         _refreshTable.Click += async (_, _) => await RefreshTableAsync();
-        _refreshCatalog.Click += async (_, _) => await RefreshCatalogAsync();
         _editCell.Click += async (_, _) => await EditSelectedCellAsync();
         _insertRow.Click += async (_, _) => await InsertRowAsync();
         _deleteRow.Click += async (_, _) => await DeleteSelectedRowAsync();
         _data.SelectionChanged += (_, _) => UpdateControls();
         _applyQuery.Click += async (_, _) => await ApplyQueryAsync();
-        _clearQuery.Click += async (_, _) =>
-        {
-            ResetQuery();
-            await ApplyQueryAsync();
-        };
+        _clearQuery.Click += async (_, _) => { ResetQuery(); await ApplyQueryAsync(); };
         _search.KeyDown += async (_, args) =>
         {
-            if (args.Key == Key.Enter)
-            {
-                args.Handled = true;
-                await ApplyQueryAsync();
-            }
+            if (args.Key == Key.Enter) { args.Handled = true; await ApplyQueryAsync(); }
         };
-        _cancelOperation.Click += (_, _) =>
-        {
-            _operation?.Cancel();
-            _status.Text = "Отмена операции…";
-        };
-        var disconnect = new Button { Content = "Отключиться" };
-        disconnect.Classes.Add("quiet");
+        _cancelOperation.Click += (_, _) => { _operation?.Cancel(); _status.Text = "Отмена операции…"; };
+        _showStructure.IsCheckedChanged += (_, _) => _inspector.IsVisible = _showStructure.IsChecked == true;
         _applyQuery.Classes.Add("primary");
         _editCell.Classes.Add("primary");
         _insertRow.Classes.Add("primary");
         _deleteRow.Classes.Add("danger");
         _applyQuery.Content = IconLabel("UiIconSearch", "Применить");
         _refreshTable.Content = IconLabel("UiIconRefresh", "Обновить");
-        _refreshCatalog.Content = IconLabel("UiIconRefresh", "Обновить каталог");
         _previous.Content = UiIcon.Create("UiIconChevronLeft", 16);
         _next.Content = UiIcon.Create("UiIconChevronRight", 16);
-        _tables.Classes.Add("navigation");
         _diagnostics.Classes.Add("muted");
         _status.Classes.Add("caption");
-        disconnect.Click += (_, _) => Close();
-        Opened += async (_, _) => await ConnectAsync();
-        Closed += async (_, _) => await ShutdownAsync();
-
-        _tables.ItemTemplate = new FuncDataTemplate<TableChoice>((choice, _) =>
-        {
-            if (choice is null) return null;
-            var label = new StackPanel { Spacing = 3 };
-            label.Children.Add(new TextBlock { Text = choice.Table.Name, FontWeight = FontWeight.SemiBold, FontSize = 13, TextWrapping = TextWrapping.Wrap });
-            label.Children.Add(new TextBlock { Text = $"{choice.Table.Schema} · {KindLabel(choice.Table.Kind)}", Classes = { "caption" }, FontSize = 11, TextWrapping = TextWrapping.Wrap });
-            ToolTip.SetTip(label, $"{choice.Table.Schema}.{choice.Table.Name}\n{KindLabel(choice.Table.Kind)}");
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("24,*"), ColumnSpacing = 6 };
-            var icon = UiIcon.Create(choice.Table.Kind == DatabaseObjectKind.View ? "UiIconStructure" : "UiIconTable", 17);
-            icon.VerticalAlignment = VerticalAlignment.Top;
-            icon.Margin = new Thickness(0, 2, 0, 0);
-            row.Children.Add(icon);
-            Grid.SetColumn(label, 1);
-            row.Children.Add(label);
-            return row;
-        });
-        _schemas.ItemTemplate = new FuncDataTemplate<SchemaChoice>((choice, _) =>
-        {
-            var text = new TextBlock { Text = choice?.ToString(), TextWrapping = TextWrapping.Wrap, FontSize = 13 };
-            ToolTip.SetTip(text, text.Text);
-            return text;
-        });
         _sortColumn.ItemTemplate = new FuncDataTemplate<SortChoice>((choice, _) =>
         {
             var text = new TextBlock { Text = choice?.ToString(), TextWrapping = TextWrapping.Wrap, FontSize = 13 };
@@ -196,108 +119,69 @@ public sealed class DatabaseBrowserWindow : Window
         });
         ToolTip.SetTip(_previous, "Предыдущая страница");
         ToolTip.SetTip(_next, "Следующая страница");
+        ToolTip.SetTip(_sortColumn, "Сортировка применяется ко всей таблице. Точные правила текста и NULL зависят от провайдера.");
+        ToolTip.SetTip(_search, "Буквальный поиск по всем полям. Обработка регистра зависит от провайдера. Enter — применить.");
         _data.RowHeight = 34;
         _data.ColumnHeaderHeight = 38;
         _structure.RowHeight = 36;
-        var navigator = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*,Auto"), RowSpacing = 12 };
-        navigator.Children.Add(_catalogCount);
-        Add(navigator, _objectSearch, 1);
-        Add(navigator, _schemas, 2);
-        Add(navigator, _tables, 3);
-        Add(navigator, _refreshCatalog, 4);
-        var dataTab = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 10 };
-        dataTab.Children.Add(_data);
-        var pagingControls = new StackPanel
-        {
-            Orientation = Orientation.Horizontal, Spacing = 12, Margin = new Thickness(0, 8, 0, 0),
-            Children = { _previous, _paging, _next }
-        };
-        var dataActions = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
-        var mutationActions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        _insertRow.Margin = new Thickness(0, 8, 0, 0);
-        _editCell.Margin = new Thickness(0, 8, 0, 0);
-        _deleteRow.Margin = new Thickness(0, 8, 0, 0);
-        mutationActions.Children.Add(_insertRow);
-        mutationActions.Children.Add(_editCell);
-        mutationActions.Children.Add(_deleteRow);
-        dataActions.Children.Add(mutationActions);
-        Grid.SetColumn(pagingControls, 1);
-        dataActions.Children.Add(pagingControls);
-        Add(dataTab, dataActions, 1);
         ConfigureStructureGrid();
-        var tabs = new TabControl
-        {
-            ItemsSource = new[]
-            {
-                new TabItem { Header = IconLabel("UiIconTable", "Данные"), FontSize = 14, Content = dataTab },
-                new TabItem { Header = IconLabel("UiIconStructure", "Структура"), FontSize = 14, Content = _structure }
-            }
-        };
-        var queryBar = new WrapPanel { Orientation = Orientation.Horizontal };
-        foreach (var control in new Control[] { _search, _sortColumn, _descending, _applyQuery, _clearQuery })
-        {
-            control.Margin = new Thickness(0, 0, 8, 6);
-            if (control is TemplatedControl templated)
-                templated.FontSize = 13;
-            queryBar.Children.Add(control);
-        }
-        ToolTip.SetTip(_sortColumn, "Сортировка применяется ко всей таблице. Точные правила текста и NULL зависят от провайдера.");
-        ToolTip.SetTip(_search, "Буквальный поиск по всем полям. Обработка регистра зависит от провайдера. Enter — применить.");
-        var detail = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*,Auto,Auto"), RowSpacing = 10 };
-        detail.Children.Add(new StackPanel { Spacing = 3, Margin = new Thickness(2, 0, 0, 4), Children = { _identity, _objectKind } });
-        Add(detail, Surface(queryBar, "UiSurfaceMutedBrush", new Thickness(10, 8, 2, 2), 8), 1);
+        var queryBar = WrappedBar(_search, _sortColumn, _descending, _applyQuery, _clearQuery,
+            _refreshTable, _cancelOperation, _showStructure);
+        var actions = WrappedBar(_insertRow, _editCell, _deleteRow, _previous, _paging, _next);
+        var dataArea = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 8 };
+        dataArea.Children.Add(_data);
+        Add(dataArea, actions, 1);
+        var inspectorContent = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8 };
+        inspectorContent.Children.Add(new TextBlock { Text = "Структура", Classes = { "sectionTitle" } });
+        Add(inspectorContent, _structure, 1);
+        _inspector.Child = inspectorContent;
+        _inspector.Width = 310;
+        _inspector.Padding = new Thickness(10);
+        _inspector.Bind(Border.BackgroundProperty, new DynamicResourceExtension("UiSurfaceMutedBrush"));
+        _inspector.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("UiBorderBrush"));
+        _inspector.BorderThickness = new Thickness(1);
+        _inspector.CornerRadius = new CornerRadius(8);
+        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 10 };
+        body.Children.Add(dataArea);
+        Grid.SetColumn(_inspector, 1);
+        body.Children.Add(_inspector);
+        var detail = new Grid { Margin = new Thickness(10), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*,Auto,Auto,Auto"), RowSpacing = 8 };
+        detail.Children.Add(new StackPanel { Spacing = 3, Children = { _identity, _objectKind } });
+        Add(detail, Surface(queryBar, "UiSurfaceMutedBrush", new Thickness(8, 6, 0, 0), 8), 1);
         Add(detail, _querySummary, 2);
-        Add(detail, tabs, 3);
-        Add(detail, new Expander { Header = "Особенности просмотра и ограничения", Content = new ScrollViewer { Content = _diagnostics, MaxHeight = 150 }, HorizontalAlignment = HorizontalAlignment.Stretch }, 4);
+        Add(detail, body, 3);
+        Add(detail, new Expander { Header = "Особенности просмотра и ограничения", Content = new ScrollViewer { Content = _diagnostics, MaxHeight = 120 }, HorizontalAlignment = HorizontalAlignment.Stretch }, 4);
         Add(detail, new TextBlock { Text = "∅ курсивом означает NULL · двойной щелчок — полное значение", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap }, 5);
-        var body = new Grid { ColumnDefinitions = new ColumnDefinitions("240,*"), ColumnSpacing = 12 };
-        body.Children.Add(Card(navigator));
-        var detailCard = Card(detail);
-        Grid.SetColumn(detailCard, 1);
-        body.Children.Add(detailCard);
-        var layout = new Grid { Margin = new Thickness(12, 10, 12, 8), RowDefinitions = new RowDefinitions("Auto,*,Auto"), RowSpacing = 12 };
-        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("200,*,Auto"), ColumnSpacing = 14, Margin = new Thickness(8, 2, 8, 4) };
-        header.Children.Add(new StackPanel
-        {
-            Spacing = 4,
-            Children =
-            {
-                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Children = { UiIcon.Create("UiIconBrand", 31), new TextBlock { Text = "SmartSQL", FontSize = 24, FontWeight = FontWeight.SemiBold } } },
-                new TextBlock { Text = "Исследуйте свои данные", Classes = { "caption" } }
-            }
-        });
-        var connectionLabel = new TextBlock { Text = $"{providerLabel} · {connectionName}", FontSize = 13, FontWeight = FontWeight.Medium, TextTrimming = TextTrimming.CharacterEllipsis, MaxWidth = 300 };
-        ToolTip.SetTip(connectionLabel, $"{connectionName}\n{endpoint}");
-        var connectionChip = Surface(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = {
-            UiIcon.Create("UiIconDatabase", 17), connectionLabel
-        } }, "UiSurfaceMutedBrush", new Thickness(14, 10), 18);
-        connectionChip.HorizontalAlignment = HorizontalAlignment.Left;
-        connectionChip.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(connectionChip, 1);
-        header.Children.Add(connectionChip);
-        var headerActions = new StackPanel
-        {
-            Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center,
-            Children = { _refreshTable, _cancelOperation, disconnect }
-        };
-        Grid.SetColumn(headerActions, 2);
-        header.Children.Add(headerActions);
-        layout.Children.Add(header);
-        Add(layout, body, 1);
-        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
-        footer.Children.Add(_status);
         _mode.Text = $"Только чтение · {providerLabel}";
-        var modeLabel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 7,
-            Children = { UiIcon.Create("UiIconLock", 16), _mode } };
-        Grid.SetColumn(modeLabel, 1);
-        footer.Children.Add(modeLabel);
-        Add(layout, Surface(footer, "UiSurfaceMutedBrush", new Thickness(12, 8), 8), 2);
-        Content = layout;
+        Add(detail, Surface(new StackPanel { Spacing = 4, Children = {
+            new TextBlock { Text = $"{connectionName} · {providerLabel} · {endpoint}", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap },
+            _status, _mode
+        } }, "UiSurfaceMutedBrush", new Thickness(10, 6), 8), 6);
+        Content = detail;
         ResetQuery();
+        SetPresentationMode(WorkspacePresentationMode.Advanced);
         UpdateControls();
     }
 
-    private static Border Card(Control content) => new() { Classes = { "card" }, Padding = new Thickness(14), Child = content };
+    private static WrapPanel WrappedBar(params Control[] controls)
+    {
+        var bar = new WrapPanel { Orientation = Orientation.Horizontal };
+        foreach (var control in controls)
+        {
+            control.Margin = new Thickness(0, 0, 8, 6);
+            if (control is TemplatedControl templated) templated.FontSize = 13;
+            bar.Children.Add(control);
+        }
+        return bar;
+    }
+
+    public void SetPresentationMode(WorkspacePresentationMode mode)
+    {
+        _showStructure.IsChecked = mode == WorkspacePresentationMode.Advanced;
+        _inspector.IsVisible = _showStructure.IsChecked == true;
+    }
+
+    public Task InitializeAsync() => _initialization ??= ConnectAsync();
 
     private static StackPanel IconLabel(string icon, string text) => new()
     {
@@ -340,20 +224,13 @@ public sealed class DatabaseBrowserWindow : Window
 
     private async Task ConnectAsync()
     {
-        if (_connectionStarted || _closed)
-            return;
-        _connectionStarted = true;
-        var password = _password;
-        _password = string.Empty;
+        if (_closed) return;
         await RunOperationAsync(async cancellationToken =>
         {
+            var connect = _connectAsync ?? throw new InvalidOperationException("Фабрика подключения не настроена.");
             IDatabaseBrowser browser;
-            if (_profile is not null && _profileConnectAsync is not null)
-                browser = await _profileConnectAsync(_profile, password, cancellationToken);
-            else if (_directConnectAsync is not null)
-                browser = await _directConnectAsync(cancellationToken);
-            else
-                throw new InvalidOperationException("Фабрика подключения не настроена.");
+            try { browser = await connect(cancellationToken); }
+            finally { _connectAsync = null; }
             if (_closed || cancellationToken.IsCancellationRequested)
             {
                 await browser.DisposeAsync();
@@ -361,86 +238,17 @@ public sealed class DatabaseBrowserWindow : Window
                 return;
             }
             _browser = browser;
-            var editor = browser as IDatabaseEditor;
-            _editor = editor is { EditingEnabled: true } ? editor : null;
-            var rowCreator = browser as IDatabaseRowCreator;
-            _rowCreator = rowCreator is { EditingEnabled: true } ? rowCreator : null;
-            var rowDeleter = browser as IDatabaseRowDeleter;
-            _rowDeleter = rowDeleter is { EditingEnabled: true } ? rowDeleter : null;
+            _editor = browser is IDatabaseEditor { EditingEnabled: true } editor ? editor : null;
+            _rowCreator = browser is IDatabaseRowCreator { EditingEnabled: true } creator ? creator : null;
+            _rowDeleter = browser is IDatabaseRowDeleter { EditingEnabled: true } deleter ? deleter : null;
             _editCell.IsVisible = _editor is not null;
             _insertRow.IsVisible = _rowCreator is not null;
             _deleteRow.IsVisible = _rowDeleter is not null;
             _mode.Text = _editor is null && _rowCreator is null && _rowDeleter is null
                 ? $"Только чтение · {_providerLabel}"
                 : $"Безопасное редактирование включено · {_providerLabel}";
-            await LoadCatalogCoreAsync(cancellationToken);
-        }, "Подключение и загрузка списка таблиц…");
-    }
-
-    private async Task RefreshCatalogAsync() => await RunOperationAsync(LoadCatalogCoreAsync, "Обновление списка таблиц…");
-
-    private async Task LoadCatalogCoreAsync(CancellationToken cancellationToken)
-    {
-        if (_browser is null)
-            return;
-        var catalog = await _browser.GetTablesAsync(cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (_closed)
-            return;
-        _catalog = catalog.OrderBy(table => table.Schema, StringComparer.Ordinal)
-            .ThenBy(table => table.Name, StringComparer.Ordinal).ToArray();
-        _catalogCount.Text = $"КАТАЛОГ БАЗЫ · {_catalog.Count}";
-        _ignoreSelections = true;
-        try
-        {
-            _schemas.ItemsSource = new[] { new SchemaChoice(null) }
-                .Concat(_catalog.Select(table => table.Schema).Distinct(StringComparer.Ordinal).Select(name => new SchemaChoice(name))).ToArray();
-            _schemas.SelectedIndex = 0;
-            PopulateTableList();
-        }
-        finally
-        {
-            _ignoreSelections = false;
-        }
-        _status.Text = _catalog.Count == 0
-            ? "Доступных таблиц и представлений не найдено. Проверьте права пользователя."
-            : $"Подключено. Доступно объектов: {_catalog.Count}. Выберите таблицу слева.";
-    }
-
-    private void FilterTables()
-    {
-        if (_ignoreSelections || _busy || _closed)
-            return;
-        PopulateTableList();
-        UpdateControls();
-    }
-
-    private void PopulateTableList()
-    {
-        var schema = (_schemas.SelectedItem as SchemaChoice)?.Name;
-        var term = _objectSearch.Text ?? string.Empty;
-        _tables.ItemsSource = _catalog.Where(table => schema is null || table.Schema == schema)
-            .Where(table => table.Name.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || table.Schema.Contains(term, StringComparison.OrdinalIgnoreCase))
-            .Select(table => new TableChoice(table)).ToArray();
-        _tables.SelectedItem = null;
-        ResetQuery();
-        ClearTable();
-    }
-
-    private async Task TableSelectedAsync()
-    {
-        if (_ignoreSelections || _busy || _closed)
-            return;
-        if (_tables.SelectedItem is not TableChoice choice)
-        {
-            ClearTable();
-            UpdateControls();
-            return;
-        }
-        ResetQuery();
-        ClearTable();
-        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(choice.Table, 0, cancellationToken), "Загрузка структуры и первой страницы…");
+            await LoadTableCoreAsync(_table, 0, cancellationToken);
+        }, "Подключение и загрузка таблицы…");
     }
 
     private void ResetQuery()
@@ -454,7 +262,7 @@ public sealed class DatabaseBrowserWindow : Window
 
     private async Task ApplyQueryAsync()
     {
-        if (_busy || _closed || _tables.SelectedItem is not TableChoice choice)
+        if (_busy || _closed)
             return;
         var query = new DatabaseBrowseQuery(_search.Text, (_sortColumn.SelectedItem as SortChoice)?.Name,
             _descending.IsChecked == true);
@@ -468,27 +276,25 @@ public sealed class DatabaseBrowserWindow : Window
             return;
         }
         _query = query;
-        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(choice.Table, 0, cancellationToken), "Поиск и сортировка данных…");
+        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, 0, cancellationToken), "Поиск и сортировка данных…");
     }
 
     private async Task RefreshTableAsync()
     {
-        if (_tables.SelectedItem is not TableChoice choice)
-            return;
         var offset = _page?.Offset ?? 0;
-        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(choice.Table, offset, cancellationToken), "Обновление структуры и данных…");
+        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, offset, cancellationToken), "Обновление структуры и данных…");
     }
 
     private async Task ChangePageAsync(int delta)
     {
-        if (_page is not { } page || _tables.SelectedItem is not TableChoice choice || choice.Table != page.Table)
+        if (_page is not { } page || _table != page.Table)
             return;
         if (delta > 0 && !page.HasMore || delta < 0 && page.Offset == 0)
             return;
         if (page.Offset > long.MaxValue - PageSize)
             return;
         var offset = Math.Max(0, page.Offset + delta);
-        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(choice.Table, offset, cancellationToken), "Загрузка страницы…");
+        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, offset, cancellationToken), "Загрузка страницы…");
     }
 
     private async Task EditSelectedCellAsync()
@@ -504,8 +310,7 @@ public sealed class DatabaseBrowserWindow : Window
         DatabaseCellEditChoice? choice;
         try
         {
-            choice = await new DatabaseCellEditDialog(capabilities, page.Columns, row.Values)
-                .ShowDialog<DatabaseCellEditChoice?>(this);
+            choice = await ShowOwnedDialogAsync<DatabaseCellEditChoice?>(new DatabaseCellEditDialog(capabilities, page.Columns, row.Values));
         }
         catch (ArgumentException exception)
         {
@@ -523,6 +328,7 @@ public sealed class DatabaseBrowserWindow : Window
         {
             try
             {
+                _reloadRequiredBeforeWrite = true;
                 await editor.UpdateCellAsync(request, cancellationToken);
             }
             catch (DatabaseBrowserException exception) when (IsEditConflict(exception))
@@ -628,7 +434,7 @@ public sealed class DatabaseBrowserWindow : Window
         DatabaseInsertChoice? choice;
         try
         {
-            choice = await new DatabaseInsertDialog(capabilities).ShowDialog<DatabaseInsertChoice?>(this);
+            choice = await ShowOwnedDialogAsync<DatabaseInsertChoice?>(new DatabaseInsertDialog(capabilities));
         }
         catch (ArgumentException exception)
         {
@@ -646,6 +452,7 @@ public sealed class DatabaseBrowserWindow : Window
         {
             try
             {
+                _reloadRequiredBeforeWrite = true;
                 await creator.InsertRowAsync(request, cancellationToken);
             }
             catch (DatabaseBrowserException exception) when (IsInsertCommitUnknown(exception))
@@ -729,8 +536,7 @@ public sealed class DatabaseBrowserWindow : Window
         UpdateControls();
         try
         {
-            confirmed = await new DatabaseRowDeleteDialog(_databaseName, page.Table, page.Columns, row.Values)
-                .ShowDialog<bool>(this);
+            confirmed = await ShowOwnedDialogAsync<bool>(new DatabaseRowDeleteDialog(_databaseName, page.Table, page.Columns, row.Values));
         }
         catch (ArgumentException exception)
         {
@@ -758,6 +564,7 @@ public sealed class DatabaseBrowserWindow : Window
             DatabaseDeleteResult result;
             try
             {
+                _reloadRequiredBeforeWrite = true;
                 result = await deleter.DeleteRowAsync(request, cancellationToken);
             }
             catch (DatabaseBrowserException exception) when (IsDeleteConflict(exception))
@@ -909,7 +716,7 @@ public sealed class DatabaseBrowserWindow : Window
         Grid.SetRow(actions, 1);
         layout.Children.Add(actions);
         dialog.Content = layout;
-        return await dialog.ShowDialog<bool>(this);
+        return await ShowOwnedDialogAsync<bool>(dialog);
     }
 
     private async Task ReloadAfterSpecialResultAsync(DatabaseTableRef table, long offset,
@@ -1089,7 +896,7 @@ public sealed class DatabaseBrowserWindow : Window
                     text.DoubleTapped += async (_, args) =>
                     {
                         args.Handled = true;
-                        await new CellValueDialog(fieldName, value).ShowDialog(this);
+                        await ShowOwnedDialogAsync<object?>(new CellValueDialog(fieldName, value));
                     };
                     return text;
                 })
@@ -1169,11 +976,11 @@ public sealed class DatabaseBrowserWindow : Window
         _data.ItemsSource = null;
         _data.Columns.Clear();
         _structure.ItemsSource = null;
-        _identity.Text = "Выберите таблицу";
-        _objectKind.Text = _editor is null && _rowCreator is null && _rowDeleter is null
-            ? "Схемы, таблицы и представления · только чтение"
-            : "Схемы, таблицы и представления · безопасные операции по подтверждённым возможностям";
-        ToolTip.SetTip(_identity, null);
+        _identity.Text = _table.Name;
+        _objectKind.Text = $"{_table.Schema} / {KindLabel(_table.Kind)} · "
+            + (_editor is null && _rowCreator is null && _rowDeleter is null
+                ? "только чтение" : "безопасные операции по подтверждённым возможностям");
+        ToolTip.SetTip(_identity, $"{_table.Schema}.{_table.Name}");
         _querySummary.Text = string.Empty;
         _diagnostics.Text = string.Empty;
         _paging.Text = "По 100 записей на странице";
@@ -1184,6 +991,8 @@ public sealed class DatabaseBrowserWindow : Window
         if (_busy || _closed)
             return;
         _busy = true;
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _operationCompletion = completion;
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         _operation = operation;
         _status.ClearValue(TextBlock.ForegroundProperty);
@@ -1224,23 +1033,20 @@ public sealed class DatabaseBrowserWindow : Window
             _busy = false;
             if (!_closed)
                 UpdateControls();
+            completion.TrySetResult();
         }
     }
 
     private void UpdateControls()
     {
         var connected = _browser is not null;
-        _schemas.IsEnabled = connected && !_busy;
-        _objectSearch.IsEnabled = connected && !_busy;
-        _tables.IsEnabled = connected && !_busy;
-        var queryEnabled = connected && !_busy && _tables.SelectedItem is TableChoice;
+        var queryEnabled = connected && !_busy && !_closed;
         _search.IsEnabled = queryEnabled;
         _sortColumn.IsEnabled = queryEnabled;
         _descending.IsEnabled = queryEnabled;
         _applyQuery.IsEnabled = queryEnabled;
         _clearQuery.IsEnabled = queryEnabled;
-        _refreshCatalog.IsEnabled = connected && !_busy;
-        _refreshTable.IsEnabled = connected && !_busy && _tables.SelectedItem is TableChoice;
+        _refreshTable.IsEnabled = connected && !_busy && !_closed;
         _previous.IsEnabled = !_busy && _page is { Offset: > 0 };
         _next.IsEnabled = !_busy && _page is { HasMore: true };
         _editCell.IsEnabled = !_busy && !_reloadRequiredBeforeWrite && _editor is not null
@@ -1259,33 +1065,38 @@ public sealed class DatabaseBrowserWindow : Window
         _cancelOperation.IsEnabled = _busy;
     }
 
-    private async Task ShutdownAsync()
+    private async Task<T?> ShowOwnedDialogAsync<T>(Window dialog)
     {
-        if (_closed)
-            return;
+        if (_closed || TopLevel.GetTopLevel(this) is not Window owner) return default;
+        _dialogs.Add(dialog);
+        try { return await dialog.ShowDialog<T>(owner); }
+        finally { _dialogs.Remove(dialog); }
+    }
+
+    public ValueTask DisposeAsync() => new(_disposal ??= DisposeCoreAsync());
+
+    private async Task DisposeCoreAsync()
+    {
         _closed = true;
-        _password = string.Empty;
-        _lifetime.Cancel();
-        _operation?.Cancel();
+        _connectAsync = null;
+        var cancellation = _lifetime.CancelAsync();
+        foreach (var dialog in _dialogs.ToArray()) dialog.Close();
+        try { await cancellation; }
+        catch (AggregateException) { /* Cancellation is requested even if a provider callback fails. */ }
+        if (_operationCompletion is { } completion) await completion.Task;
         var browser = _browser;
         _browser = null;
         _editor = null;
         _rowCreator = null;
         _rowDeleter = null;
-        _editCapabilities = null;
-        _insertCapabilities = null;
-        _deleteCapabilities = null;
+        ClearTable();
+        IsEnabled = false;
         if (browser is not null)
         {
-            try
-            {
-                await browser.DisposeAsync();
-            }
-            catch (Exception)
-            {
-                // The window is closed; never expose provider credentials through cleanup errors.
-            }
+            try { await browser.DisposeAsync(); }
+            catch (Exception) { /* Cleanup must not expose provider credentials. */ }
         }
+        _dialogs.Clear();
         _lifetime.Dispose();
     }
 
