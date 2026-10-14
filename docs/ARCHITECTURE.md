@@ -138,3 +138,9 @@ The architecture should allow later implementation of:
 - data portability diagnostics.
 
 Manual/automatic local safety backups, validated restore, import/schema transactions, one-step cell undo, and format diagnostics are implemented. General action audit, broader undo, and cross-provider migration diagnostics remain planned.
+
+## Native Database Editing
+
+`IDatabaseBrowser` describes ordinary existing database objects and native display values independently of managed `IDataWorkspace` projects. `IDatabaseEditor` adds an optional explicit editing capability for one cell. Provider-confirmed column rules and lossless input validation live in Application; native SQL, permissions, keys, transient row handles, concurrency checks and transactions belong to Infrastructure.
+
+The first PostgreSQL editor defaults to read-only and enables writes only for the current opted-in connection. It supports selected built-in scalar fields on ordinary tables with reliable primary keys, protects keys/generated/unique fields and reports unsupported table features. It rechecks schema and row snapshots before writing, rejects precision loss, and never automatically repeats a conflicting or unconfirmed commit. No native SQL or unrestricted AI execution is introduced into Domain/Application.

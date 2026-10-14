@@ -17,8 +17,15 @@ public sealed record DatabaseTableRef(string Schema, string Name, DatabaseObject
 public sealed record DatabaseColumn(string Name, int Ordinal, string NativeType,
     bool IsNullable, int? PrimaryKeyOrder);
 
-/// <summary>Display values only. Null is distinct from an empty string; no row identity is invented.</summary>
-public sealed record DatabaseDisplayRow(IReadOnlyList<string?> Values);
+/// <summary>Display values with an optional transient provider edit handle; never a database row identity.</summary>
+public sealed record DatabaseDisplayRow(IReadOnlyList<string?> Values)
+{
+    /// <summary>Session-only capability for an explicitly enabled editor. Not exported or persisted.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid? EditHandle { get; init; }
+
+    public override string ToString() => $"{nameof(DatabaseDisplayRow)} {{ Values = {Values} }}";
+}
 
 public sealed record DatabaseDiagnostic(string Code, string Message);
 

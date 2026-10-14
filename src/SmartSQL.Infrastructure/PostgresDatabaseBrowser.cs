@@ -9,8 +9,8 @@ using SmartSQL.Domain;
 
 namespace SmartSQL.Infrastructure;
 
-/// <summary>Read-only access to an existing PostgreSQL database, separate from the editable local workspace.</summary>
-public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
+/// <summary>Existing PostgreSQL database access with explicit, restricted opt-in cell editing.</summary>
+public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly TransientCredential _credential;
@@ -18,10 +18,11 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
     private const int MaxCellCharacters = 1_000_000;
     private const int MaxPageCharacters = 16_000_000;
 
-    private PostgresDatabaseBrowser(NpgsqlDataSource dataSource, TransientCredential credential)
+    private PostgresDatabaseBrowser(NpgsqlDataSource dataSource, TransientCredential credential, bool editingEnabled)
     {
         _dataSource = dataSource;
         _credential = credential;
+        EditingEnabled = editingEnabled;
     }
 
     private sealed class TransientCredential(string password)
@@ -31,8 +32,14 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
         internal void Clear() => Volatile.Write(ref _password, string.Empty);
     }
 
-    public static async Task<PostgresDatabaseBrowser> OpenAsync(ConnectionProfile profile, string transientPassword,
-        CancellationToken cancellationToken = default)
+    public static Task<PostgresDatabaseBrowser> OpenAsync(ConnectionProfile profile, string transientPassword,
+        CancellationToken cancellationToken = default) => OpenCoreAsync(profile, transientPassword, false, cancellationToken);
+
+    public static Task<PostgresDatabaseBrowser> OpenForEditingAsync(ConnectionProfile profile, string transientPassword,
+        CancellationToken cancellationToken = default) => OpenCoreAsync(profile, transientPassword, true, cancellationToken);
+
+    private static async Task<PostgresDatabaseBrowser> OpenCoreAsync(ConnectionProfile profile, string transientPassword,
+        bool editingEnabled, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentNullException.ThrowIfNull(transientPassword);
@@ -50,7 +57,7 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
             builder.UsePasswordProvider(_ => credential.Read(), (_, _) => ValueTask.FromResult(credential.Read()));
             builder.UseNegotiateOptionsCallback(options => options.Credential = new NetworkCredential(profile.Username, credential.Read()));
             dataSource = builder.Build();
-            var browser = new PostgresDatabaseBrowser(dataSource, credential);
+            var browser = new PostgresDatabaseBrowser(dataSource, credential, editingEnabled);
             await browser.ReadAsync(async (connection, transaction, token) =>
             {
                 await using var command = Command("SELECT pg_catalog.current_setting('transaction_read_only')", connection, transaction);
@@ -100,86 +107,125 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
         Options = "-c default_transaction_read_only=on -c statement_timeout=15000 -c lock_timeout=3000 -c idle_in_transaction_session_timeout=15000 -c search_path=pg_catalog"
     };
 
-    public Task<IReadOnlyList<DatabaseTableRef>> GetTablesAsync(CancellationToken cancellationToken = default) =>
-        ReadAsync<IReadOnlyList<DatabaseTableRef>>(async (connection, transaction, token) =>
+    public async Task<IReadOnlyList<DatabaseTableRef>> GetTablesAsync(CancellationToken cancellationToken = default)
+    {
+        await _editGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await using var command = Command(PostgresBrowserSql.Tables, connection, transaction);
-            await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
-            var tables = new List<DatabaseTableRef>();
-            while (await reader.ReadAsync(token).ConfigureAwait(false))
+            InvalidateEditSnapshots();
+            return await ReadAsync<IReadOnlyList<DatabaseTableRef>>(async (connection, transaction, token) =>
             {
-                if (tables.Count == 10_000)
-                    throw new DatabaseBrowserException("catalog_too_large", "В базе больше 10 000 доступных объектов. Каталог слишком большой для текущего обозревателя.");
-                tables.Add(new DatabaseTableRef(reader.GetString(0), reader.GetString(1), ReadKind(reader.GetString(2))));
-            }
-            return tables;
-        }, cancellationToken);
+                await using var command = Command(PostgresBrowserSql.Tables, connection, transaction);
+                await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+                var tables = new List<DatabaseTableRef>();
+                while (await reader.ReadAsync(token).ConfigureAwait(false))
+                {
+                    if (tables.Count == 10_000)
+                        throw new DatabaseBrowserException("catalog_too_large", "В базе больше 10 000 доступных объектов. Каталог слишком большой для текущего обозревателя.");
+                    tables.Add(new DatabaseTableRef(reader.GetString(0), reader.GetString(1), ReadKind(reader.GetString(2))));
+                }
+                return tables;
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        finally { _editGate.Release(); }
+    }
 
-    public Task<IReadOnlyList<DatabaseColumn>> GetColumnsAsync(DatabaseTableRef table, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DatabaseColumn>> GetColumnsAsync(DatabaseTableRef table, CancellationToken cancellationToken = default)
     {
         ValidateTable(table);
-        return ReadAsync<IReadOnlyList<DatabaseColumn>>(async (connection, transaction, token) =>
+        await _editGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
-            return await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
-        }, cancellationToken);
+            InvalidateEditSnapshots();
+            return await ReadAsync<IReadOnlyList<DatabaseColumn>>(async (connection, transaction, token) =>
+            {
+                var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
+                return await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        finally { _editGate.Release(); }
     }
 
     public Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize = PostgresBrowserSql.DefaultPageSize,
         CancellationToken cancellationToken = default) =>
         ReadPageAsync(table, offset, pageSize, new DatabaseBrowseQuery(), cancellationToken);
 
-    public Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
+    public async Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
         DatabaseBrowseQuery query, CancellationToken cancellationToken = default)
     {
         ValidateTable(table);
         PostgresBrowserSql.ValidatePage(offset, pageSize);
         ArgumentNullException.ThrowIfNull(query);
         query.Validate();
-        return ReadAsync(async (connection, transaction, token) =>
+        await _editGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        InvalidateEditSnapshots();
+        try
         {
-            var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
-            var columns = await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
-            var rows = new List<DatabaseDisplayRow>(pageSize);
-            await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query), connection, transaction);
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, Value = pageSize + 1 });
-            command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, Value = offset });
-            if (!string.IsNullOrEmpty(query.SearchText))
-                command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = query.SearchText });
-            await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token).ConfigureAwait(false);
-            var hasMore = false;
-            var pageCharacters = 0;
-            while (await reader.ReadAsync(token).ConfigureAwait(false))
+            return await ReadAsync(async (connection, transaction, token) =>
             {
-                if (rows.Count == pageSize)
+                var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
+                var columns = await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
+                var editing = EditingEnabled
+                    ? await ReadEditMetadataAsync(relation.Id, relation.Table, connection, transaction, token).ConfigureAwait(false)
+                    : null;
+                var captureHandles = editing?.Capabilities.CanUpdate == true;
+                var snapshots = new Dictionary<Guid, EditSnapshot>();
+                var rows = new List<DatabaseDisplayRow>(pageSize);
+                await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query, captureHandles), connection, transaction);
+                command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, Value = pageSize + 1 });
+                command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, Value = offset });
+                if (!string.IsNullOrEmpty(query.SearchText))
+                    command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = query.SearchText });
+                await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token).ConfigureAwait(false);
+                var hasMore = false;
+                var pageCharacters = 0;
+                while (await reader.ReadAsync(token).ConfigureAwait(false))
                 {
-                    hasMore = true;
-                    break;
-                }
-                var values = new string?[columns.Count];
-                for (var index = 0; index < values.Length; index++)
-                {
-                    if (await reader.IsDBNullAsync(index, token).ConfigureAwait(false))
-                        continue;
-                    using var text = await reader.GetTextReaderAsync(index, token).ConfigureAwait(false);
-                    try
+                    if (rows.Count == pageSize)
                     {
-                        values[index] = await ReadTextAsync(text, MaxCellCharacters, token).ConfigureAwait(false);
-                        pageCharacters += values[index]!.Length;
-                        if (pageCharacters > MaxPageCharacters)
-                            throw new DatabaseBrowserException("page_too_large", "Страница превышает 16 миллионов символов. Уменьшите число строк; данные не были обрезаны.");
+                        hasMore = true;
+                        break;
                     }
-                    catch (DatabaseBrowserException)
+                    var values = new string?[columns.Count];
+                    for (var index = 0; index < values.Length; index++)
                     {
-                        command.Cancel();
-                        throw;
+                        if (await reader.IsDBNullAsync(index, token).ConfigureAwait(false))
+                            continue;
+                        using var text = await reader.GetTextReaderAsync(index, token).ConfigureAwait(false);
+                        try
+                        {
+                            values[index] = await ReadTextAsync(text, MaxCellCharacters, token).ConfigureAwait(false);
+                            pageCharacters += values[index]!.Length;
+                            if (pageCharacters > MaxPageCharacters)
+                                throw new DatabaseBrowserException("page_too_large", "Страница превышает 16 миллионов символов. Уменьшите число строк; данные не были обрезаны.");
+                        }
+                        catch (DatabaseBrowserException)
+                        {
+                            command.Cancel();
+                            throw;
+                        }
                     }
+                    Guid? handle = null;
+                    if (captureHandles)
+                    {
+                        handle = Guid.NewGuid();
+                        snapshots.Add(handle.Value, new EditSnapshot(relation.Table, editing!, values.ToArray(), reader.GetString(columns.Count), DateTimeOffset.UtcNow));
+                    }
+                rows.Add(new DatabaseDisplayRow(values) { EditHandle = handle });
                 }
-                rows.Add(new DatabaseDisplayRow(values));
-            }
-            return new DatabasePage(relation.Table, columns, rows, offset, pageSize, hasMore,
-                PostgresBrowserSql.Diagnostics(relation.Table, columns, relation.RowLevelSecurity, relation.HasSubclasses, query));
-        }, cancellationToken);
+                lock (_snapshotSync)
+                    foreach (var item in snapshots)
+                        _editSnapshots.Add(item.Key, item.Value);
+                return new DatabasePage(relation.Table, columns, rows, offset, pageSize, hasMore,
+                    PostgresBrowserSql.Diagnostics(relation.Table, columns, relation.RowLevelSecurity, relation.HasSubclasses, query));
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            InvalidateEditSnapshots();
+            throw;
+        }
+        finally { _editGate.Release(); }
     }
 
     internal static async Task<string> ReadTextAsync(TextReader reader, int maxCharacters, CancellationToken cancellationToken)
@@ -305,8 +351,16 @@ public sealed class PostgresDatabaseBrowser : IDatabaseBrowser
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
-            _credential.Clear();
-            await _dataSource.DisposeAsync().ConfigureAwait(false);
+            // An admitted edit finishes before its data source is disposed. Queued edits
+            // recheck disposal under the gate and cannot start a write transaction.
+            await _editGate.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                InvalidateEditSnapshots();
+                _credential.Clear();
+                await _dataSource.DisposeAsync().ConfigureAwait(false);
+            }
+            finally { _editGate.Release(); }
         }
     }
 }

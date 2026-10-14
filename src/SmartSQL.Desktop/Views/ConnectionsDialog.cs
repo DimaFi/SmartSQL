@@ -7,7 +7,7 @@ using SmartSQL.Application;
 
 namespace SmartSQL.Desktop.Views;
 
-public sealed record ConnectionRequest(ConnectionProfile Profile, string Password)
+public sealed record ConnectionRequest(ConnectionProfile Profile, string Password, bool AllowEditing = false)
 {
     public override string ToString() => $"{Profile.Name} ({Profile.Provider})";
 }
@@ -24,6 +24,7 @@ public sealed class ConnectionsDialog : Window
     private readonly TextBox _database = new() { PlaceholderText = "Имя базы данных" };
     private readonly TextBox _username = new() { PlaceholderText = "Пользователь PostgreSQL" };
     private readonly TextBox _password = new() { PasswordChar = '●', PlaceholderText = "Пароль для этого подключения" };
+    private readonly CheckBox _allowEditing = new() { Content = "Разрешить редактирование данных" };
     private readonly ComboBox _ssl = new();
     private readonly TextBlock _sslHint = new() { TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick };
@@ -73,6 +74,7 @@ public sealed class ConnectionsDialog : Window
         _ssl.ItemsSource = SslChoices;
         _ssl.SelectedIndex = 0;
         _ssl.SelectionChanged += (_, _) => UpdateSslHint();
+        _allowEditing.IsCheckedChanged += (_, _) => UpdateProviderLabel();
         _profilesList.SelectionChanged += (_, _) => SelectProfile();
         _add.Click += (_, _) => NewProfile();
         _save.Click += async (_, _) => await SaveProfileAsync();
@@ -86,6 +88,7 @@ public sealed class ConnectionsDialog : Window
             _closed = true;
             _lifetime.Cancel();
             _password.Text = string.Empty;
+            _allowEditing.IsChecked = false;
             _lifetime.Dispose();
         };
 
@@ -111,8 +114,14 @@ public sealed class ConnectionsDialog : Window
         _editor.Children.Add(Field("Пароль", _password));
         _editor.Children.Add(new TextBlock
         {
-            Text = "Пароль используется только для текущего подключения и не сохраняется. Просмотр внешней базы не изменяет её таблицы и записи.",
+            Text = "Пароль используется только для текущего подключения и не сохраняется. Без отдельного разрешения внешняя база открывается только для просмотра.",
             TextWrapping = TextWrapping.Wrap, Classes = { "muted" }
+        });
+        _editor.Children.Add(_allowEditing);
+        _editor.Children.Add(new TextBlock
+        {
+            Text = "Разрешение действует только для этого подключения. SmartSQL изменяет одну явно выбранную ячейку и только в таблицах с подтверждённым ключом.",
+            TextWrapping = TextWrapping.Wrap, Classes = { "caption" }
         });
         _save.Margin = new Thickness(0, 0, 8, 8);
         _delete.Margin = new Thickness(0, 0, 0, 8);
@@ -176,6 +185,7 @@ public sealed class ConnectionsDialog : Window
         _database.Text = string.Empty;
         _username.Text = string.Empty;
         _password.Text = string.Empty;
+        _allowEditing.IsChecked = false;
         _ssl.SelectedIndex = 0;
         _status.Text = string.Empty;
         UpdateControls();
@@ -187,6 +197,7 @@ public sealed class ConnectionsDialog : Window
         if (_profilesList.SelectedItem is not ProfileChoice choice)
         {
             _selectedId = null;
+            _allowEditing.IsChecked = false;
             UpdateControls();
             return;
         }
@@ -200,6 +211,7 @@ public sealed class ConnectionsDialog : Window
         _database.Text = profile.Database;
         _username.Text = profile.Username;
         _password.Text = string.Empty;
+        _allowEditing.IsChecked = false;
         _ssl.SelectedItem = SslChoices.First(choice => choice.Policy == profile.SslPolicy);
         _status.Text = profile.Provider == DatabaseProviders.PostgreSql ? string.Empty : "Этот провайдер пока недоступен в интерфейсе. Создайте профиль PostgreSQL для подключения.";
         UpdateControls();
@@ -271,6 +283,7 @@ public sealed class ConnectionsDialog : Window
             RefreshList(null);
             _selectedId = null;
             _password.Text = string.Empty;
+            _allowEditing.IsChecked = false;
             _status.Text = "Профиль удалён из SmartSQL.";
         }, "Не удалось удалить профиль. Проверьте доступ к файлу подключений.");
     }
@@ -321,10 +334,12 @@ public sealed class ConnectionsDialog : Window
         {
             var profile = ReadProfile();
             var password = _password.Text ?? string.Empty;
+            var allowEditing = _allowEditing.IsChecked == true;
             _submitted = true;
             _password.Text = string.Empty;
+            _allowEditing.IsChecked = false;
             UpdateControls();
-            Close(new ConnectionRequest(profile, password));
+            Close(new ConnectionRequest(profile, password, allowEditing));
         }
         catch (ArgumentException exception)
         {
@@ -336,6 +351,7 @@ public sealed class ConnectionsDialog : Window
     {
         _profilesList.IsEnabled = !_busy;
         _editor.IsEnabled = !_busy;
+        _allowEditing.IsEnabled = !_busy && !_submitted && _selectedProvider == DatabaseProviders.PostgreSql;
         _add.IsEnabled = !_busy;
         _save.IsEnabled = !_busy && _storeLoaded;
         _delete.IsEnabled = !_busy && _storeLoaded && _selectedId is not null;
@@ -352,5 +368,14 @@ public sealed class ConnectionsDialog : Window
             ConnectionSslPolicy.VerifyCA => "Проверяется доверие к сертификату сервера.",
             _ => "Проверяются сертификат и соответствие имени сервера. Рекомендуемый режим."
         };
+    }
+
+    private void UpdateProviderLabel()
+    {
+        if (_selectedProvider != DatabaseProviders.PostgreSql)
+            return;
+        _providerLabel.Text = _allowEditing.IsChecked == true
+            ? "PostgreSQL · просмотр и изменение одной ячейки"
+            : "PostgreSQL · просмотр базы";
     }
 }

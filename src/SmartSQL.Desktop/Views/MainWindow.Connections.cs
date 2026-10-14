@@ -16,9 +16,12 @@ public partial class MainWindow
             var store = new JsonConnectionProfileStore(Path.Combine(WorkspacePaths.DataDirectory, "connections.json"));
             var request = await new ConnectionsDialog(store).ShowDialog<ConnectionRequest?>(this);
             if (request is null) return;
+            var allowEditing = request.AllowEditing;
             var browserWindow = new DatabaseBrowserWindow(request.Profile, request.Password,
                 async (profile, password, cancellationToken) =>
-                    await PostgresDatabaseBrowser.OpenAsync(profile, password, cancellationToken));
+                    allowEditing
+                        ? await PostgresDatabaseBrowser.OpenForEditingAsync(profile, password, cancellationToken)
+                        : await PostgresDatabaseBrowser.OpenAsync(profile, password, cancellationToken));
             browserWindow.Show(this);
         }
         catch

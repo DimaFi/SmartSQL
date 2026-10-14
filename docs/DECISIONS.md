@@ -219,3 +219,15 @@ Status: Accepted
 `DatabaseBrowseQuery` adds a bounded literal search and optional catalog-confirmed sort column without exposing SQL in Application. PostgreSQL applies the parameterized search across native text representations before paging. Case conversion follows the server locale; C locale can retain case for non-Latin letters. Selected-column sorting uses text with C collation, NULL first, and existing key ordering to resolve ties. The UI names this text ordering and reports its difference from numeric/date ordering. Native typed sorting and typed external filters remain separate work; existing default primary-key paging is preserved.
 
 Status: Accepted
+
+## D037 - Explicit, Keyed Single-Cell Editing of Native Tables
+
+`IDatabaseEditor` is an optional extension of native browsing. Application describes provider-confirmed editable columns and validates lossless input; SQL, permissions, identity snapshots and native transactions remain in Infrastructure. PostgreSQL connections default to read-only. Editing must be enabled explicitly for the current connection and is never persisted in a profile.
+
+The first editing slice changes one supported cell in an ordinary table with a confirmed primary key. Keys, unique-index fields, generated/identity columns and unsupported native types remain read-only. Tables with inheritance, partitioning, RLS, user triggers, UPDATE rules or unsafe CHECK/type-output functions remain browse-only. The provider checks table privileges and reports restrictions rather than inventing identities or silently losing capabilities.
+
+Rows receive random, provider-private handles for the current page, expiring after 15 minutes. Handles are excluded from JSON; original native values, row version and schema identity remain in a bounded in-memory snapshot. A write locks the table against concurrent structural changes, rechecks metadata and permissions, locks the row by its complete key, and compares its version and original values before a parameterized update. A changed/deleted row is a conflict, never an automatic overwrite or retry.
+
+NULL, empty strings and whitespace remain distinct. Native numeric assignment is compared with the submitted number without converting through .NET decimal; rounding, overflow or truncation cause rollback. Cancellation before commit rolls back. Once commit has started, an unconfirmed result is reported as unknown and must be inspected before another attempt. External inserts/deletes, general undo and backup/export of a remote database remain separate work.
+
+Status: Accepted

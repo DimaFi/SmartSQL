@@ -81,7 +81,7 @@ internal static class PostgresBrowserSql
 
     // Only catalog-confirmed names reach this builder; values remain parameters.
     internal static string Page(DatabaseTableRef table, IReadOnlyList<DatabaseColumn> columns,
-        DatabaseBrowseQuery? query = null)
+        DatabaseBrowseQuery? query = null, bool includeEditVersion = false)
     {
         query ??= new DatabaseBrowseQuery();
         query.Validate();
@@ -96,6 +96,8 @@ internal static class PostgresBrowserSql
         if (columns.Count == 0)
             return $"SELECT NULL::pg_catalog.text FROM {QuoteIdentifier(table.Schema)}.{QuoteIdentifier(table.Name)} AS q{filtering} LIMIT $1 OFFSET $2";
         var projection = string.Join(", ", columns.Select(column => $"q.{QuoteIdentifier(column.Name)}::pg_catalog.text"));
+        if (includeEditVersion)
+            projection += ", q.xmin::pg_catalog.text";
         var primaryKey = columns.Where(column => column.PrimaryKeyOrder is not null).OrderBy(column => column.PrimaryKeyOrder).ToArray();
         var ordering = primaryKey.Length > 0
             ? string.Join(", ", primaryKey.Select(column => $"q.{QuoteIdentifier(column.Name)}"))
