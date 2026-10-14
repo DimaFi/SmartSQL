@@ -2,15 +2,15 @@
 
 The main checkout remains `D:\Code\SmartSQL`. The independent experimental local-assistant source is `D:\Code\SmartSQL-model`. Source/test directory layouts are unchanged; installed Codex, .NET SDK, Windows and other system tools remain installed where they were.
 
-Use the helpers from the main workspace so project-created files stay on D:
+Use each workspace's own helpers so project-created files stay in that workspace on D:
 
 ```powershell
 ./scripts/Build.ps1
 ./scripts/Test.ps1
 ./scripts/Run.ps1
-./scripts/Build.ps1 -Model
-./scripts/Test.ps1 -Model
 ```
+
+For ML, run `scripts/Build.ps1` and `scripts/Test.ps1` from `D:\Code\SmartSQL-model`. The legacy main `-Model` switch delegates to the model-local initializer; it does not use the main package cache or config. The model repository is [DimaFi/SmartSQL-ML](https://github.com/DimaFi/SmartSQL-ML). Every model source/docs/script/data/cache/temporary/result stays inside its own folder.
 
 Add `-Offline` to Build/Test/Run when the prepared package cache is sufficient and network access is unavailable. Only that explicit offline restore skips the online vulnerability feed. `-NoBuild -NoRestore` tests an already-built stage. `Run.ps1 -NoBuild -Detached` opens the built desktop executable; `-DataDirectory <absolute path>` selects an isolated data copy for UI checks.
 
@@ -22,6 +22,7 @@ Add `-Offline` to Build/Test/Run when the prepared package cache is sufficient a
 | Main test data, temporaries, TRX results, UI copies | `D:\Code\SmartSQL\.workspace` | Ignored |
 | Model source and tests | `D:\Code\SmartSQL-model\src`, `tests`, `cases` | Separate Git repository |
 | Model test results, temporaries and migration backups | `D:\Code\SmartSQL-model\.workspace` | Ignored |
+| Model NuGet packages/HTTP/scratch cache and .NET CLI state | `D:\Code\SmartSQL-model\.workspace` | Ignored; independent of main cache |
 | Future local model caches and weights | `D:\Code\SmartSQL-model\local`, `models` | Ignored |
 | Compilation outputs | Existing `bin`/`obj` beside each project on D: | Ignored |
 

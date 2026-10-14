@@ -8,6 +8,19 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# The compatibility switch delegates to the isolated workspace. Model builds
+# must not create caches or data in the desktop repository.
+if ($Model) {
+    if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
+        $ModelRoot = Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($WorkspaceRoot))) 'SmartSQL-model'
+    }
+    $modelInitializer = Join-Path ([IO.Path]::GetFullPath($ModelRoot)) 'scripts/Initialize-Workspace.ps1'
+    if (!(Test-Path -LiteralPath $modelInitializer -PathType Leaf)) {
+        throw "Model-local workspace scripts are missing: $modelInitializer"
+    }
+    return (. $modelInitializer -ForTests:$ForTests)
+}
+
 # This changes only the current process and its children. Installed SDKs and
 # Codex remain where they are installed; project-created files stay in this workspace.
 $workspaceResolvedRoot = (Resolve-Path -LiteralPath $WorkspaceRoot).Path
@@ -20,12 +33,6 @@ if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
 }
 $workspaceModelRoot = [System.IO.Path]::GetFullPath($ModelRoot)
 $workspaceArtifactRoot = $workspaceResolvedRoot
-if ($Model) {
-    if (!(Test-Path -LiteralPath (Join-Path $workspaceModelRoot 'SmartSql.LocalAssistant.slnx') -PathType Leaf)) {
-        throw "The separate model workspace has not been prepared: $workspaceModelRoot"
-    }
-    $workspaceArtifactRoot = $workspaceModelRoot
-}
 
 $workspaceCacheRoot = Join-Path $workspaceResolvedRoot '.workspace'
 $workspaceArtifactCacheRoot = Join-Path $workspaceArtifactRoot '.workspace'
@@ -45,15 +52,6 @@ $workspaceDirectories = [ordered]@{
     SMARTSQL_TEMP_DIRECTORY = (Join-Path $workspaceArtifactCacheRoot $workspaceTempName)
     SMARTSQL_TEST_DIRECTORY = (Join-Path $workspaceArtifactCacheRoot 'test-data')
     SMARTSQL_TEST_RESULTS_DIRECTORY = (Join-Path $workspaceArtifactCacheRoot 'test-results')
-}
-
-if ($Model) {
-    # Model weights/caches are local files and are excluded from source control.
-    $workspaceDirectories['HF_HOME'] = Join-Path $workspaceModelRoot 'local/huggingface'
-    $workspaceDirectories['HF_HUB_CACHE'] = Join-Path $workspaceModelRoot 'local/huggingface/hub'
-    $workspaceDirectories['HUGGINGFACE_HUB_CACHE'] = $workspaceDirectories['HF_HUB_CACHE']
-    $workspaceDirectories['TRANSFORMERS_CACHE'] = Join-Path $workspaceModelRoot 'local/transformers'
-    $workspaceDirectories['OLLAMA_MODELS'] = Join-Path $workspaceModelRoot 'models/ollama'
 }
 
 # Validate each destination before setting the environment. Only our unique

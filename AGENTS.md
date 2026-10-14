@@ -23,7 +23,7 @@ University teaching-practice management is the primary diploma validation scenar
 13. Run build/tests after each meaningful stage.
 14. Do not silently change accepted architectural decisions.
 15. Record significant architectural decisions in `docs/DECISIONS.md`.
-16. Keep project-created data, backups, caches, build/test temporaries, and test results on D:. Use the workspace scripts `scripts/Build.ps1`, `scripts/Test.ps1`, and `scripts/Run.ps1`. Main workspace: `D:\Code\SmartSQL`; isolated local-assistant workspace: `D:\Code\SmartSQL-model`. Local databases, model weights, and test artifacts must remain ignored by Git. Do not change installed tools or global user settings.
+16. Keep project-created data, backups, caches, build/test temporaries, and test results on D:. Use the workspace scripts `scripts/Build.ps1`, `scripts/Test.ps1`, and `scripts/Run.ps1`. Main workspace: `D:\Code\SmartSQL`; isolated ML workspace: `D:\Code\SmartSQL-model`, future remote `DimaFi/SmartSQL-ML`. All model source/docs/scripts, data, weights, caches, temporaries and results belong inside that model workspace and use its own scripts/configuration. Local databases, model weights, and test artifacts must remain ignored by Git. Do not change installed tools or global user settings.
 17. Commit completed, verified stages in Git; exclude local data and runtime files.
 18. Use parallel subagents for independent important tasks with disjoint file ownership when available. Coordinate integration, builds/tests, and Git in the parent agent.
 19. Develop toward a universal database client in the DBeaver direction: common desktop workflows across DBMS providers, including exploration of ordinary existing databases. Retain approachable UI and safe operations.

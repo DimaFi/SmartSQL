@@ -275,3 +275,11 @@ The PostgreSQL transaction acquires the existing `SHARE ROW EXCLUSIVE` metadata 
 This first slice rejects every incoming foreign key, including self references and RESTRICT/NO ACTION, as well as cascades/SET NULL/SET DEFAULT. Proving safe RI queries would require guarded child metadata and additional rights; that work stays in T06/T12 rather than introducing a dependency graph now. Outgoing foreign keys do not themselves prevent deleting a child row. User triggers, DELETE rules, RLS, inheritance, partitions and unsafe expressions/type output also prevent deletion. The UI confirms the database, schema, table, ordered key and row preview; successful deletion and subsequent refresh failures are reported separately.
 
 Status: Accepted
+
+## D043 - The Model Workspace Owns All of Its Project Files and Caches
+
+The user assigns future model development to `DimaFi/SmartSQL-ML` and requires every model-specific source, script, document, profile, dataset, weight, cache, temporary file and test/benchmark result to remain inside `D:\Code\SmartSQL-model`. The existing library/CLI/tests/cases names are retained. Model-local scripts and a relative NuGet package folder replace dependence on the desktop repository's configuration/cache; existing required packages were copied without removing the shared desktop cache.
+
+The desktop `-Model` compatibility switch delegates to the model initializer. The model can build/test independently of the desktop checkout. Environment changes affect only the calling process and child tools; installed tools and global settings remain unchanged. Stub tests do not imply a real model, training or Desktop integration. Future integration still requires stable data workflows and an accepted Action/Permission boundary. GitHub publication is currently deferred by the user.
+
+Status: Accepted
