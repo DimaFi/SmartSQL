@@ -231,3 +231,13 @@ Rows receive random, provider-private handles for the current page, expiring aft
 NULL, empty strings and whitespace remain distinct. Native numeric assignment is compared with the submitted number without converting through .NET decimal; rounding, overflow or truncation cause rollback. Cancellation before commit rolls back. Once commit has started, an unconfirmed result is reported as unknown and must be inspected before another attempt. External inserts/deletes, general undo and backup/export of a remote database remain separate work.
 
 Status: Accepted
+
+## D038 - First-Run Mode Choice and a Shared Tabbed Workspace
+
+The user prioritizes comfortable PostgreSQL/SQLite workflows, values both approachable and advanced modes, and requests a first-run choice with a permanently available switching control. The selected mode will be remembered; switching preserves active connection/object/tab state and does not enable writes.
+
+The target presentation uses one main window with a connection/object tree, table/SQL tabs, an optional inspector and active-context status. Tabs retain separate query/page/loading state and explicit connection identities; session and cancellation ownership must be defined before replacing separate browser windows. This follows the connection tree documented by [DBeaver](https://dbeaver.com/docs/dbeaver/Database-Navigator/) and the object-tree/tabbed layout in [pgAdmin](https://www.pgadmin.org/docs/pgadmin4/latest/user_interface.html). Managed/native data boundaries remain; no plugin framework is introduced.
+
+Russian workflows are completed first, then translated through full resources. This is an accepted future direction: persistence, onboarding and unified tabs are not yet implemented. Priorities and acceptance criteria are in [WORK_PLAN.md](WORK_PLAN.md).
+
+Status: Accepted direction; implementation planned.

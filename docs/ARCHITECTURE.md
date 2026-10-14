@@ -4,27 +4,22 @@
 
 This document records the current architecture and planned extensions.
 
-The universal model, editable SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard paste, and local backup/restore are implemented. A provider-independent native catalog/page contract and a read-only PostgreSQL provider/browser are also implemented. Relationships, safe type conversion, external-table editing, other DBMS providers, and integrated AI remain later stages.
+The universal model, editable SQLite provider, typed fields, desktop CRUD/filters, CSV/JSON/XLSX table exchange, clipboard paste, and local backup/restore are implemented. Native browsing and explicitly enabled keyed single-cell PostgreSQL editing are implemented. External inserts/deletes, ordinary SQLite browsing, relationships, safe type conversion, other DBMS providers, and integrated AI remain later stages. See the [capability matrix](CAPABILITY_MATRIX.md) and [development plan](WORK_PLAN.md).
 
-The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns SmartSQL-managed metadata and physical tables; `IDatabaseBrowser` supplies native schema/table/column metadata and read-only pages without managed identifiers or type conversion. PostgreSQL validates this existing-database workflow before external editing. Native provider differences remain explicit through diagnostics and future capability/compatibility reporting.
+The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns managed metadata and physical tables; `IDatabaseBrowser` supplies native metadata and pages without managed identifiers or type conversion. `IDatabaseEditor` adds optional provider-confirmed cell updates; it does not imply INSERT/DELETE or schema-edit capabilities. Native provider differences remain explicit.
 
 ## Layered Architecture
 
-The intended architecture is:
+Compile-time project references point toward the independent core:
 
 ```text
-Presentation
-↓
-Application
-↓
-Domain / Universal Data Model
-↓
-Provider abstractions
-↓
-Infrastructure providers
-↓
-Physical database
+Application -> Domain
+Infrastructure -> Application / Domain
+Desktop -> Application / Domain
+Desktop composition root -> Infrastructure
 ```
+
+Domain/Application do not reference Infrastructure or Desktop. Desktop's existing composition root selects concrete providers; data workflows use the core contracts. Runtime calls from UI to a provider do not reverse these project dependencies.
 
 ## Projects
 
@@ -88,7 +83,7 @@ The desktop application uses Avalonia 12 on .NET 10. It must remain cross-platfo
 
 The application does not depend directly on SQLite. SQLite is the default local embedded provider, but remains an infrastructure detail.
 
-The future direction is:
+The following describes runtime orchestration, not compile-time project dependencies:
 
 ```text
 UI

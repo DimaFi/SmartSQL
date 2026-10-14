@@ -1,18 +1,20 @@
 # Roadmap
 
-This roadmap is preliminary and may change as architectural decisions are validated.
+The stage numbers below are a scope/history map, not a promise of serial delivery. The current execution order, user priorities, parallel work and acceptance criteria are maintained in the Russian [development plan](WORK_PLAN.md). Actual implemented capabilities are in the [matrix](CAPABILITY_MATRIX.md).
 
 ## Product Direction and Immediate Priorities
 
 SmartSQL is moving toward a universal desktop database client in the DBeaver direction: one interface for connections, browsing tables, editing records, search/filtering, data exchange, and migration across supported DBMSs. An approachable interface and safe structured actions remain core requirements. Additional providers must eventually support ordinary existing databases, not just SmartSQL-managed projects.
 
-The current checked sequence is:
+The user currently prioritizes comfortable PostgreSQL/SQLite workflows, both interface modes, a first-run choice and a permanent switch. A shared tabbed main window is the chosen future direction. There is no calendar deadline. The checked next sequence is:
 
-1. Keep development, local data, model experiments, and test artifacts on D: through the workspace scripts; keep local files out of Git.
-2. Stabilize CSV/JSON/XLSX exchange and bulk paste with preview and compatibility reporting.
-3. Add connection management and a first PostgreSQL slice that connects to an existing database, lists schemas/tables, inspects columns/types/keys, and pages records. Begin with read-only browsing; enable editing with supported types and reliable row identities.
-4. Extend provider-independent editing, relationships, and safe type changes according to concrete use cases; then add MySQL/MariaDB and SQL Server.
-5. Validate migration compatibility and then the permission/action boundary before integrating AI mutations.
+1. Accept the current PostgreSQL editing UI; add safe native INSERT/DELETE capabilities. Develop ordinary SQLite browsing independently, without managed metadata migration.
+2. Integrate connection/object tabs, typed native filters/sorting, and supported ordinary SQLite editing. Complete Russian workflows and refine both modes.
+3. Add bounded manual SQL for reading, native structure inspection and external data exchange with compatibility reporting; deliver a usable PostgreSQL/SQLite release.
+4. Complete English localization; add MySQL/MariaDB, then SQL Server through verified provider slices.
+5. Expand relationships, schema/type changes and migration. Validate diploma scenarios and compatibility throughout. Implement Action/Permission before integrated AI; add external backup destinations after stable database workflows.
+
+Development data, caches, backups and test artifacts stay on D:. Calendar dates are not assigned. See WORK_PLAN for dependencies and the distinction between code verification and manual UI acceptance.
 
 ## Stage 0 - Project Foundation
 
@@ -50,7 +52,7 @@ Status: CSV column mapping, preview, import, and export for existing tables, ato
 
 ## Stage 7 - PostgreSQL Provider
 
-Add PostgreSQL support through the provider architecture. First deliver an existing-database connection and read-only catalog/record browser, without assuming private SmartSQL metadata. Report unsupported types/features; follow with parameterized editing and safe operations where reliable keys are available.
+PostgreSQL support uses native browsing and explicitly enabled keyed updates without private SmartSQL metadata. The next slices add safe inserts/deletes, typed querying and native exchange; unsupported capabilities remain explicit.
 
 Status: native browsing and an explicit single-cell editor implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search and explicit text sorting. Editing defaults off, requires a reliable primary key and supported fields, rechecks metadata/permissions/row versions, and rolls back precision loss. Real dedicated PostgreSQL integration covers native values, permissions, conflicts, protected/unsupported metadata and transient handles. External inserts/deletes and a general undo workflow remain next.
 
