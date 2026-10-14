@@ -120,7 +120,7 @@ public sealed class ConnectionsDialog : Window
         _editor.Children.Add(_allowEditing);
         _editor.Children.Add(new TextBlock
         {
-            Text = "Разрешение действует только для этого подключения. SmartSQL изменяет одну явно выбранную ячейку и только в таблицах с подтверждённым ключом.",
+            Text = "Разрешение действует только для этого подключения. SmartSQL позволяет добавить строку, изменить одну ячейку или удалить выбранную строку, если структура, права и связи таблицы допускают безопасную операцию. Удаление требует отдельного подтверждения.",
             TextWrapping = TextWrapping.Wrap, Classes = { "caption" }
         });
         _save.Margin = new Thickness(0, 0, 8, 8);
@@ -375,7 +375,7 @@ public sealed class ConnectionsDialog : Window
         if (_selectedProvider != DatabaseProviders.PostgreSql)
             return;
         _providerLabel.Text = _allowEditing.IsChecked == true
-            ? "PostgreSQL · просмотр и изменение одной ячейки"
+            ? "PostgreSQL · просмотр и разрешённые изменения"
             : "PostgreSQL · просмотр базы";
     }
 }

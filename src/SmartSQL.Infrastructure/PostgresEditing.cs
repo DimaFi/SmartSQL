@@ -29,7 +29,10 @@ public sealed partial class PostgresDatabaseBrowser
     private void InvalidateEditSnapshots()
     {
         lock (_snapshotSync)
+        {
             _editSnapshots.Clear();
+            _deleteSnapshots.Clear();
+        }
     }
 
     public Task<DatabaseEditCapabilities> GetEditCapabilitiesAsync(DatabaseTableRef table,
@@ -51,11 +54,12 @@ public sealed partial class PostgresDatabaseBrowser
         await using (var command = Command(PostgresEditingSql.TableSafety, connection, transaction))
         {
             command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Oid, Value = relationId });
-            await using var reader = await command.ExecuteReaderAsync(token).ConfigureAwait(false);
+            await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token).ConfigureAwait(false);
             if (!await reader.ReadAsync(token).ConfigureAwait(false))
                 throw new DatabaseBrowserException("edit_schema_changed", "Объект изменился. Обновите страницу перед редактированием.");
             safeTable = reader.GetBoolean(0) && table.Kind == DatabaseObjectKind.Table;
-            fingerprint = reader.GetString(1);
+            using var text = await reader.GetTextReaderAsync(1, token).ConfigureAwait(false);
+            fingerprint = await ReadTextAsync(text, MaxPageCharacters, token).ConfigureAwait(false);
         }
         var columns = new List<PostgresEditColumn>();
         await using (var command = Command(PostgresEditingSql.Columns, connection, transaction))

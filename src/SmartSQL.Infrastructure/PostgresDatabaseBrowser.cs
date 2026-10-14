@@ -9,8 +9,8 @@ using SmartSQL.Domain;
 
 namespace SmartSQL.Infrastructure;
 
-/// <summary>Existing PostgreSQL database access with explicit, restricted opt-in cell editing.</summary>
-public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabaseRowCreator
+/// <summary>Existing PostgreSQL database access with explicit, guarded opt-in row operations.</summary>
+public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabaseRowCreator, IDatabaseRowDeleter
 {
     private readonly NpgsqlDataSource _dataSource;
     private readonly TransientCredential _credential;
@@ -168,10 +168,16 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabase
                 var editing = EditingEnabled
                     ? await ReadEditMetadataAsync(relation.Id, relation.Table, connection, transaction, token).ConfigureAwait(false)
                     : null;
-                var captureHandles = editing?.Capabilities.CanUpdate == true;
+                var deletion = EditingEnabled
+                    ? await ReadDeleteMetadataAsync(relation.Id, relation.Table, connection, transaction, token, editing).ConfigureAwait(false)
+                    : null;
+                var captureEditHandles = editing?.Capabilities.CanUpdate == true;
+                var captureDeleteHandles = deletion?.Capabilities.CanDelete == true;
+                var captureVersion = captureEditHandles || captureDeleteHandles;
                 var snapshots = new Dictionary<Guid, EditSnapshot>();
+                var deleteSnapshots = new Dictionary<Guid, DeleteSnapshot>();
                 var rows = new List<DatabaseDisplayRow>(pageSize);
-                await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query, captureHandles), connection, transaction);
+                await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query, captureVersion), connection, transaction);
                 command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, Value = pageSize + 1 });
                 command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, Value = offset });
                 if (!string.IsNullOrEmpty(query.SearchText))
@@ -206,16 +212,32 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabase
                         }
                     }
                     Guid? handle = null;
-                    if (captureHandles)
+                    Guid? deleteHandle = null;
+                    if (captureVersion)
                     {
-                        handle = Guid.NewGuid();
-                        snapshots.Add(handle.Value, new EditSnapshot(relation.Table, editing!, values.ToArray(), reader.GetString(columns.Count), DateTimeOffset.UtcNow));
+                        var originals = values.ToArray();
+                        var version = reader.GetString(columns.Count);
+                        var createdAt = DateTimeOffset.UtcNow;
+                        if (captureEditHandles)
+                        {
+                            handle = Guid.NewGuid();
+                            snapshots.Add(handle.Value, new EditSnapshot(relation.Table, editing!, originals, version, createdAt));
+                        }
+                        if (captureDeleteHandles)
+                        {
+                            deleteHandle = Guid.NewGuid();
+                            deleteSnapshots.Add(deleteHandle.Value, new DeleteSnapshot(relation.Table, deletion!, originals, version, createdAt));
+                        }
                     }
-                rows.Add(new DatabaseDisplayRow(values) { EditHandle = handle });
+                    rows.Add(new DatabaseDisplayRow(values) { EditHandle = handle, DeleteHandle = deleteHandle });
                 }
                 lock (_snapshotSync)
+                {
                     foreach (var item in snapshots)
                         _editSnapshots.Add(item.Key, item.Value);
+                    foreach (var item in deleteSnapshots)
+                        _deleteSnapshots.Add(item.Key, item.Value);
+                }
                 return new DatabasePage(relation.Table, columns, rows, offset, pageSize, hasMore,
                     PostgresBrowserSql.Diagnostics(relation.Table, columns, relation.RowLevelSecurity, relation.HasSubclasses, query));
             }, cancellationToken).ConfigureAwait(false);

@@ -265,3 +265,13 @@ Status: Accepted
 Live WAL remains visible; immutable reads that could ignore it are not used. SQLite may use/create source-side WAL/SHM auxiliary files, a disclosed engine limitation. No checkpoint is requested. Real tests check main/WAL hashes while a writer remains open. This slice is browse-only and does not make native files editable or backed up automatically.
 
 Status: Accepted
+
+## D042 - Single-Row Deletion Uses an Independent One-Time Confirmation
+
+`IDatabaseRowDeleter` separates deletion from cell updating and row creation. The provider requires explicit session opt-in, SELECT/DELETE rights, a safe ordinary table and a reliable complete primary key. A separate random `DeleteHandle` identifies a bounded private copy of the original native values and `xmin`; it is excluded from serialized/displayed rows and expires with the current page after 15 minutes. After admission each handle is consumed once, including rollback, conflict or cancellation.
+
+The PostgreSQL transaction acquires the existing `SHARE ROW EXCLUSIVE` metadata guard before rechecking structure, permissions and dependencies. It reads original values without `SELECT FOR UPDATE`, which would unnecessarily require UPDATE privileges; the table guard excludes concurrent target writers. `DELETE FROM ONLY ... RETURNING` then verifies exactly one row, its original values and version again before commit. Cancellation before commit rolls back. An unconfirmed commit clears handles and reports an unknown outcome without retrying the deletion.
+
+This first slice rejects every incoming foreign key, including self references and RESTRICT/NO ACTION, as well as cascades/SET NULL/SET DEFAULT. Proving safe RI queries would require guarded child metadata and additional rights; that work stays in T06/T12 rather than introducing a dependency graph now. Outgoing foreign keys do not themselves prevent deleting a child row. User triggers, DELETE rules, RLS, inheritance, partitions and unsafe expressions/type output also prevent deletion. The UI confirms the database, schema, table, ordered key and row preview; successful deletion and subsequent refresh failures are reported separately.
+
+Status: Accepted

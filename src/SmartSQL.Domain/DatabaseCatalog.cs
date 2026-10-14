@@ -17,12 +17,16 @@ public sealed record DatabaseTableRef(string Schema, string Name, DatabaseObject
 public sealed record DatabaseColumn(string Name, int Ordinal, string NativeType,
     bool IsNullable, int? PrimaryKeyOrder);
 
-/// <summary>Display values with an optional transient provider edit handle; never a database row identity.</summary>
+/// <summary>Display values with optional transient provider operation handles; never a database row identity.</summary>
 public sealed record DatabaseDisplayRow(IReadOnlyList<string?> Values)
 {
     /// <summary>Session-only capability for an explicitly enabled editor. Not exported or persisted.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public Guid? EditHandle { get; init; }
+
+    /// <summary>Independent session-only capability for a confirmed single-row deletion.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public Guid? DeleteHandle { get; init; }
 
     public override string ToString() => $"{nameof(DatabaseDisplayRow)} {{ Values = {Values} }}";
 }
