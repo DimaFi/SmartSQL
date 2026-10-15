@@ -292,4 +292,4 @@ Each native table tab acquires and owns a separate provider-browser instance. Th
 
 Simple/Advanced are presentation preferences only. Switching updates existing controls without reloading data or changing provider capabilities/session write opt-in. First-run selection can be deferred. Only the chosen mode is stored in bounded, versioned JSON under the workspace data directory, with atomic replacement and explicit errors preserving damaged/unknown settings. Passwords, live sessions and open tabs are not persisted. SQL tabs remain T11; this slice introduces no model integration or provider changes.
 
-Status: Implemented; Debug build and 404 automated tests (including 41 real PostgreSQL checks) pass. Manual UI acceptance remains open in WORKSPACE_UI_ACCEPTANCE.md.
+Status: Implemented; Debug build and 404 automated tests (including 41 real PostgreSQL checks) pass. Basic screen checks now pass; remaining UI acceptance is recorded in WORKSPACE_UI_ACCEPTANCE.md. Stateful managed labels use code-owned values to survive first visual attachment; workspace shortcuts use tunneling input so focused child controls cannot swallow them.

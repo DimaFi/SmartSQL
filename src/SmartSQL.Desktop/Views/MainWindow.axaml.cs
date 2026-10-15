@@ -26,6 +26,7 @@ public partial class MainWindow : UserControl
     private bool _updatingSavedFilters;
     private CellChange? _lastChange;
     private bool _transferInProgress;
+    private bool _initialAttachedStateApplied;
 
     private sealed record CellChange(Guid TableId, Guid RecordId, Guid FieldId, string? OldValue);
 
@@ -47,6 +48,7 @@ public partial class MainWindow : UserControl
     public MainWindow(string? path, Guid? tableId = null)
     {
         InitializeComponent();
+        AttachedToVisualTree += (_, _) => ApplyInitialAttachedState();
         InitializePresentation();
         if (path is not null)
         {
@@ -133,6 +135,28 @@ public partial class MainWindow : UserControl
     private IStorageProvider StorageProvider => GetHostTopLevel().StorageProvider;
 
     private Avalonia.Input.Platform.IClipboard? Clipboard => GetHostTopLevel().Clipboard;
+
+    private void ApplyInitialAttachedState()
+    {
+        if (_initialAttachedStateApplied)
+            return;
+
+        _initialAttachedStateApplied = true;
+        if (_workspace is null || _currentTable is null)
+        {
+            CurrentTableText.Text = "Выберите или создайте таблицу";
+            TableSummaryText.Text = "Данные хранятся локально";
+            RefreshPresentation();
+            return;
+        }
+
+        var selectedSavedFilterId = (SavedFilterBox.SelectedItem as SavedFilterDefinition)?.Id;
+        RefreshSavedFilters(selectedSavedFilterId);
+        CurrentTableText.Text = _currentTable.Name;
+        var count = _workspace.CountRecords(_currentTable.Id, _search, _filters);
+        TableSummaryText.Text = $"{count} записей{(string.IsNullOrWhiteSpace(_search) && _filters.Count == 0 ? "" : " найдено")} · страница {_offset / PageSize + 1}";
+        RefreshPresentation();
+    }
 
     private bool BeginTransfer()
     {

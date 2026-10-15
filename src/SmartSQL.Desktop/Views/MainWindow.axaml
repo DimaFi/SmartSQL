@@ -40,7 +40,7 @@
             <Button x:Name="FilterButton" Classes="secondary" IsEnabled="False" Click="OnEditFilters">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <PathIcon Width="18" Height="18" Data="{DynamicResource UiIconFilter}" />
-                <TextBlock x:Name="FilterCaptionText" Text="{DynamicResource UiTextFilter}" />
+                <TextBlock x:Name="FilterCaptionText" Text="Фильтр" />
               </StackPanel>
             </Button>
             <Border Classes="chip" Padding="8,0">
@@ -97,7 +97,7 @@
                         Data="{DynamicResource UiIconDatabase}" />
               <StackPanel Grid.Column="1" Spacing="1">
                 <TextBlock x:Name="DatabaseNameText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                <TextBlock x:Name="HeaderDatabasePathText" Classes="caption" Text="{DynamicResource UiTextLocalDatabase}"
+                <TextBlock x:Name="HeaderDatabasePathText" Classes="caption" Text="База не открыта"
                            TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </Grid>
@@ -121,7 +121,7 @@
           <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="7">
             <Grid ColumnDefinitions="*,Auto">
               <TextBlock Classes="navsection" Text="{DynamicResource UiTextTables}" VerticalAlignment="Center" />
-              <TextBlock x:Name="TableCountText" Grid.Column="1" Classes="caption" Text="{DynamicResource UiTextNoTables}" />
+              <TextBlock x:Name="TableCountText" Grid.Column="1" Classes="caption" Text="Нет таблиц" />
             </Grid>
             <ListBox x:Name="TablesList" Grid.Row="1" Classes="navigation"
                      SelectionChanged="OnTableSelected">
@@ -164,9 +164,9 @@
                               Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconTable}" />
                   </Border>
                   <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1" MinWidth="0">
-                    <TextBlock x:Name="CurrentTableText" Classes="pageTitle" Text="{DynamicResource UiTextSelectTableCaption}"
+                    <TextBlock x:Name="CurrentTableText" Classes="pageTitle" Text="Выберите или создайте таблицу"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock x:Name="TableSummaryText" Classes="muted" Text="{DynamicResource UiTextLocalDataCaption}"
+                    <TextBlock x:Name="TableSummaryText" Classes="muted" Text="Данные хранятся локально"
                                TextTrimming="CharacterEllipsis" />
                   </StackPanel>
                 </Grid>
@@ -175,7 +175,7 @@
                   <Button x:Name="AddButton" Classes="primary" IsEnabled="False" Click="OnAddRecord">
                     <StackPanel Orientation="Horizontal" Spacing="7">
                       <PathIcon Width="17" Height="17" Data="{DynamicResource UiIconPlus}" />
-                      <TextBlock x:Name="AddButtonCaption" Text="{DynamicResource UiTextNewRowCaption}" />
+                      <TextBlock x:Name="AddButtonCaption" Text="Новая запись" />
                     </StackPanel>
                   </Button>
                   <Button x:Name="QuickPasteRowsButton" Classes="secondary" Margin="7,0,0,0"
@@ -246,8 +246,7 @@
                   </WrapPanel>
                 </StackPanel>
                 <TextBlock x:Name="EmptyStateText" IsVisible="False" HorizontalAlignment="Center"
-                           VerticalAlignment="Center" Classes="muted"
-                           Text="{DynamicResource UiTextEmptyTableInstruction}" />
+                           VerticalAlignment="Center" Classes="muted" />
                 <DataGrid x:Name="RecordsGrid" Classes="flatgrid" IsVisible="False"
                           AutoGenerateColumns="False" CanUserReorderColumns="True"
                           CanUserResizeColumns="True" CanUserSortColumns="False"
@@ -294,7 +293,13 @@
                     <StackPanel Margin="14" Spacing="10">
                       <TextBlock Classes="caption" Text="{DynamicResource UiTextSavedFilterSetsSection}" />
                       <ComboBox x:Name="SavedFilterBox" HorizontalAlignment="Stretch"
-                                SelectionChanged="OnSavedFilterSelected" />
+                                SelectionChanged="OnSavedFilterSelected">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate x:DataType="domain:SavedFilterDefinition">
+                            <TextBlock Text="{Binding Name}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
                       <WrapPanel>
                         <Button x:Name="SaveFilterButton" Classes="secondary" Content="{DynamicResource UiTextSave}"
                                 Margin="0,0,6,6" IsEnabled="False" Click="OnSaveFilter" />
@@ -317,8 +322,8 @@
                       <Border Padding="10" CornerRadius="8" Background="{DynamicResource UiAccentSoftBrush}">
                         <StackPanel Spacing="3">
                           <TextBlock x:Name="StructureTableNameText" FontWeight="SemiBold"
-                                     Text="{DynamicResource UiTextNoTableSelected}" TextTrimming="CharacterEllipsis" />
-                          <TextBlock x:Name="StructureSummaryText" Classes="caption" Text="{DynamicResource UiTextSelectTableLeft}" />
+                                     Text="Таблица не выбрана" TextTrimming="CharacterEllipsis" />
+                          <TextBlock x:Name="StructureSummaryText" Classes="caption" Text="Выберите таблицу слева" />
                         </StackPanel>
                       </Border>
                       <ItemsControl x:Name="StructureFieldsList">

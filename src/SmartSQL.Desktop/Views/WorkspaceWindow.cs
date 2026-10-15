@@ -83,19 +83,19 @@ public sealed class WorkspaceWindow : Window
         _tree.ItemsSource = _roots;
         _tabs.ItemsSource = _tabItems;
         _tree.DoubleTapped += async (_, e) => { e.Handled = true; await OpenSelectedObjectAsync(); };
-        _tree.KeyDown += async (_, e) =>
+        _tree.AddHandler(KeyDownEvent, async (_, e) =>
         {
             if (e.Key != Key.Enter) return;
             e.Handled = true;
             await OpenSelectedObjectAsync();
-        };
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         _tabs.SelectionChanged += (_, _) => UpdateActiveContext();
         _mode.IsCheckedChanged += (_, _) =>
         {
             if (!_settingMode && !_starting)
                 ApplyMode(_mode.IsChecked == true ? WorkspacePresentationMode.Advanced : WorkspacePresentationMode.Simple, persist: true);
         };
-        KeyDown += async (_, e) =>
+        AddHandler(KeyDownEvent, async (_, e) =>
         {
             if (e.KeyModifiers != KeyModifiers.Control) return;
             if (e.Key == Key.W && ActiveTab is { } tab)
@@ -108,7 +108,7 @@ public sealed class WorkspaceWindow : Window
                 e.Handled = true;
                 _tabs.SelectedIndex = (_tabs.SelectedIndex + 1) % _tabItems.Count;
             }
-        };
+        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AutomationProperties.SetName(_tree, "Подключения, схемы и таблицы");
         AutomationProperties.SetName(_tabs, "Открытые таблицы");
         AutomationProperties.SetName(_mode, "Режим интерфейса");
