@@ -158,9 +158,15 @@ public sealed class WorkspaceConnectionTests
         {
             Tables = async token =>
             {
-                using var registration = token.Register(() => cancelled.TrySetResult(true));
                 started.SetResult(true);
-                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                try { await Task.Delay(Timeout.InfiniteTimeSpan, token); }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    // Observe cancellation at the provider await. A separately registered callback
+                    // can legitimately be unregistered by this continuation before it is invoked.
+                    cancelled.TrySetResult(true);
+                    throw;
+                }
                 return Array.Empty<DatabaseTableRef>();
             }
         };

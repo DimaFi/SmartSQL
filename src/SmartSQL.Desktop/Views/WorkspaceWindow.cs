@@ -9,6 +9,7 @@ using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using SmartSQL.Application;
 using SmartSQL.Desktop.Presentation;
+using SmartSQL.Desktop.Queries;
 using SmartSQL.Desktop.Workspaces;
 using SmartSQL.Domain;
 using SmartSQL.Infrastructure;
@@ -27,6 +28,8 @@ public sealed class WorkspaceWindow : Window
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _context = new() { Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly ToggleSwitch _mode = new() { OffContent = "Простой режим", OnContent = "Расширенный режим", IsEnabled = false };
+    private readonly Button _newSql = new() { Content = "SQL…", IsVisible = false };
+    private readonly SqlQueryHistoryStore _sqlHistory = new(Path.Combine(WorkspacePaths.DataDirectory, "queries", "history.json"));
     private readonly TextBlock _empty = new()
     {
         Text = "Выберите таблицу в дереве подключений и нажмите Enter или откройте её двойным щелчком.",
@@ -43,6 +46,7 @@ public sealed class WorkspaceWindow : Window
     private bool _shuttingDown;
     private bool _shutdownFinished;
     private int _connectionNumber;
+    private int _sqlNumber;
 
     private sealed class ConnectionEntry
     {
@@ -69,6 +73,7 @@ public sealed class WorkspaceWindow : Window
         public required Control View { get; init; }
         public DatabaseTableRef? NativeTable { get; init; }
         public Guid? ManagedTableId { get; set; }
+        public int SqlNumber { get; init; }
         public bool Closing { get; set; }
         public Task? CloseTask { get; set; }
     }
@@ -116,6 +121,14 @@ public sealed class WorkspaceWindow : Window
         var actions = new WrapPanel { Orientation = Orientation.Horizontal };
         AddAction(actions, "PostgreSQL…", OpenPostgresAsync, "Подключиться к PostgreSQL");
         AddAction(actions, "SQLite…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу");
+        _newSql.Click += (_, _) =>
+        {
+            try { OpenSqlTab(); }
+            catch (Exception) { _status.Text = "Не удалось открыть SQL-вкладку. Проверьте выбранное подключение."; }
+        };
+        AutomationProperties.SetName(_newSql, "Открыть SQL-вкладку выбранного подключения только для чтения");
+        ToolTip.SetTip(_newSql, "SQL только для чтения для подключения, выбранного в дереве или активной вкладке");
+        actions.Children.Add(_newSql);
         AddAction(actions, "Открыть проект…", OpenManagedAsync, "Открыть проект SmartSQL");
         AddAction(actions, "Новый проект…", CreateManagedAsync, "Создать проект SmartSQL");
         AddAction(actions, "Демонстрация", OpenDemoAsync, "Открыть демонстрационный проект");
@@ -217,9 +230,11 @@ public sealed class WorkspaceWindow : Window
         {
             _presentationMode = mode;
             _mode.IsChecked = mode == WorkspacePresentationMode.Advanced;
+            _newSql.IsVisible = mode == WorkspacePresentationMode.Advanced;
             foreach (var tab in _openTabs)
                 if (tab.View is DatabaseTableView native) native.SetPresentationMode(mode);
                 else if (tab.View is MainWindow managed) managed.SetPresentationMode(mode);
+                else if (tab.View is DatabaseQueryView query) query.SetPresentationMode(mode);
         }
         finally { _settingMode = false; }
         if (persist && _preferences is not null)
@@ -254,7 +269,8 @@ public sealed class WorkspaceWindow : Window
                 $"{profile.Host}:{profile.Port}/{profile.Database} · {profile.Username}", profile.Database, editing,
                 async token => editing
                     ? await PostgresDatabaseBrowser.OpenForEditingAsync(profile, password, token)
-                    : await PostgresDatabaseBrowser.OpenAsync(profile, password, token));
+                    : await PostgresDatabaseBrowser.OpenAsync(profile, password, token),
+                async token => await PostgresReadOnlySqlExecutor.OpenAsync(profile, password, token));
             await AddNativeConnectionAsync(connection);
         }
         finally { _dialogOpen = false; }
@@ -284,7 +300,7 @@ public sealed class WorkspaceWindow : Window
                     if (editing)
                         return await NativeSqliteDatabaseBrowser.OpenEditableAsync(path, backupDirectory, token);
                     return await NativeSqliteDatabaseBrowser.OpenAsync(path, token);
-                }));
+                }, async token => await NativeSqliteReadOnlySqlExecutor.OpenAsync(path, token)));
         }
         finally { _dialogOpen = false; }
     }
@@ -387,6 +403,21 @@ public sealed class WorkspaceWindow : Window
         if (!tab.Closing && !_shuttingDown) UpdateActiveContext();
     }
 
+    private void OpenSqlTab()
+    {
+        if (_starting || _shuttingDown || _presentationMode != WorkspacePresentationMode.Advanced) return;
+        var entry = SelectedConnection;
+        if (entry is null || entry.Closing || entry.Native is not { CanQuery: true } connection)
+        {
+            _status.Text = "Выберите обычное SQLite- или PostgreSQL-подключение в дереве. Для управляемого проекта SQL пока недоступен.";
+            return;
+        }
+        var view = new DatabaseQueryView(entry.Name, entry.Provider, entry.Endpoint, connection.OpenSqlAsync, _sqlHistory);
+        view.SetPresentationMode(_presentationMode);
+        AddTab(entry, view, null, null);
+        _status.Text = "SQL-вкладка открыта. Запрос запускается явно, сеанс всегда только для чтения.";
+    }
+
     private ConnectionEntry GetManagedConnection(string path, IReadOnlyList<TableDefinition> tables)
     {
         var fullPath = Path.GetFullPath(path);
@@ -453,7 +484,7 @@ public sealed class WorkspaceWindow : Window
     private WorkspaceTab AddTab(ConnectionEntry entry, Control view, DatabaseTableRef? nativeTable, Guid? managedTableId)
     {
         var item = new TabItem { Content = view, HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch };
-        var tab = new WorkspaceTab { Connection = entry, View = view, Item = item, NativeTable = nativeTable, ManagedTableId = managedTableId };
+        var tab = new WorkspaceTab { Connection = entry, View = view, Item = item, NativeTable = nativeTable, ManagedTableId = managedTableId, SqlNumber = view is DatabaseQueryView ? ++_sqlNumber : 0 };
         _openTabs.Add(tab);
         UpdateTabHeader(tab);
         _tabItems.Add(item);
@@ -464,7 +495,7 @@ public sealed class WorkspaceWindow : Window
 
     private void UpdateTabHeader(WorkspaceTab tab)
     {
-        var tableName = tab.NativeTable is { } table ? $"{table.Schema}.{table.Name}"
+        var tableName = tab.View is DatabaseQueryView ? $"SQL {tab.SqlNumber}" : tab.NativeTable is { } table ? $"{table.Schema}.{table.Name}"
             : tab.Connection.ManagedTables.FirstOrDefault(table => table.Id == tab.ManagedTableId)?.Name ?? "Проект";
         var label = new TextBlock
         {
@@ -608,7 +639,7 @@ public sealed class WorkspaceWindow : Window
             return;
         }
         var entry = tab.Connection;
-        var access = entry.ManagedPath is not null ? "Проект SmartSQL" : entry.Native?.AllowsEditing == true ? "Редактирование разрешено; возможности проверяет провайдер" : "Только чтение";
+        var access = tab.View is DatabaseQueryView ? "SQL всегда только для чтения" : entry.ManagedPath is not null ? "Проект SmartSQL" : entry.Native?.AllowsEditing == true ? "Редактирование разрешено; возможности проверяет провайдер" : "Только чтение";
         _context.Text = $"{entry.Name} · {entry.Endpoint} · {access}";
         ToolTip.SetTip(_context, _context.Text);
         Title = $"SmartSQL — {entry.Name}";

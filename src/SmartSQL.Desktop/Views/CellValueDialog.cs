@@ -78,7 +78,7 @@ public sealed class CellValueDialog : Window
         content.Bind(TextBox.BackgroundProperty, new DynamicResourceExtension("UiPaperBrush"));
         Grid.SetRow(content, 2);
         layout.Children.Add(content);
-        var note = new TextBlock { Text = "Полное текстовое представление PostgreSQL · без обрезки и изменения точности", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
+        var note = new TextBlock { Text = "Полное представление значения провайдера · без обрезки и изменения точности", Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
         Grid.SetRow(note, 3);
         layout.Children.Add(note);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 4, 0, 0), Children = { close, copy } };

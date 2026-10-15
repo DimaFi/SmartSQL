@@ -9,6 +9,7 @@ public sealed class WorkspaceConnection : IAsyncDisposable
     private readonly object _gate = new();
     private readonly CancellationTokenSource _lifetime = new();
     private Func<CancellationToken, Task<IDatabaseBrowser>>? _openAsync;
+    private Func<CancellationToken, Task<IReadOnlySqlExecutor>>? _openSqlAsync;
     private TaskCompletionSource _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task? _cancellationTask;
     private Task? _disposeTask;
@@ -16,7 +17,8 @@ public sealed class WorkspaceConnection : IAsyncDisposable
     private bool _closing;
 
     public WorkspaceConnection(string name, string providerLabel, string endpoint, string databaseName,
-        bool allowsEditing, Func<CancellationToken, Task<IDatabaseBrowser>> openAsync)
+        bool allowsEditing, Func<CancellationToken, Task<IDatabaseBrowser>> openAsync,
+        Func<CancellationToken, Task<IReadOnlySqlExecutor>>? openSqlAsync = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentException.ThrowIfNullOrWhiteSpace(providerLabel);
@@ -29,6 +31,7 @@ public sealed class WorkspaceConnection : IAsyncDisposable
         DatabaseName = databaseName;
         AllowsEditing = allowsEditing;
         _openAsync = openAsync;
+        _openSqlAsync = openSqlAsync;
         _drained.SetResult();
     }
 
@@ -38,6 +41,7 @@ public sealed class WorkspaceConnection : IAsyncDisposable
     public string Endpoint { get; }
     public string DatabaseName { get; }
     public bool AllowsEditing { get; }
+    public bool CanQuery { get { lock (_gate) return !_closing && _openSqlAsync is not null; } }
     public bool IsClosing { get { lock (_gate) return _closing; } }
 
     public async Task<IDatabaseBrowser> OpenBrowserAsync(CancellationToken cancellationToken = default)
@@ -46,6 +50,38 @@ public sealed class WorkspaceConnection : IAsyncDisposable
         try
         {
             return await AcquireAsync(factory, linked.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            linked.Dispose();
+            EndOperation();
+        }
+    }
+
+    public async Task<IReadOnlySqlExecutor> OpenSqlAsync(CancellationToken cancellationToken = default)
+    {
+        Func<CancellationToken, Task<IReadOnlySqlExecutor>> factory;
+        CancellationTokenSource linked;
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_closing, this);
+            cancellationToken.ThrowIfCancellationRequested();
+            factory = _openSqlAsync ?? throw new NotSupportedException("Для этого подключения SQL-вкладки пока недоступны.");
+            linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+            if (_operations++ == 0)
+                _drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        try
+        {
+            var executor = await factory(linked.Token).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Провайдер не вернул SQL-сеанс.");
+            lock (_gate)
+            {
+                if (!_closing && !linked.IsCancellationRequested)
+                    return executor;
+            }
+            await executor.DisposeAsync().ConfigureAwait(false);
+            throw new OperationCanceledException(linked.Token);
         }
         finally
         {
@@ -79,6 +115,7 @@ public sealed class WorkspaceConnection : IAsyncDisposable
                 return;
             _closing = true;
             _openAsync = null;
+            _openSqlAsync = null;
             // Request cancellation now; await callbacks before disposing the source.
             _cancellationTask = _lifetime.CancelAsync();
         }
