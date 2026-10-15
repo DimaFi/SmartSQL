@@ -8,19 +8,19 @@ namespace SmartSQL.Infrastructure.Tests;
 public sealed class PostgresDatabaseBrowserTests
 {
     [Xunit.Fact]
-    public void SearchIsAParameterAndSelectedSortIsCatalogValidatedTextWithKeyTieBreakers()
+    public void SearchIsAParameterAndSelectedSortUsesConfirmedNativeTypeWithKeyTieBreakers()
     {
         var table = new DatabaseTableRef("public", "rows", DatabaseObjectKind.Table);
         DatabaseColumn[] columns = [new("id", 0, "integer", false, 1), new("document\"", 1, "json", true, null)];
         const string search = "%'_; DROP TABLE rows; --";
-        var query = new DatabaseBrowseQuery(search, "document\"", true);
-        var sql = PostgresBrowserSql.Page(table, columns, query);
+        var query = new DatabaseBrowseQuery(search, "id", true);
+        var sql = PostgresBrowserSql.Page(table, columns, query, queryColumns: [PostgresQuerySql.Confirm("id", 23, "pg_catalog", "int4", "b")]);
         Xunit.Assert.DoesNotContain(search, sql);
         Xunit.Assert.DoesNotContain("LIKE", sql);
         Xunit.Assert.Contains("pg_catalog.strpos(pg_catalog.lower(q.\"id\"::pg_catalog.text), pg_catalog.lower($3::pg_catalog.text)) > 0", sql);
-        Xunit.Assert.Contains("ORDER BY (q.\"document\"\"\"::pg_catalog.text) COLLATE pg_catalog.\"C\" DESC NULLS FIRST, q.\"id\" LIMIT $1 OFFSET $2", sql);
+        Xunit.Assert.Contains("ORDER BY q.\"id\" USING OPERATOR(pg_catalog.>) NULLS FIRST, q.\"id\" LIMIT $1 OFFSET $2", sql);
         var diagnostics = PostgresBrowserSql.Diagnostics(table, columns, false, false, query);
-        Xunit.Assert.Contains(diagnostics, item => item.Code == "selected_text_sort");
+        Xunit.Assert.Contains(diagnostics, item => item.Code == "selected_native_sort");
         Xunit.Assert.Contains(diagnostics, item => item.Code == "native_text_search");
         var error = Xunit.Assert.Throws<DatabaseBrowserException>(() => PostgresBrowserSql.Page(table, columns,
             new DatabaseBrowseQuery(SortColumn: "id\"; DROP TABLE rows; --")));

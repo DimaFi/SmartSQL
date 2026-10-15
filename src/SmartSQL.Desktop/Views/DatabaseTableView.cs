@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
@@ -32,6 +33,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
     private readonly ComboBox _sortColumn = new() { Width = 190 };
     private readonly CheckBox _descending = new() { Content = "Убывание", VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _applyQuery = new() { Content = "Применить" };
+    private readonly Button _editFilters = new() { Content = "Фильтры: 0" };
     private readonly Button _clearQuery = new() { Content = "Сбросить" };
     private readonly DataGrid _data = new() { AutoGenerateColumns = false, IsReadOnly = true };
     private readonly DataGrid _structure = new() { AutoGenerateColumns = false, IsReadOnly = true };
@@ -57,6 +59,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
     private DatabaseEditCapabilities? _editCapabilities;
     private DatabaseInsertCapabilities? _insertCapabilities;
     private DatabaseDeleteCapabilities? _deleteCapabilities;
+    private DatabaseQueryCapabilities? _queryCapabilities;
     private CancellationTokenSource? _operation;
     private bool _busy;
     private bool _closed;
@@ -94,6 +97,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _deleteRow.Click += async (_, _) => await DeleteSelectedRowAsync();
         _data.SelectionChanged += (_, _) => UpdateControls();
         _applyQuery.Click += async (_, _) => await ApplyQueryAsync();
+        _editFilters.Click += async (_, _) => await EditFiltersAsync();
         _clearQuery.Click += async (_, _) => { ResetQuery(); await ApplyQueryAsync(); };
         _search.KeyDown += async (_, args) =>
         {
@@ -119,13 +123,17 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         });
         ToolTip.SetTip(_previous, "Предыдущая страница");
         ToolTip.SetTip(_next, "Следующая страница");
-        ToolTip.SetTip(_sortColumn, "Сортировка применяется ко всей таблице. Точные правила текста и NULL зависят от провайдера.");
+        AutomationProperties.SetName(_search, "Поиск по всем полям");
+        AutomationProperties.SetName(_sortColumn, "Столбец нативной сортировки");
+        AutomationProperties.SetName(_editFilters, "Фильтры по типам, условий 0");
+        ToolTip.SetTip(_sortColumn, "Нативная сортировка применяется провайдером ко всей выборке до разбиения на страницы. Недоступные столбцы исключены.");
+        ToolTip.SetTip(_editFilters, "Условия AND применяются провайдером ко всей таблице до разбиения на страницы.");
         ToolTip.SetTip(_search, "Буквальный поиск по всем полям. Обработка регистра зависит от провайдера. Enter — применить.");
         _data.RowHeight = 34;
         _data.ColumnHeaderHeight = 38;
         _structure.RowHeight = 36;
         ConfigureStructureGrid();
-        var queryBar = WrappedBar(_search, _sortColumn, _descending, _applyQuery, _clearQuery,
+        var queryBar = WrappedBar(_search, _sortColumn, _descending, _applyQuery, _editFilters, _clearQuery,
             _refreshTable, _cancelOperation, _showStructure);
         var actions = WrappedBar(_insertRow, _editCell, _deleteRow, _previous, _paging, _next);
         var dataArea = new Grid { RowDefinitions = new RowDefinitions("*,Auto"), RowSpacing = 8 };
@@ -258,6 +266,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _sortColumn.ItemsSource = new[] { new SortChoice(null) };
         _sortColumn.SelectedIndex = 0;
         _descending.IsChecked = false;
+        UpdateFilterButton();
     }
 
     private async Task ApplyQueryAsync()
@@ -265,7 +274,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         if (_busy || _closed)
             return;
         var query = new DatabaseBrowseQuery(_search.Text, (_sortColumn.SelectedItem as SortChoice)?.Name,
-            _descending.IsChecked == true);
+            _descending.IsChecked == true, _query.EffectiveFilters);
         try
         {
             query.Validate();
@@ -276,7 +285,52 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             return;
         }
         _query = query;
-        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, 0, cancellationToken), "Поиск и сортировка данных…");
+        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, 0, cancellationToken), "Поиск, фильтрация и сортировка данных…");
+    }
+
+    private async Task EditFiltersAsync()
+    {
+        if (_busy || _closed || _queryCapabilities is not { } capabilities || capabilities.Table != _table)
+            return;
+
+        IReadOnlyList<DatabaseFilter>? filters;
+        try
+        {
+            filters = await ShowOwnedDialogAsync<IReadOnlyList<DatabaseFilter>?>(
+                new DatabaseFilterDialog(capabilities, _query.EffectiveFilters));
+        }
+        catch (ArgumentException exception)
+        {
+            _status.Foreground = Brushes.Firebrick;
+            _status.Text = exception.Message;
+            return;
+        }
+        if (filters is null || _closed)
+            return;
+
+        var query = new DatabaseBrowseQuery(_search.Text, (_sortColumn.SelectedItem as SortChoice)?.Name,
+            _descending.IsChecked == true, filters.ToArray());
+        try
+        {
+            query.Validate();
+        }
+        catch (ArgumentException exception)
+        {
+            _status.Foreground = Brushes.Firebrick;
+            _status.Text = exception.Message;
+            return;
+        }
+        _query = query;
+        UpdateFilterButton();
+        await RunOperationAsync(cancellationToken => LoadTableCoreAsync(_table, 0, cancellationToken),
+            "Применение фильтров ко всей таблице…");
+    }
+
+    private void UpdateFilterButton()
+    {
+        var count = _query.EffectiveFilters.Count;
+        _editFilters.Content = $"Фильтры: {count}";
+        AutomationProperties.SetName(_editFilters, $"Фильтры по типам, условий {count}");
     }
 
     private async Task RefreshTableAsync()
@@ -798,6 +852,12 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         cancellationToken.ThrowIfCancellationRequested();
         if (_closed)
             return;
+        var queryCapabilities = await _browser.GetQueryCapabilitiesAsync(table, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_closed)
+            return;
+        if (queryCapabilities.Table != table)
+            throw new InvalidOperationException("Провайдер вернул возможности запросов другого объекта.");
         DatabaseEditCapabilities? capabilities = null;
         if (_editor is not null)
         {
@@ -834,6 +894,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _editCapabilities = capabilities;
         _insertCapabilities = insertCapabilities;
         _deleteCapabilities = deleteCapabilities;
+        _queryCapabilities = queryCapabilities;
         ShowStructure(columns, capabilities, insertCapabilities);
         var page = await _browser.ReadPageAsync(table, offset, PageSize, _query, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -859,15 +920,23 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             (false, false, true) => "можно удалить выбранную строку",
             _ => "только чтение для этого объекта"
         });
-        _querySummary.Text = (_query.SortColumn is { } sort
-            ? $"Сортировка: {sort} {(_query.Descending ? "↓" : "↑")}"
-            : "Исходный порядок")
-            + (string.IsNullOrEmpty(_query.SearchText) ? "" : $" · поиск: {_query.SearchText}");
+        var queryParts = new List<string>();
+        if (_query.EffectiveFilters.Count > 0)
+            queryParts.Add($"Фильтры: {_query.EffectiveFilters.Count} условий AND ко всей таблице до страниц");
+        if (!string.IsNullOrEmpty(_query.SearchText))
+            queryParts.Add($"поиск по всей таблице: {_query.SearchText}");
+        queryParts.Add(_query.SortColumn is { } sort
+            ? $"нативная сортировка всей выборки: {sort} {(_query.Descending ? "↓" : "↑")}"
+            : "исходный порядок провайдера");
+        _querySummary.Text = string.Join(" · ", queryParts);
         ToolTip.SetTip(_querySummary, _querySummary.Text);
         ShowStructure(page.Columns, capabilities, insertCapabilities);
-        var choices = new[] { new SortChoice(null) }.Concat(page.Columns.Select(column => new SortChoice(column.Name))).ToArray();
+        var choices = new[] { new SortChoice(null) }.Concat(queryCapabilities.Columns
+            .Where(column => column.CanSort)
+            .Select(column => new SortChoice(column.Name))).ToArray();
         _sortColumn.ItemsSource = choices;
         _sortColumn.SelectedItem = choices.FirstOrDefault(choice => choice.Name == _query.SortColumn) ?? choices[0];
+        UpdateFilterButton();
         _data.Columns.Clear();
         for (var index = 0; index < page.Columns.Count; index++)
         {
@@ -914,9 +983,12 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             diagnostics.AddRange(insertCapabilities.Diagnostics.Select(diagnostic => diagnostic.Message));
         if (deleteCapabilities is not null)
             diagnostics.AddRange(deleteCapabilities.Diagnostics.Select(diagnostic => diagnostic.Message));
+        diagnostics.AddRange(queryCapabilities.Diagnostics.Select(diagnostic => diagnostic.Message));
+        diagnostics.AddRange(queryCapabilities.Columns.Where(column => !string.IsNullOrWhiteSpace(column.Limitation))
+            .Select(column => $"{column.Name}: {column.Limitation}"));
         if (!page.Columns.Any(column => column.PrimaryKeyOrder is not null) && !diagnostics.Any(message => message.Contains("ключ", StringComparison.OrdinalIgnoreCase)))
             diagnostics.Add("У объекта нет первичного ключа: при изменении данных между загрузками записи на страницах могут повторяться или пропускаться.");
-        _diagnostics.Text = string.Join("\n", diagnostics);
+        _diagnostics.Text = string.Join("\n", diagnostics.Distinct(StringComparer.Ordinal));
         _status.Text = (canUpdate, canInsert, canDelete) switch
         {
             (true, true, true) => $"Загружено записей: {page.Rows.Count}. Можно добавить запись, изменить ячейку или удалить выбранную строку.",
@@ -971,6 +1043,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _editCapabilities = null;
         _insertCapabilities = null;
         _deleteCapabilities = null;
+        _queryCapabilities = null;
         _reloadRequiredBeforeWrite = false;
         _data.SelectedItem = null;
         _data.ItemsSource = null;
@@ -1045,6 +1118,8 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _sortColumn.IsEnabled = queryEnabled;
         _descending.IsEnabled = queryEnabled;
         _applyQuery.IsEnabled = queryEnabled;
+        _editFilters.IsEnabled = queryEnabled && _queryCapabilities is { } queryCapabilities
+            && queryCapabilities.Table == _table;
         _clearQuery.IsEnabled = queryEnabled;
         _refreshTable.IsEnabled = connected && !_busy && !_closed;
         _previous.IsEnabled = !_busy && _page is { Offset: > 0 };

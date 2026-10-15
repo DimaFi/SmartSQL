@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 530 128" role="img" aria-label="SmartSQL">
+  <defs>
+    <linearGradient id="green" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="#399878"/><stop offset="1" stop-color="#145640"/></linearGradient>
+    <path id="ribbon" d="M47 1 Q50 -1 53 1 L98 27 Q102 29 98 32 L85 39 Q82 41 79 39 L53 24 Q50 22 47 24 L21 39 Q19 40 19 43 L19 49 Q19 52 22 54 L42 65 Q45 67 48 65 L54 61 Q57 59 60 61 L70 68 Q74 70 70 73 L48 83 Q45 85 42 83 L4 61 Q0 59 0 54 L0 32 Q0 28 4 26 Z"/>
+    <path id="lower-ribbon" d="M48 33 Q51 31 54 33 L96 57 Q99 59 99 64 L99 83 Q99 87 96 89 L54 111 Q51 113 47 111 L2 85 Q-1 83 2 80 L11 75 Q14 72 17 75 L47 92 Q50 94 53 92 L78 78 Q81 76 81 73 L81 70 Q81 67 78 65 L55 52 Q52 51 49 53 L45 56 Q42 58 39 56 L29 50 Q25 48 29 46 Z"/>
+  </defs>
+  <g transform="translate(4 8)" fill="url(#green)"><use href="#ribbon"/><use href="#lower-ribbon"/></g>
+  <text x="128" y="90" fill="#132a30" font-family="Inter, Segoe UI, sans-serif" font-size="76" font-weight="650" letter-spacing="-2">SmartSQL</text>
+</svg>

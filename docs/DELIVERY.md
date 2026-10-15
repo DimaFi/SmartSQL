@@ -1,0 +1,80 @@
+# Поставка SmartSQL для Windows x64
+
+Готовое приложение создаётся рядом с исходниками, по умолчанию в `D:\Code\SmartSQL-builds`. Исходники остаются в `D:\Code\SmartSQL`. Публикация содержит только приложение, runtime при self-contained, запускатель и контрольные суммы; локальные базы, профили, пароли, backups, результаты тестов, NuGet-кэш и модель не копируются.
+
+## Публикация
+
+Из корня исходников, PowerShell 7:
+
+```powershell
+./scripts/Publish.ps1 -Version 0.7.0-preview.1 -Online
+```
+
+По умолчанию создаётся **self-contained directory** для `win-x64`: установленный .NET на компьютере пользователя не требуется. Single-file, trimming, ReadyToRun, подпись и автообновления не включены. Скрипт использует `Initialize-Workspace.ps1`: все NuGet-кэши и TEMP остаются в `.workspace` на D:, промежуточная сборка изолирована в новой папке поставки `.build`; обычные Debug/Release-каталоги исходников не перезаписываются. Для сборки нужен установленный .NET 10 SDK и доступные зависимости/runtime pack. Для разрешённой загрузки недостающих пакетов используйте `-Online`: он передаёт `https://api.nuget.org/v3/index.json` только текущему вызову restore, сохраняя workspace-кэш на D:. Пользовательские и глобальные NuGet sources не меняются; ничего не устанавливается в систему. Без `-Online`/`-Offline` используются эффективные настройки источников, которые могут не содержать ни одного feed. Режим источников отражён в manifest (`restoreMode`).
+
+Результат: `<OutputRoot>\<Version>\win-x64-self-contained-<UTC>-<commit>\`:
+
+- `app\SmartSQL.Desktop.exe` — запускаемое приложение и соседние зависимости;
+- `app\Run-SmartSQL.ps1` — изолированный запуск с явным каталогом данных;
+- `app\manifest.json` — версия, commit, dirty-флаг, SDK, режим поставки, платформа и SHA-256 каждого файла payload;
+- `app\SHA256SUMS.txt` — те же SHA-256; сам manifest и файл сумм исключены, чтобы избежать циклического хэширования;
+- `SmartSQL-<Version>-win-x64-self-contained.zip` и `.zip.sha256` — переносимый архив с содержимым `app` в корне;
+- `publish.log`, `.build` — диагностика и промежуточные результаты, в ZIP не входят.
+
+Каждый запуск создаёт отдельную папку. `-BuildId reviewed-1` задаёт фиксированное имя, но существующая папка всегда отклоняется. Ничего не удаляется; неудачная сборка сохраняется для диагностики. Сборка по процедуре воспроизводима при одинаковых исходниках/SDK/зависимостях; ZIP и manifest содержат время публикации, поэтому побайтовая идентичность архивов не заявляется. Dirty-сборка явно отмечена и не равнозначна сборке сохранённого Git-коммита.
+
+Если нужен осознанный вариант без runtime:
+
+```powershell
+./scripts/Publish.ps1 -Version 0.7.0-preview.1 -Deployment FrameworkDependent
+```
+
+Этот вариант требует установленный **.NET 10 x64 Runtime** на целевом компьютере; Avalonia не требует Windows Desktop Runtime. Автоматического переключения с self-contained на framework-dependent нет. `-Online` и `-Offline` взаимно исключаются; их совместный выбор отклоняется до создания папок. `-Offline` разрешает restore только из подготовленного workspace NuGet-кэша и отключает сетевой NuGet audit для этого вызова; отсутствие пакетов завершит сборку ошибкой. Приготовленный SDK/runtime на машине разработчика сам по себе не заменяет NuGet runtime pack для self-contained публикации. Первая попытка self-contained публикации в текущем окружении завершилась `NU1100` из-за отсутствующих runtime packs 10.0.12 и недоступного настроенного источника. Неудачная папка сохраняется; для повторной попытки с явно разрешённой сетью выберите новый BuildId:
+
+```powershell
+./scripts/Publish.ps1 -Version 0.7.0-preview.1 -BuildId acceptance-online-1 -Online
+```
+
+Указание `-Online` не меняет режим поставки: он по-прежнему self-contained, без автоматического fallback.
+
+## Запуск и данные
+
+Для проверки новой поставки:
+
+```powershell
+./scripts/Run-Published.ps1 -BuildDirectory 'D:\Code\SmartSQL-builds\0.7.0-preview.1\win-x64-self-contained-<build-id>' -Wait
+```
+
+Без `-DataDirectory` запускатель использует постоянный `<build>\run-data\local` рядом с `app` (для ZIP, распакованного без подпапки `app`, — `run-data\local` внутри собственной папки portable): повторные запуски этой сборки сохраняют базы и выбор режима. Для свежей изолированной приёмки задайте новый отдельный каталог на D: через `-DataDirectory`; предыдущие данные не удаляются:
+
+```powershell
+./scripts/Run-Published.ps1 -BuildDirectory 'D:\Code\SmartSQL-builds\0.7.0-preview.1\win-x64-self-contained-<build-id>' -DataDirectory 'D:\Code\SmartSQL-builds\acceptance\0.7.0-preview.1' -Wait
+```
+
+После распаковки ZIP аналогичный запускатель находится внутри:
+
+```powershell
+& 'D:\Apps\SmartSQL-portable\Run-SmartSQL.ps1' -DataDirectory 'D:\SmartSQL-data\personal'
+```
+
+Переменные `SMARTSQL_DATA_DIRECTORY`, `SMARTSQL_TEMP_DIRECTORY`, `TEMP/TMP/TMPDIR` и каталоги runtime/cache задаются только для процесса и его дочернего приложения; после запуска настройки вызывающего процесса восстанавливаются. Глобальные настройки пользователя не меняются. Скрипт не открывает исходную пользовательскую базу и не удаляет данные при выходе.
+
+Прямой запуск portable `SmartSQL.Desktop.exe` также поддержан: существующий `WorkspacePaths` без переменных использует `data\local` рядом с executable, временные файлы — под ним. Поэтому portable следует распаковывать в отдельную папку **на D:**, вне дерева исходников и вне каталога с родительским `SmartSQL.sln`; иначе текущая политика поиска workspace может выбрать данные исходного проекта. `Publish.ps1` отклоняет OutputRoot внутри исходников. Все три скрипта поставки проверяют существующие компоненты путей на ReparsePoint: junction/symlink отклоняются, ошибки чтения атрибутов также останавливают действие. Проверки выполняются до создания каталогов. Они предназначены для локального процесса сборки, а не как защита от конкурентной подмены каталогов другим процессом. Каталог `data` не является частью поставки и появляется только при запуске. Для максимально явного разделения используйте запускатель и `-DataDirectory`.
+
+## Основа установщика
+
+В `packaging/windows/SmartSQL.iss` подготовлен Inno Setup 6 recipe: Windows x64, per-user, `PrivilegesRequired=lowest`, постоянный AppId, ярлыки, необязательный ярлык рабочего стола, иконка `SmartSQL.ico`. По умолчанию приложение устанавливается в `D:\SmartSQL-app\<username>`; выбор другого диска блокируется, поскольку прямой запуск хранит данные рядом с приложением. Общая `ValidateInstallDirectory` проверяет также предков на `SmartSQL.sln` и reparse points, отклоняя установку внутрь исходников или через junction; проверка действует и в silent mode. Реализация использует официальные [Inno ExpandFileName](https://jrsoftware.org/ishelp/topic_isxfunc_expandfilename.htm), [DLLGetLastError](https://jrsoftware.org/ishelp/topic_isxfunc_dllgetlasterror.htm) и [Win32 GetFileAttributesW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfileattributesw). Без ISCC эта Pascal-часть остаётся непроверенным компиляцией scaffold. Обновление использует прежний каталог установки. Базы, профили, backups и временные файлы приложение создаёт в `data\local`, установщик их не поставляет и не удаляет; `[UninstallDelete]` отсутствует. При удалении приложения пользовательские файлы остаются в прежней папке. Перенос сохранённых данных между отдельно распакованными portable-версиями выполняется пользователем явно, автоматически базы не перемещаются.
+
+Компиляция **только уже установленным** ISCC:
+
+```powershell
+./packaging/windows/Build-Installer.ps1 -BuildDirectory 'D:\Code\SmartSQL-builds\0.7.0-preview.1\win-x64-self-contained-<build-id>'
+# либо явный путь к существующему компилятору:
+./packaging/windows/Build-Installer.ps1 -BuildDirectory 'D:\Code\SmartSQL-builds\0.7.0-preview.1\win-x64-self-contained-<build-id>' -IsccPath 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+# публикация и попытка компиляции за один вызов:
+./scripts/Publish.ps1 -Version 0.7.0-preview.1 -Online -Installer
+```
+
+Для prerelease-версии полный `AppVersion` сохраняется (`0.7.0-preview.1`), а `VersionInfoVersion` передаётся отдельно числовым (`0.7.0`); формат manifest-версии и диапазон компонентов 0–65535 проверяются до вызова ISCC. Перед компиляцией проверяются SHA-256 файлов manifest и наличие опубликованной иконки, self-contained режим обязателен. Выход — новая папка `installer`, executable и SHA-256. Повторная компиляция в существующий каталог отклоняется. Компилятор не скачивается и не устанавливается. Если его нет, скрипт явно сообщает, что installer **не создан**, а уже созданные directory/ZIP сохраняются.
+
+Read-only проверка окружения 2026-10-15: SDK 10.0.401, установленный runtime/host 10.0.12; `Microsoft.NETCore.App.Runtime.win-x64` отсутствовал в workspace NuGet-кэше. ISCC/Inno Setup в PATH и стандартных папках, WiX и NSIS в PATH не найдены. Это описание основы поставки, а не подтверждение созданного/протестированного installer. Проверенная основным агентом preview-публикация `0.7.0-preview.1`, сборка `b`, уже создана с `-Online`: 237 файлов payload, загрузка собственного `coreclr.dll` из папки приложения подтверждена. В ограниченной UI-проверке фильтр PostgreSQL `id > 200` показал строки 201–205, переключение Advanced сохранило состояние, сброс вернул 100 строк. Это проверка preview-приложения, а не installer; финальная чистая публикация и её SHA фиксируются отдельно. Runtime packs после успешного restore находятся в workspace-кэше, поэтому следующая публикация может явно использовать `-Offline`. Неподписанные пакеты не имеют подписи издателя; подпись и релизный CI этим срезом не добавляются.

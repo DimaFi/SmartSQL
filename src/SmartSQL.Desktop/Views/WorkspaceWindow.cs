@@ -120,10 +120,12 @@ public sealed class WorkspaceWindow : Window
         AddAction(actions, "Демонстрация", OpenDemoAsync, "Открыть демонстрационный проект");
         AddAction(actions, "Обновить каталог", RefreshSelectedAsync, "Обновить каталог выбранного подключения");
         AddAction(actions, "Отключить", DisconnectSelectedAsync, "Закрыть выбранное подключение и его вкладки");
+        var brandIcon = UiIcon.Create("UiIconBrand", 30);
+        brandIcon.Foreground = new SolidColorBrush(Color.Parse("#1E7454"));
         var title = new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center,
-            Children = { UiIcon.Create("UiIconBrand", 30), new TextBlock { Text = "SmartSQL", FontSize = 24, FontWeight = FontWeight.SemiBold } }
+            Children = { brandIcon, new TextBlock { Text = "SmartSQL", FontSize = 24, FontWeight = FontWeight.SemiBold } }
         };
         var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
         heading.Children.Add(title);

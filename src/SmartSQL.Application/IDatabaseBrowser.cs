@@ -8,6 +8,13 @@ public interface IDatabaseBrowser : IAsyncDisposable
     Task<IReadOnlyList<DatabaseTableRef>> GetTablesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DatabaseColumn>> GetColumnsAsync(DatabaseTableRef table,
         CancellationToken cancellationToken = default);
+    Task<DatabaseQueryCapabilities> GetQueryCapabilitiesAsync(DatabaseTableRef table,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(new DatabaseQueryCapabilities(table, [],
+            [new DatabaseDiagnostic("typed_query_unsupported", "Провайдер пока не подтвердил фильтры по типам и нативную сортировку.")]));
+    }
     Task<DatabasePage> ReadPageAsync(DatabaseTableRef table, long offset, int pageSize,
         CancellationToken cancellationToken = default);
 
@@ -16,8 +23,8 @@ public interface IDatabaseBrowser : IAsyncDisposable
     {
         ArgumentNullException.ThrowIfNull(query);
         query.Validate();
-        if (!string.IsNullOrEmpty(query.SearchText) || query.SortColumn is not null)
-            throw new DatabaseBrowserException("browse_query_unsupported", "Провайдер пока не поддерживает поиск и выбранную сортировку.");
+        if (!string.IsNullOrEmpty(query.SearchText) || query.SortColumn is not null || query.EffectiveFilters.Count > 0)
+            throw new DatabaseBrowserException("browse_query_unsupported", "Провайдер пока не поддерживает поиск, фильтры и выбранную сортировку.");
         return ReadPageAsync(table, offset, pageSize, cancellationToken);
     }
 }

@@ -54,7 +54,7 @@ public sealed class PostgresDatabaseBrowserIntegrationTests
     }
 
     [DedicatedPostgresFact]
-    public async Task ExplicitSortUsesHonestTextOrderingNativeMetadataAndReadOnlyQueries()
+    public async Task ExplicitSortUsesConfirmedNativeOrderingMetadataAndReadOnlyQueries()
     {
         await using var browser = await PostgresDatabaseBrowser.OpenAsync(Profile(), string.Empty);
         var tables = await browser.GetTablesAsync();
@@ -63,14 +63,13 @@ public sealed class PostgresDatabaseBrowserIntegrationTests
         var descending = await browser.ReadPageAsync(table, 0, 500, new DatabaseBrowseQuery(SortColumn: "id", Descending: true));
         var id = ascending.Columns.Single(column => column.Name == "id").Ordinal;
         var values = ascending.Rows.Select(row => row.Values[id]!).ToArray();
-        Assert.Equal(values.OrderBy(value => value, StringComparer.Ordinal), values);
+        Assert.Equal(values.OrderBy(value => int.Parse(value, CultureInfo.InvariantCulture)), values);
         Assert.Equal(values.Reverse(), descending.Rows.Select(row => row.Values[id]!));
-        Assert.Equal(new[] { "1", "10", "100" }, values.Take(3));
-        Assert.Contains(ascending.Diagnostics, item => item.Code == "selected_text_sort");
+        Assert.Equal(new[] { "1", "2", "3" }, values.Take(3));
+        Assert.Contains(ascending.Diagnostics, item => item.Code == "selected_native_sort");
         Assert.Equal("integer", ascending.Columns[id].NativeType);
-        // Native json and array values need no native ordering operators for the selected sort.
-        var json = await browser.ReadPageAsync(table, 0, 2, new DatabaseBrowseQuery(SortColumn: "document"));
-        Assert.Equal(2, json.Rows.Count);
+        var json = await Assert.ThrowsAsync<DatabaseBrowserException>(() => browser.ReadPageAsync(table, 0, 2, new DatabaseBrowseQuery(SortColumn: "document")));
+        Assert.Equal("sort_type_unsupported", json.Code);
         var failure = await Assert.ThrowsAsync<DatabaseBrowserException>(() => browser.ReadPageAsync(table, 0, 100,
             new DatabaseBrowseQuery(SortColumn: "id\"; DROP TABLE browser_rows; --")));
         Assert.Equal("sort_column_unavailable", failure.Code);

@@ -7,7 +7,7 @@ using SmartSQL.Domain;
 namespace SmartSQL.Infrastructure;
 
 /// <summary>Ordinary existing SQLite files, with no SmartSQL metadata or migrations.</summary>
-public sealed class NativeSqliteDatabaseBrowser : IDatabaseBrowser
+public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
 {
     private const int MaxCell = 1_000_000;
     private const int MaxPage = 16_000_000;
@@ -69,17 +69,19 @@ public sealed class NativeSqliteDatabaseBrowser : IDatabaseBrowser
         Validate(table);
         DatabaseBrowseLimits.ValidatePageRequest(offset, pageSize);
         ArgumentNullException.ThrowIfNull(query);
-        query.Validate();
+        query = query.Snapshot();
         return ReadAsync(context =>
         {
             var relation = Relation(context, table);
             var columns = Columns(context, relation);
             if (columns.Count == 0) throw new DatabaseBrowserException("unsupported_object", "Нет доступных столбцов объекта.");
             if (columns.Count > 600) throw new DatabaseBrowserException("object_too_wide", "В объекте больше 600 столбцов. Страница с проверкой нативных значений превышает ограничения текущего обозревателя; структура доступна отдельно.");
+            var filterValues = PrepareFilters(context, table, columns, query);
             using var command = context.Command(NativeSqliteBrowserSql.Page(table, columns, query));
             command.Parameters.AddWithValue("$limit", pageSize + 1);
             command.Parameters.AddWithValue("$offset", offset);
             if (!string.IsNullOrEmpty(query.SearchText)) command.Parameters.AddWithValue("$search", query.SearchText);
+            foreach (var parameter in filterValues) command.Parameters.AddWithValue(parameter.Key, parameter.Value);
             using var reader = command.ExecuteReader();
             var rows = new List<DatabaseDisplayRow>();
             var characters = 0;
@@ -118,7 +120,8 @@ public sealed class NativeSqliteDatabaseBrowser : IDatabaseBrowser
             };
             if (columns.All(c => c.PrimaryKeyOrder is null) || columns.Any(c => c.PrimaryKeyOrder is not null && c.IsNullable))
                 diagnostics.Add(new("unstable_pagination", "Нет гарантированного уникального непустого ключа. Повторяющиеся значения не обеспечивают стабильный порядок страниц."));
-            if (query.SortColumn is not null) diagnostics.Add(new("selected_text_sort", "Выбранный столбец сортируется по текстовому представлению SQLite, а не по числовому или календарному значению."));
+            if (query.SortColumn is not null) diagnostics.Add(new("selected_native_sort", "Нативная сортировка SQLite: NULL сначала; INTEGER/REAL сравниваются как числа, затем TEXT по BINARY, затем BLOB по байтам. Смешанные классы хранения не преобразуются в один тип."));
+            if (query.EffectiveFilters.Count > 0) diagnostics.Add(new("sqlite_typed_filters", "Условия объединены через И до пагинации. Для типизированных сравнений проверены все непустые значения затронутых столбцов в том же снимке; объявленный тип сам по себе не гарантирует совместимость."));
             if (!string.IsNullOrEmpty(query.SearchText)) diagnostics.Add(new("native_text_search", "Буквальный поиск по представлению SQLite; lower меняет регистр ASCII. REAL может иметь другое представление, чем отображаемый double."));
             return new DatabasePage(table, columns, rows, offset, pageSize, more, diagnostics);
         }, cancellationToken);

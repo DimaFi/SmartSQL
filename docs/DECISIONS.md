@@ -293,3 +293,23 @@ Each native table tab acquires and owns a separate provider-browser instance. Th
 Simple/Advanced are presentation preferences only. Switching updates existing controls without reloading data or changing provider capabilities/session write opt-in. First-run selection can be deferred. Only the chosen mode is stored in bounded, versioned JSON under the workspace data directory, with atomic replacement and explicit errors preserving damaged/unknown settings. Passwords, live sessions and open tabs are not persisted. SQL tabs remain T11; this slice introduces no model integration or provider changes.
 
 Status: Implemented; Debug build and 404 automated tests (including 41 real PostgreSQL checks) pass. Basic screen checks now pass; remaining UI acceptance is recorded in WORKSPACE_UI_ACCEPTANCE.md. Stateful managed labels use code-owned values to survive first visual attachment; workspace shortcuts use tunneling input so focused child controls cannot swallow them.
+
+## D045 - Typed Native Predicates Are Provider Capabilities
+
+Native queries carry up to 20 immutable-snapshotted AND conditions with literal input and explicit NULL operators. Domain/Application contains no SQL. Providers confirm available operators and native sorting from fresh metadata and recheck before execution, applying search and predicates before pagination. Unsupported operations fail explicitly. NULL, empty text and whitespace remain distinct; values are parameters and names come from quoted metadata.
+
+PostgreSQL admits exact pg_catalog builtin identities for text/varchar, integers, numeric, date and Boolean. Operators/casts/functions are qualified and relation metadata is guarded by ACCESS SHARE in a read-only transaction. Numeric input stays a decimal string rather than passing through .NET decimal. Domains and unsupported types permit NULL tests only and do not offer selected sorting.
+
+SQLite's declarations are not storage guarantees. Every affected non-null column value is checked in the same read snapshot, including rows outside the result/page. Integer input is Int64; numeric input must round-trip without changing its decimal spelling's mathematical value, DATE must be real canonical TEXT and Boolean INTEGER 0/1. Unknown declarations permit NULL tests; their native storage ordering remains available with a diagnostic. No casts silently repair or discard incompatible data. Sources remain read-only and are not migrated.
+
+Status: Implemented; Debug and 461 tests, including 45 real PostgreSQL checks, pass. Manual UI acceptance is tracked separately.
+
+## D046 - Versioned Local Desktop Publications and Shared Branding
+
+The user requests a runnable application alongside development and a gradually formed installer. Windows x64 publication uses a self-contained directory and ZIP under the sibling `D:\Code\SmartSQL-builds`, with explicit version/build identifiers, source commit/dirty state and payload hashes. Existing publications are never overwritten or deleted. SDK caches, build temporaries and runtime test data remain on D:. Online restore is an explicit command-local option; installed tools and global settings are unchanged. Framework-dependent output requires explicit selection and is labelled accordingly.
+
+The portable app can launch directly outside the source tree or through an isolated-data launcher. Databases, profiles, passwords and caches are never included in the payload. The initial Inno Setup recipe is per-user, keeps a stable AppId, uses D: and does not remove user-created data during upgrade/uninstall. Compiler installation, installer acceptance, signing and automatic updates remain separate work; the absence of ISCC does not imply a working installer.
+
+The supplied green S emblem is redrawn as two crisp vector ribbons. A shared multiresolution ICO is embedded in the executable and applied to all windows/dialogs; small frames use a flat fill and light backing for contrast. The shell header uses the same vector geometry. PNG/ICO export is reproducible from the SVG source, without new runtime dependencies.
+
+Status: Implemented and self-contained EXE/ZIP launch verified on Windows; icon visible in dialogs and taskbar. Installer compilation/installation/update/uninstallation and cross-platform delivery remain unverified.

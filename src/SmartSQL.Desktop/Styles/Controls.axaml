@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <!-- Keep Fluent templates and their keyboard focus indicators. -->
   <Style Selector="Window">
+    <Setter Property="Icon" Value="avares://SmartSQL.Desktop/Assets/SmartSQL.ico" />
     <Setter Property="Background" Value="{DynamicResource UiCanvasBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource UiTextBrush}" />
     <Setter Property="FontSize" Value="14" />

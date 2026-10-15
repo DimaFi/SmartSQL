@@ -21,6 +21,14 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>Assets\SmartSQL.ico</ApplicationIcon>
+    <Title>SmartSQL</Title>
+    <Product>SmartSQL</Product>
+    <Description>SmartSQL</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
 
 </Project>

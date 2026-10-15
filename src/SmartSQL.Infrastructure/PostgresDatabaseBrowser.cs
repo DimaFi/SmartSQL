@@ -156,15 +156,19 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabase
         ValidateTable(table);
         PostgresBrowserSql.ValidatePage(offset, pageSize);
         ArgumentNullException.ThrowIfNull(query);
-        query.Validate();
+        try { query = query.Snapshot(); }
+        catch (ArgumentException) { throw new DatabaseBrowserException("query_invalid", "Некорректный запрос просмотра. Проверьте имена столбцов, операции, Unicode и длину значений."); }
         await _editGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         InvalidateEditSnapshots();
         try
         {
             return await ReadAsync(async (connection, transaction, token) =>
             {
+                // Keep relation/type identities stable through parsing and execution of the page.
+                await LockQueryRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
                 var relation = await ReadRelationAsync(table, connection, transaction, token).ConfigureAwait(false);
                 var columns = await ReadColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
+                var queryColumns = await ReadQueryColumnsAsync(relation.Id, connection, transaction, token).ConfigureAwait(false);
                 var editing = EditingEnabled
                     ? await ReadEditMetadataAsync(relation.Id, relation.Table, connection, transaction, token).ConfigureAwait(false)
                     : null;
@@ -177,11 +181,12 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabase
                 var snapshots = new Dictionary<Guid, EditSnapshot>();
                 var deleteSnapshots = new Dictionary<Guid, DeleteSnapshot>();
                 var rows = new List<DatabaseDisplayRow>(pageSize);
-                await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query, captureVersion), connection, transaction);
+                await using var command = Command(PostgresBrowserSql.Page(relation.Table, columns, query, captureVersion, queryColumns), connection, transaction);
                 command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Integer, Value = pageSize + 1 });
                 command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Bigint, Value = offset });
                 if (!string.IsNullOrEmpty(query.SearchText))
                     command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Text, Value = query.SearchText });
+                PostgresQuerySql.AddParameters(command, query, queryColumns);
                 await using var reader = await command.ExecuteReaderAsync(CommandBehavior.SequentialAccess, token).ConfigureAwait(false);
                 var hasMore = false;
                 var pageCharacters = 0;
@@ -344,6 +349,7 @@ public sealed partial class PostgresDatabaseBrowser : IDatabaseEditor, IDatabase
             return postgres.SqlState switch
             {
                 "28P01" or "28000" => new("authentication_failed", "Сервер отклонил подключение. Проверьте имя пользователя, пароль и правила доступа PostgreSQL."),
+                "22003" or "22007" or "22008" or "22P02" => new("filter_value_invalid", "Значение фильтра не соответствует допустимому нативному типу или диапазону PostgreSQL."),
                 "3D000" => new("database_unavailable", "Указанная база данных не найдена на сервере."),
                 "42501" => new("permission_denied", "Недостаточно прав для чтения выбранного объекта."),
                 "42P01" or "42703" or "42809" => new("object_changed", "Структура объекта изменилась на сервере. Обновите список таблиц."),

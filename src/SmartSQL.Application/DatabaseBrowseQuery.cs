@@ -1,9 +1,20 @@
 namespace SmartSQL.Application;
 
 /// <summary>Provider-neutral, read-only page options. Search matches literal text, not a pattern.</summary>
-public sealed record DatabaseBrowseQuery(string? SearchText = null, string? SortColumn = null, bool Descending = false)
+public sealed record DatabaseBrowseQuery(string? SearchText = null, string? SortColumn = null, bool Descending = false,
+    IReadOnlyList<DatabaseFilter>? Filters = null)
 {
     public const int MaxSearchCharacters = 256;
+    public const int MaxFilters = 20;
+    public IReadOnlyList<DatabaseFilter> EffectiveFilters => Filters ?? [];
+
+    /// <summary>Freeze caller-owned conditions before awaiting provider work.</summary>
+    public DatabaseBrowseQuery Snapshot()
+    {
+        var snapshot = this with { Filters = EffectiveFilters.ToArray() };
+        snapshot.Validate();
+        return snapshot;
+    }
 
     public void Validate()
     {
@@ -13,9 +24,17 @@ public sealed record DatabaseBrowseQuery(string? SearchText = null, string? Sort
         ValidateText(SortColumn, nameof(SortColumn));
         if (SortColumn is { Length: 0 })
             throw new ArgumentException("Выберите существующий столбец сортировки.", nameof(SortColumn));
+        if (EffectiveFilters.Count > MaxFilters)
+            throw new ArgumentException($"Можно объединить не более {MaxFilters} условий фильтра.", nameof(Filters));
+        foreach (var filter in EffectiveFilters)
+        {
+            if (filter is null)
+                throw new ArgumentException("Условие фильтра не может быть пустым.", nameof(Filters));
+            filter.Validate();
+        }
     }
 
-    private static void ValidateText(string? value, string parameter)
+    internal static void ValidateText(string? value, string parameter)
     {
         if (value is null)
             return;

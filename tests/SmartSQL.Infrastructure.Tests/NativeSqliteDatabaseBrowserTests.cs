@@ -51,12 +51,12 @@ public sealed class NativeSqliteDatabaseBrowserTests
         Assert.Contains(page.Diagnostics, d => d.Code == "sqlite_storage_classes");
         var descending = await browser.ReadPageAsync(table, 0, 10, new DatabaseBrowseQuery(SortColumn: "value", Descending: true));
         Assert.Null(descending.Rows[0].Values[1]);
-        Assert.Equal(page.Rows.Where(r => r.Values[1] is not null).Select(r => r.Values[1]).OrderByDescending(v => v, StringComparer.Ordinal),
-            descending.Rows.Skip(1).Select(r => r.Values[1]));
+        Assert.Equal(new string?[] { null, "0x00FF80", "a\0b", "  🌍  ", "", "9223372036854775807", "1.2345678901234567" },
+            descending.Rows.Select(r => r.Values[1]));
     }
 
     [Fact]
-    public async Task PagingSearchAndTextSortApplyToWholeTableAndIdentifiersStayLiteral()
+    public async Task PagingSearchAndNativeSortApplyToWholeTableAndIdentifiersStayLiteral()
     {
         using var file = new Fixture();
         file.Execute("CREATE TABLE rows(id INTEGER PRIMARY KEY, note TEXT); WITH RECURSIVE n(i) AS (VALUES(1) UNION ALL SELECT i+1 FROM n WHERE i<205) INSERT INTO rows SELECT i, CASE WHEN i%2=0 THEN 'MATCH_%' ELSE 'other' END FROM n");
@@ -74,8 +74,8 @@ public sealed class NativeSqliteDatabaseBrowserTests
         Assert.Equal(2, filtered.Rows.Count);
         Assert.Equal("202", filtered.Rows[0].Values[0]);
         var sorted = await browser.ReadPageAsync(table, 0, 3, new DatabaseBrowseQuery(SortColumn:"id"));
-        Assert.Equal(new[] { "1", "10", "100" }, sorted.Rows.Select(r => r.Values[0]));
-        Assert.Contains(sorted.Diagnostics, d => d.Code == "selected_text_sort");
+        Assert.Equal(new[] { "1", "2", "3" }, sorted.Rows.Select(r => r.Values[0]));
+        Assert.Contains(sorted.Diagnostics, d => d.Code == "selected_native_sort");
         Assert.Empty((await browser.ReadPageAsync(table, 0, 10, new DatabaseBrowseQuery("'; DELETE FROM rows;--"))).Rows);
         var injected = await Assert.ThrowsAsync<DatabaseBrowserException>(() => browser.ReadPageAsync(table, 0, 10, new DatabaseBrowseQuery(SortColumn:"id\"; DELETE FROM rows;--")));
         Assert.Equal("sort_column_unavailable", injected.Code);
