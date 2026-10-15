@@ -380,10 +380,11 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         var request = new DatabaseCellUpdate(table, editHandle, choice.Column.Name, choice.Value);
         await RunOperationAsync(async cancellationToken =>
         {
+            DatabaseUpdateResult updateResult;
             try
             {
                 _reloadRequiredBeforeWrite = true;
-                await editor.UpdateCellAsync(request, cancellationToken);
+                updateResult = await editor.UpdateCellAsync(request, cancellationToken);
             }
             catch (DatabaseBrowserException exception) when (IsEditConflict(exception))
             {
@@ -436,6 +437,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
 
             if (_closed)
                 return;
+            var providerMessage = string.IsNullOrWhiteSpace(updateResult.Message) ? string.Empty : " " + updateResult.Message;
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -447,7 +449,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 {
                     _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
-                    _status.Text = "Ячейка сохранена, но обновление страницы отменено. Обновите страницу перед следующим изменением.";
+                    _status.Text = "Ячейка сохранена, но обновление страницы отменено. Обновите страницу перед следующим изменением." + providerMessage;
                 }
                 return;
             }
@@ -457,7 +459,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 {
                     _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
-                    _status.Text = $"Ячейка сохранена, но обновить страницу не удалось. {exception.Message}";
+                    _status.Text = $"Ячейка сохранена, но обновить страницу не удалось. {exception.Message}" + providerMessage;
                 }
                 return;
             }
@@ -467,12 +469,12 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 {
                     _reloadRequiredBeforeWrite = true;
                     _status.Foreground = Brushes.Firebrick;
-                    _status.Text = "Ячейка сохранена, но обновить страницу не удалось. Обновите страницу перед следующим изменением.";
+                    _status.Text = "Ячейка сохранена, но обновить страницу не удалось. Обновите страницу перед следующим изменением." + providerMessage;
                 }
                 return;
             }
             if (!_closed)
-                _status.Text = $"Значение в столбце «{choice.Column.Name}» сохранено. Страница обновлена.";
+                _status.Text = $"Значение в столбце «{choice.Column.Name}» сохранено. Страница обновлена." + providerMessage;
         }, "Сохранение одной ячейки…");
     }
 

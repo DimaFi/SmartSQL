@@ -313,3 +313,15 @@ The portable app can launch directly outside the source tree or through an isola
 The supplied green S emblem is redrawn as two crisp vector ribbons. A shared multiresolution ICO is embedded in the executable and applied to all windows/dialogs; small frames use a flat fill and light backing for contrast. The shell header uses the same vector geometry. PNG/ICO export is reproducible from the SVG source, without new runtime dependencies.
 
 Status: Implemented and self-contained EXE/ZIP launch verified on Windows; icon visible in dialogs and taskbar. Installer compilation/installation/update/uninstallation and cross-platform delivery remain unverified.
+
+## D047 - Explicit SQLite Cell Updates Require a Prewrite Backup
+
+T10 extends D041 with a separate explicitly enabled session implementing IDatabaseEditor. OpenAsync remains read-only; OpenEditableAsync receives an absolute D: backup directory. Presentation mode and saved profiles do not grant write access. The first slice changes one supported cell, with no INSERT/DELETE, migrations or general undo.
+
+Only ordinary main tables with a complete non-null INTEGER/TEXT primary key qualify. Keys, unique fields and unsupported target types remain protected. Views, virtual/shadow tables, triggers, foreign keys in either direction, generated fields, CHECK and unsafe index/collation expressions are rejected conservatively. Values preserve NULL/empty/whitespace and native storage/precision; unsupported SQLite affinity conversions fail explicitly.
+
+The current page grants random, bounded, provider-private single-use handles expiring after 15 minutes. A write takes BEGIN IMMEDIATE on an existing file, confirms metadata and the full raw original row by its complete key, and consumes the submitted handle. Storage classes, integer values, REAL bits and original TEXT/BLOB bytes are compared. SQLite has no PostgreSQL-like row version: changes which return to exactly the same raw values are not distinguishable; this limitation is disclosed.
+
+While holding the writer lock, a separate read-only connection creates an online backup of the prewrite state, including live WAL. The backup is checked and atomically published under a unique name on D: before UPDATE OR ABORT. Copy failure prevents writing; failed updates retain any completed protective copy. The result must contain exactly one row and preserve every other raw value; loss, rounding or constraint errors roll back. Cancellation before commit rolls back. Commit uncertainty invalidates handles, reports an unknown result and never triggers an automatic retry.
+
+Status: Implemented; Debug 0 warnings and 519 tests (including 45 real PostgreSQL facts) pass without skips. UI partially accepted: explicit opt-in, exactly one changed cell, verified prewrite copy and CHECK-table refusal. Full UI acceptance remains open. Existing core dependency direction is unchanged.

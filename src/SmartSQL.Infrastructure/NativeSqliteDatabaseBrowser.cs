@@ -7,7 +7,7 @@ using SmartSQL.Domain;
 namespace SmartSQL.Infrastructure;
 
 /// <summary>Ordinary existing SQLite files, with no SmartSQL metadata or migrations.</summary>
-public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
+public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseEditor
 {
     private const int MaxCell = 1_000_000;
     private const int MaxPage = 16_000_000;
@@ -77,6 +77,7 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
             if (columns.Count == 0) throw new DatabaseBrowserException("unsupported_object", "Нет доступных столбцов объекта.");
             if (columns.Count > 600) throw new DatabaseBrowserException("object_too_wide", "В объекте больше 600 столбцов. Страница с проверкой нативных значений превышает ограничения текущего обозревателя; структура доступна отдельно.");
             var filterValues = PrepareFilters(context, table, columns, query);
+            var editing = EditingEnabled ? ReadEditMetadata(context, relation, columns) : null;
             using var command = context.Command(NativeSqliteBrowserSql.Page(table, columns, query));
             command.Parameters.AddWithValue("$limit", pageSize + 1);
             command.Parameters.AddWithValue("$offset", offset);
@@ -110,19 +111,26 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
                     characters += values[i]?.Length ?? 0;
                     if (characters > MaxPage) throw new DatabaseBrowserException("page_too_large", "Страница превышает 16 млн символов. Уменьшите размер страницы.");
                 }
-                rows.Add(new(values));
+                Guid? editHandle = null;
+                if (editing?.Capabilities.CanUpdate == true)
+                {
+                    editHandle = Guid.NewGuid();
+                    _editSnapshots.Add(editHandle.Value, new(table, editing, ReadRawRow(reader, columns.Count), DateTimeOffset.UtcNow));
+                }
+                rows.Add(new(values) { EditHandle = editHandle });
             }
             var diagnostics = new List<DatabaseDiagnostic>
             {
                 new("sqlite_storage_classes", "SQLite допускает разные классы хранения в одном столбце. Объявленный тип не гарантирует тип значения; целые числа точны, REAL показан как double с обратимым представлением, BLOB — 0x и hex."),
                 new("live_pagination", "Каждая страница — отдельный снимок; изменения файла могут сдвигать строки."),
-                new("sqlite_readonly_wal", "Файл открыт только для чтения без миграции и checkpoint. При WAL SQLite может использовать или создавать служебные -shm/-wal рядом с исходным файлом; это не резервная копия и не режим immutable.")
+                new("sqlite_readonly_wal", "Страницы читаются без изменения данных, миграции и checkpoint. При WAL SQLite может использовать или создавать служебные -shm/-wal рядом с исходным файлом; это не резервная копия и не режим immutable. Разрешение записи проверяется отдельно.")
             };
             if (columns.All(c => c.PrimaryKeyOrder is null) || columns.Any(c => c.PrimaryKeyOrder is not null && c.IsNullable))
                 diagnostics.Add(new("unstable_pagination", "Нет гарантированного уникального непустого ключа. Повторяющиеся значения не обеспечивают стабильный порядок страниц."));
             if (query.SortColumn is not null) diagnostics.Add(new("selected_native_sort", "Нативная сортировка SQLite: NULL сначала; INTEGER/REAL сравниваются как числа, затем TEXT по BINARY, затем BLOB по байтам. Смешанные классы хранения не преобразуются в один тип."));
             if (query.EffectiveFilters.Count > 0) diagnostics.Add(new("sqlite_typed_filters", "Условия объединены через И до пагинации. Для типизированных сравнений проверены все непустые значения затронутых столбцов в том же снимке; объявленный тип сам по себе не гарантирует совместимость."));
             if (!string.IsNullOrEmpty(query.SearchText)) diagnostics.Add(new("native_text_search", "Буквальный поиск по представлению SQLite; lower меняет регистр ASCII. REAL может иметь другое представление, чем отображаемый double."));
+            if (editing is not null) diagnostics.AddRange(editing.Capabilities.Diagnostics);
             return new DatabasePage(table, columns, rows, offset, pageSize, more, diagnostics);
         }, cancellationToken);
     }
@@ -179,10 +187,12 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         await _gate.WaitAsync(token).ConfigureAwait(false);
+        var completed = false;
         try
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-            return await Task.Run(() =>
+            InvalidateEditSnapshots();
+            var result = await Task.Run(() =>
             {
                 token.ThrowIfCancellationRequested();
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token, _stop.Token);
@@ -220,8 +230,14 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
                     throw new DatabaseBrowserException("database_unavailable", "SQLite не смог прочитать файл или объект. Проверьте формат, доступ, блокировки и структуру.");
                 }
             }, token).ConfigureAwait(false);
+            completed = true;
+            return result;
         }
-        finally { _gate.Release(); }
+        finally
+        {
+            if (!completed) InvalidateEditSnapshots();
+            _gate.Release();
+        }
     }
 
     private static void Validate(DatabaseTableRef table)
@@ -237,6 +253,7 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseBrowser
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
         _stop.Cancel();
         await _gate.WaitAsync().ConfigureAwait(false);
+        InvalidateEditSnapshots();
         _stop.Dispose();
         _gate.Release();
     }

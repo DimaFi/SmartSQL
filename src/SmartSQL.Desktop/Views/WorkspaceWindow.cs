@@ -39,6 +39,7 @@ public sealed class WorkspaceWindow : Window
     private bool _settingMode;
     private bool _starting = true;
     private bool _dialogOpen;
+    private Window? _activeDialog;
     private bool _shuttingDown;
     private bool _shutdownFinished;
     private int _connectionNumber;
@@ -114,7 +115,7 @@ public sealed class WorkspaceWindow : Window
         AutomationProperties.SetName(_mode, "Режим интерфейса");
         var actions = new WrapPanel { Orientation = Orientation.Horizontal };
         AddAction(actions, "PostgreSQL…", OpenPostgresAsync, "Подключиться к PostgreSQL");
-        AddAction(actions, "SQLite…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу для просмотра");
+        AddAction(actions, "SQLite…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу");
         AddAction(actions, "Открыть проект…", OpenManagedAsync, "Открыть проект SmartSQL");
         AddAction(actions, "Новый проект…", CreateManagedAsync, "Создать проект SmartSQL");
         AddAction(actions, "Демонстрация", OpenDemoAsync, "Открыть демонстрационный проект");
@@ -192,7 +193,7 @@ public sealed class WorkspaceWindow : Window
             _preferences = new JsonWorkspacePreferencesStore(Path.Combine(WorkspacePaths.DataDirectory, "workspace-preferences.json"));
             var saved = await _preferences.LoadModeAsync();
             if (_shuttingDown) return;
-            var choice = saved ?? await new PresentationModeDialog().ShowDialog<WorkspacePresentationMode?>(this);
+            var choice = saved ?? await ShowWorkspaceDialogAsync<WorkspacePresentationMode?>(new PresentationModeDialog());
             if (_shuttingDown) return;
             ApplyMode(choice ?? WorkspacePresentationMode.Simple, persist: saved is null && choice is not null);
         }
@@ -244,7 +245,7 @@ public sealed class WorkspaceWindow : Window
         try
         {
             var store = new JsonConnectionProfileStore(Path.Combine(WorkspacePaths.DataDirectory, "connections.json"));
-            var request = await new ConnectionsDialog(store).ShowDialog<ConnectionRequest?>(this);
+            var request = await ShowWorkspaceDialogAsync<ConnectionRequest?>(new ConnectionsDialog(store));
             if (request is null || _shuttingDown) return;
             var profile = request.Profile;
             var password = request.Password;
@@ -267,13 +268,23 @@ public sealed class WorkspaceWindow : Window
         {
             var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
             {
-                Title = "Открыть SQLite для просмотра", AllowMultiple = false,
+                Title = "Открыть существующую SQLite-базу", AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("SQLite") { Patterns = ["*.db", "*.sqlite", "*.sqlite3"] }, FilePickerFileTypes.All]
             });
             if (files.Count == 0 || _shuttingDown) return;
             var path = files[0].TryGetLocalPath() ?? throw new InvalidOperationException();
+            var backupDirectory = Path.Combine(WorkspacePaths.DataDirectory, "backups", "native-sqlite");
+            var choice = await ShowWorkspaceDialogAsync<NativeSqliteOpenChoice?>(
+                new NativeSqliteOpenDialog(path, backupDirectory));
+            if (choice is null || _shuttingDown) return;
+            var editing = choice.AllowEditing;
             await AddNativeConnectionAsync(new WorkspaceConnection(Path.GetFileName(path), "SQLite", path,
-                Path.GetFileName(path), false, async token => await NativeSqliteDatabaseBrowser.OpenAsync(path, token)));
+                Path.GetFileName(path), editing, async token =>
+                {
+                    if (editing)
+                        return await NativeSqliteDatabaseBrowser.OpenEditableAsync(path, backupDirectory, token);
+                    return await NativeSqliteDatabaseBrowser.OpenAsync(path, token);
+                }));
         }
         finally { _dialogOpen = false; }
     }
@@ -603,6 +614,19 @@ public sealed class WorkspaceWindow : Window
         Title = $"SmartSQL — {entry.Name}";
     }
 
+    private async Task<T?> ShowWorkspaceDialogAsync<T>(Window dialog)
+    {
+        if (_shuttingDown)
+            return default;
+        _activeDialog = dialog;
+        try { return await dialog.ShowDialog<T>(this); }
+        finally
+        {
+            if (ReferenceEquals(_activeDialog, dialog))
+                _activeDialog = null;
+        }
+    }
+
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (_shutdownFinished) return;
@@ -615,6 +639,7 @@ public sealed class WorkspaceWindow : Window
         }
         _shuttingDown = true;
         IsEnabled = false;
+        _activeDialog?.Close();
         foreach (var entry in _connections) { entry.Closing = true; entry.Native?.Stop(); }
         try
         {

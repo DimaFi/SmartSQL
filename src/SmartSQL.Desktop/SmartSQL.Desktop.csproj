@@ -23,6 +23,7 @@
     <Nullable>enable</Nullable>
     <ApplicationIcon>Assets\SmartSQL.ico</ApplicationIcon>
     <Title>SmartSQL</Title>
+    <AssemblyTitle>SmartSQL</AssemblyTitle>
     <Product>SmartSQL</Product>
     <Description>SmartSQL</Description>
   </PropertyGroup>
