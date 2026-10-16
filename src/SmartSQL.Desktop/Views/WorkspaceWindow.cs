@@ -78,6 +78,7 @@ public sealed class WorkspaceWindow : Window
         public int SqlNumber { get; init; }
         public bool Closing { get; set; }
         public Task? CloseTask { get; set; }
+        public bool CloseFailed { get; set; }
     }
 
     public WorkspaceWindow(string? themeStartupWarning = null)
@@ -559,6 +560,11 @@ public sealed class WorkspaceWindow : Window
             _status.Text = "Дождитесь завершения импорта или экспорта перед закрытием вкладки.";
             return Task.CompletedTask;
         }
+        if (tab.View is DatabaseQueryView { CanClose: false })
+        {
+            _status.Text = "Завершите или отмените выбор SQL-файла перед закрытием вкладки.";
+            return Task.CompletedTask;
+        }
         return tab.CloseTask = CloseTabCoreAsync(tab);
     }
 
@@ -570,7 +576,11 @@ public sealed class WorkspaceWindow : Window
         {
             if (tab.View is IAsyncDisposable disposable) await disposable.DisposeAsync();
         }
-        catch (Exception) { _status.Text = "При завершении сеанса возникла ошибка. Изменения не повторяются автоматически."; }
+        catch (Exception)
+        {
+            tab.CloseFailed = true;
+            _status.Text = "При завершении сеанса возникла ошибка. Изменения не повторяются автоматически.";
+        }
         finally
         {
             tab.Item.Content = null;
@@ -599,6 +609,11 @@ public sealed class WorkspaceWindow : Window
         var entry = SelectedConnection;
         if (entry is null || entry.Closing) return;
         var tabs = _openTabs.Where(tab => tab.Connection == entry).ToArray();
+        if (tabs.Any(tab => tab.View is DatabaseQueryView { CanClose: false }))
+        {
+            _status.Text = "Завершите или отмените выбор SQL-файла перед отключением подключения.";
+            return;
+        }
         if (tabs.Any(tab => tab.View is MainWindow { CanClose: false }))
         {
             _status.Text = "Дождитесь завершения импорта или экспорта перед отключением.";
@@ -607,14 +622,17 @@ public sealed class WorkspaceWindow : Window
         entry.Closing = true;
         entry.Native?.Stop();
         await Task.WhenAll(tabs.Select(CloseTabAsync));
+        var cleanupFailed = tabs.Any(tab => tab.CloseFailed);
         if (entry.Native is not null)
         {
             try { await entry.Native.DisposeAsync(); }
-            catch (Exception) { _status.Text = "Подключение закрыто с ошибкой завершения сеанса. Изменения не повторяются автоматически."; }
+            catch (Exception) { cleanupFailed = true; }
         }
         _connections.Remove(entry);
         _roots.Remove(entry.Node);
-        _status.Text = $"Подключение закрыто: {entry.Name}.";
+        _status.Text = cleanupFailed
+            ? $"Подключение закрыто: {entry.Name}. При завершении сеанса возникла ошибка. Изменения не повторяются автоматически."
+            : $"Подключение закрыто: {entry.Name}.";
         UpdateActiveContext();
     }
 
@@ -703,6 +721,11 @@ public sealed class WorkspaceWindow : Window
         if (_shutdownFinished) return;
         e.Cancel = true;
         if (_shuttingDown) return;
+        if (_openTabs.Any(tab => tab.View is DatabaseQueryView { CanClose: false }))
+        {
+            _status.Text = "Завершите или отмените выбор SQL-файла перед выходом из приложения.";
+            return;
+        }
         if (_openTabs.Any(tab => tab.View is MainWindow { CanClose: false }))
         {
             _status.Text = "Дождитесь завершения импорта или экспорта перед выходом.";

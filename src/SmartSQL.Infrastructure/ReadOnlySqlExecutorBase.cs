@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using SmartSQL.Application;
 
 namespace SmartSQL.Infrastructure;
@@ -69,19 +70,32 @@ public abstract class ReadOnlySqlExecutorBase : IReadOnlySqlExecutor
         {
             if (_disposal is not null) return new(_disposal);
             _closing = true;
-            _disposal = CompleteDisposeAsync(_lifetime.CancelAsync(), _drained.Task);
+            _disposal = CompleteDisposeAsync(_drained.Task);
             return new(_disposal);
         }
     }
 
-    private async Task CompleteDisposeAsync(Task cancellation, Task drained)
+    private async Task CompleteDisposeAsync(Task drained)
     {
+        ExceptionDispatchInfo? failure = null;
+        async Task AttemptAsync(Func<Task> cleanup)
+        {
+            try { await cleanup().ConfigureAwait(false); }
+            catch (Exception exception) { failure ??= ExceptionDispatchInfo.Capture(exception); }
+        }
+
         try
         {
-            await Task.WhenAll(cancellation, drained).ConfigureAwait(false);
-            await ReleaseResourcesAsync().ConfigureAwait(false);
+            await AttemptAsync(_lifetime.CancelAsync).ConfigureAwait(false);
+            await AttemptAsync(() => drained).ConfigureAwait(false);
+            await AttemptAsync(() => ReleaseResourcesAsync().AsTask()).ConfigureAwait(false);
         }
-        finally { _lifetime.Dispose(); }
+        finally
+        {
+            try { _lifetime.Dispose(); }
+            catch (Exception exception) { failure ??= ExceptionDispatchInfo.Capture(exception); }
+        }
+        failure?.Throw();
     }
 
     private static TaskCompletionSource Completed()

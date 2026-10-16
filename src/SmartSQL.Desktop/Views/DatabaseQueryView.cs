@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.ExceptionServices;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -46,6 +47,9 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
     private Task? _disposal;
     private bool _busy;
     private bool _closed;
+    private bool _pickingFile;
+
+    public bool CanClose => !_pickingFile;
 
     public DatabaseQueryView(string connectionName, string provider, string endpoint,
         Func<CancellationToken, Task<IReadOnlySqlExecutor>> open, SqlQueryHistoryStore history)
@@ -159,8 +163,8 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
             var type = new FilePickerFileType("SQL · UTF-8") { Patterns = ["*.sql"] };
             if (save)
             {
-                var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-                { Title = "Сохранить SQL-запрос", SuggestedFileName = "query.sql", DefaultExtension = "sql", FileTypeChoices = [type] });
+                var file = await PickFileAsync(() => top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                { Title = "Сохранить SQL-запрос", SuggestedFileName = "query.sql", DefaultExtension = "sql", FileTypeChoices = [type] }));
                 if (_closed) return;
                 if (file is null) { _status.Text = "Сохранение SQL-файла отменено. Запрос не запускался."; return; }
                 await SqlQueryFiles.WriteAsync(file.TryGetLocalPath() ?? throw new IOException(), _sql.Text ?? string.Empty, token);
@@ -168,14 +172,31 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
             }
             else
             {
-                var files = await top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-                { Title = "Открыть SQL-запрос · UTF-8", AllowMultiple = false, FileTypeFilter = [type, FilePickerFileTypes.All] });
+                var files = await PickFileAsync(() => top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+                { Title = "Открыть SQL-запрос · UTF-8", AllowMultiple = false, FileTypeFilter = [type, FilePickerFileTypes.All] }));
                 if (_closed) return;
                 if (files.Count == 0) { _status.Text = "Открытие SQL-файла отменено. Запрос не запускался."; return; }
                 var text = await SqlQueryFiles.ReadAsync(files[0].TryGetLocalPath() ?? throw new IOException(), token);
                 if (!_closed) { _sql.Text = text; _status.Text = "SQL-файл открыт. Проверьте подключение и нажмите «Выполнить»."; }
             }
         }, save ? "Сохранение SQL-файла…" : "Открытие SQL-файла…");
+    }
+
+    private async Task<T> PickFileAsync<T>(Func<Task<T>> picker)
+    {
+        // Native pickers have no cancellation handle. Keep the tab/connection alive
+        // until the user finishes that dialog; cancellation still covers subsequent IO.
+        _pickingFile = true;
+        try
+        {
+            UpdateControls();
+            return await picker();
+        }
+        finally
+        {
+            _pickingFile = false;
+            if (!_closed) UpdateControls();
+        }
     }
 
     private async Task ShowHistoryAsync()
@@ -228,24 +249,46 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
         catch (DatabaseBrowserException exception) { if (!_closed) { SetErrorStatus(); _status.Text = exception.Message; } }
         catch (ArgumentException exception) { if (!_closed) { SetErrorStatus(); _status.Text = exception.Message; } }
         catch (Exception) { if (!_closed) { SetErrorStatus(); _status.Text = "Не удалось выполнить операцию. Проверьте подключение, права, UTF-8 и доступ к локальному файлу."; } }
-        finally { _operation = null; _busy = false; if (!_closed) UpdateControls(); completion.TrySetResult(); }
+        finally
+        {
+            _operation = null; _busy = false;
+            try { if (!_closed) UpdateControls(); }
+            finally { completion.TrySetResult(); }
+        }
     }
 
     private void UpdateControls()
     {
         _run.IsEnabled = _load.IsEnabled = _save.IsEnabled = _historyButton.IsEnabled = !_busy && !_closed;
-        _sql.IsReadOnly = _busy || _closed; _limit.IsEnabled = !_busy && !_closed; _cancel.IsEnabled = _busy && !_closed;
+        _sql.IsReadOnly = _busy || _closed; _limit.IsEnabled = !_busy && !_closed;
+        _cancel.IsEnabled = _busy && !_closed && !_pickingFile;
     }
 
     public ValueTask DisposeAsync() => new(_disposal ??= DisposeCoreAsync());
     private async Task DisposeCoreAsync()
     {
+        ExceptionDispatchInfo? failure = null;
+        void Attempt(Action cleanup)
+        {
+            try { cleanup(); }
+            catch (Exception exception) { failure ??= ExceptionDispatchInfo.Capture(exception); }
+        }
+        async Task AttemptAsync(Func<Task> cleanup)
+        {
+            try { await cleanup(); }
+            catch (Exception exception) { failure ??= ExceptionDispatchInfo.Capture(exception); }
+        }
         _closed = true; _open = null;
-        foreach (var dialog in _dialogs.ToArray()) dialog.Close();
-        await _lifetime.CancelAsync();
-        if (_completion is { } operation) await operation.Task;
-        if (_executor is not null) await _executor.DisposeAsync();
-        _executor = null; _sql.Text = string.Empty; _results.ItemsSource = null; _results.Columns.Clear();
-        _lifetime.Dispose();
+        foreach (var dialog in _dialogs.ToArray()) Attempt(dialog.Close);
+        await AttemptAsync(_lifetime.CancelAsync);
+        // Never dispose the session while its admitted work is still using it.
+        if (_completion is { } operation) await AttemptAsync(() => operation.Task);
+        if (_executor is not null) await AttemptAsync(() => _executor.DisposeAsync().AsTask());
+        _executor = null;
+        Attempt(() => _sql.Text = string.Empty);
+        Attempt(() => _results.ItemsSource = null);
+        Attempt(_results.Columns.Clear);
+        Attempt(_lifetime.Dispose);
+        failure?.Throw();
     }
 }
