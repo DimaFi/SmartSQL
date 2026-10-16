@@ -56,7 +56,7 @@ public sealed class CellValueDialog : Window
         var icon = UiIcon.Create("UiIconText", 25);
         var iconBox = new Border { Child = icon, Padding = new Thickness(10), CornerRadius = new CornerRadius(10), VerticalAlignment = VerticalAlignment.Top };
         iconBox.Bind(Border.BackgroundProperty, new DynamicResourceExtension("UiAccentSoftBrush"));
-        icon.Bind(PathIcon.ForegroundProperty, new DynamicResourceExtension("UiAccentBrush"));
+        icon.Bind(PathIcon.ForegroundProperty, new DynamicResourceExtension("UiAccentTextBrush"));
         header.Children.Add(iconBox);
         var title = new StackPanel { Spacing = 3, Children = {
             new TextBlock { Text = "ЗНАЧЕНИЕ ПОЛЯ", Classes = { "caption" }, FontSize = 11 },

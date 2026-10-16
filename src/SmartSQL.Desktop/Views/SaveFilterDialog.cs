@@ -15,7 +15,7 @@ public sealed class SaveFilterDialog : Window
         CanResize = false;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         var name = new TextBox { Text = suggestedName ?? string.Empty, PlaceholderText = "Например, Нет документов" };
-        var error = new TextBlock { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+        var error = new TextBlock { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
         var cancel = new Button { Content = "Отмена" };
         cancel.Click += (_, _) => Close(null);
         var save = new Button { Content = "Сохранить" };

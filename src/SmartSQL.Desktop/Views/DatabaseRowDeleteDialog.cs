@@ -67,7 +67,7 @@ public sealed class DatabaseRowDeleteDialog : Window
         content.Children.Add(new TextBlock
         {
             Text = "Строка будет удалена безвозвратно",
-            Foreground = Brushes.Firebrick,
+            Classes = { "error" },
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap
         });

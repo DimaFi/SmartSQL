@@ -17,8 +17,8 @@ public sealed class ClipboardPasteDialog : Window
     private readonly Button _prepare = new() { Content = "Проверить данные", IsEnabled = false };
     private readonly StackPanel _mappings = new() { Spacing = 8 };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _warning = new() { Foreground = Brushes.DarkOrange, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _warning = new() { Classes = { "warning" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly CheckBox _confirmOmissions = new() { Content = "Подтверждаю пропуск указанных столбцов и пустые поля.", IsVisible = false };
     private readonly List<MappingRow> _rows = [];
     private ClipboardImportSource? _source;

@@ -20,7 +20,7 @@ public sealed class CreateTableDialog : Window
     private readonly IDataWorkspace _workspace;
     private readonly TextBox _tableName = new() { PlaceholderText = "Например, Студенты" };
     private readonly StackPanel _fields = new() { Spacing = 8 };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<FieldRow> _rows = [];
 
     private sealed record FieldTypeOption(string Label, FieldType Type)

@@ -13,7 +13,7 @@ public sealed class EditSchemaDialog : Window
     private readonly TableDefinition _table;
     private readonly TextBox _tableName;
     private readonly Dictionary<Guid, TextBox> _fieldNames = [];
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
 
     public EditSchemaDialog(IDataWorkspace workspace, TableDefinition table)
     {

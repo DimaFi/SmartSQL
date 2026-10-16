@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using SmartSQL.Application;
@@ -23,10 +24,10 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
     private readonly SqlQueryHistoryStore _history;
     private readonly CancellationTokenSource _lifetime = new();
     private IReadOnlySqlExecutor? _executor;
-    private readonly TextBox _sql = new()
+    private readonly SqlTextEditor _sql = new()
     {
         AcceptsReturn = true, AcceptsTab = true, TextWrapping = TextWrapping.NoWrap,
-        FontFamily = new FontFamily("Consolas"), FontSize = 14, MaxLength = SqlReadLimits.MaxSqlBytes,
+        FontFamily = new FontFamily("Consolas"), FontSize = 14,
         Text = "SELECT 1 AS result;", MinHeight = 110
     };
     private readonly Button _run = new() { Content = "Выполнить · Ctrl+Enter", Classes = { "primary" } };
@@ -94,12 +95,14 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
         ? "Расширенный режим · SQL только для чтения"
         : "Простой режим · открытая SQL-вкладка и её состояние сохранены";
 
+    private void SetErrorStatus() => _status.Classes.Set("error", true);
+
     private async Task RunAsync()
     {
         if (_busy || _closed) return;
         var request = new SqlReadRequest(_sql.Text ?? string.Empty, (int)(_limit.Value ?? 100));
         try { request.Validate(); }
-        catch (ArgumentException exception) { _status.Foreground = Brushes.Firebrick; _status.Text = exception.Message; return; }
+        catch (ArgumentException exception) { SetErrorStatus(); _status.Text = exception.Message; return; }
         await OperationAsync(async token =>
         {
             _results.ItemsSource = null; _results.Columns.Clear();
@@ -219,12 +222,12 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
         _busy = true;
         var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously); _completion = completion;
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token); _operation = operation;
-        _status.ClearValue(TextBlock.ForegroundProperty); _status.Text = progress; UpdateControls();
+        _status.Classes.Set("error", false); _status.Text = progress; UpdateControls();
         try { await action(operation.Token); }
         catch (OperationCanceledException) { if (!_closed) _status.Text = "Операция отменена. SQL-запрос не повторяется автоматически."; }
-        catch (DatabaseBrowserException exception) { if (!_closed) { _status.Foreground = Brushes.Firebrick; _status.Text = exception.Message; } }
-        catch (ArgumentException exception) { if (!_closed) { _status.Foreground = Brushes.Firebrick; _status.Text = exception.Message; } }
-        catch (Exception) { if (!_closed) { _status.Foreground = Brushes.Firebrick; _status.Text = "Не удалось выполнить операцию. Проверьте подключение, права, UTF-8 и доступ к локальному файлу."; } }
+        catch (DatabaseBrowserException exception) { if (!_closed) { SetErrorStatus(); _status.Text = exception.Message; } }
+        catch (ArgumentException exception) { if (!_closed) { SetErrorStatus(); _status.Text = exception.Message; } }
+        catch (Exception) { if (!_closed) { SetErrorStatus(); _status.Text = "Не удалось выполнить операцию. Проверьте подключение, права, UTF-8 и доступ к локальному файлу."; } }
         finally { _operation = null; _busy = false; if (!_closed) UpdateControls(); completion.TrySetResult(); }
     }
 

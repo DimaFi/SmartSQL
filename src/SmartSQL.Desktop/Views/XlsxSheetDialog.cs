@@ -29,7 +29,7 @@ public sealed class XlsxSheetDialog : Window
             _continue.IsEnabled = false;
             _confirm.IsChecked = false;
             _confirm.IsVisible = false;
-            _warnings.Foreground = Brushes.DarkOrange;
+            _warnings.Classes.Set("warning", true);
             _warnings.Text = "Проверка листа…";
             if (_sheets.SelectedItem is not string name) return;
             try
@@ -43,7 +43,8 @@ public sealed class XlsxSheetDialog : Window
             catch (Exception exception)
             {
                 if (revision != _revision) return;
-                _warnings.Foreground = Brushes.Firebrick;
+                _warnings.Classes.Set("warning", false);
+                _warnings.Classes.Set("error", true);
                 _warnings.Text = exception.Message;
             }
         };

@@ -1,21 +1,66 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- A small semantic palette: views refer to purpose rather than a particular colour. -->
-  <SolidColorBrush x:Key="UiCanvasBrush" Color="#F5F2EB" />
-  <SolidColorBrush x:Key="UiSurfaceBrush" Color="#FAF9F6" />
-  <SolidColorBrush x:Key="UiSurfaceMutedBrush" Color="#F0EDE6" />
-  <SolidColorBrush x:Key="UiPaperBrush" Color="#FFFFFF" />
-  <SolidColorBrush x:Key="UiBorderBrush" Color="#E5E1D8" />
-  <SolidColorBrush x:Key="UiSoftBorderBrush" Color="#EFEBE3" />
-  <SolidColorBrush x:Key="UiTextBrush" Color="#252C32" />
-  <SolidColorBrush x:Key="UiMutedTextBrush" Color="#70746F" />
-  <SolidColorBrush x:Key="UiDisabledTextBrush" Color="#959991" />
-  <SolidColorBrush x:Key="UiAccentBrush" Color="#245E48" />
-  <SolidColorBrush x:Key="UiAccentHoverBrush" Color="#1C4C3A" />
-  <SolidColorBrush x:Key="UiAccentSoftBrush" Color="#E3E9DF" />
-  <SolidColorBrush x:Key="UiAccentDisabledBrush" Color="#DFE7DF" />
-  <SolidColorBrush x:Key="UiDangerBrush" Color="#A83232" />
-  <SolidColorBrush x:Key="UiFocusBrush" Color="#245E48" />
+  <!-- Shared semantic keys update every open view when RequestedThemeVariant changes. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="UiCanvasBrush" Color="#F5F2EB" />
+      <SolidColorBrush x:Key="UiSurfaceBrush" Color="#FAF9F6" />
+      <SolidColorBrush x:Key="UiSurfaceMutedBrush" Color="#F0EDE6" />
+      <SolidColorBrush x:Key="UiPaperBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="UiBorderBrush" Color="#D2CEC5" />
+      <SolidColorBrush x:Key="UiSoftBorderBrush" Color="#E5E1D8" />
+      <SolidColorBrush x:Key="UiTextBrush" Color="#252C32" />
+      <SolidColorBrush x:Key="UiMutedTextBrush" Color="#60655F" />
+      <SolidColorBrush x:Key="UiDisabledTextBrush" Color="#777E75" />
+      <SolidColorBrush x:Key="UiAccentBrush" Color="#245E48" />
+      <SolidColorBrush x:Key="UiAccentHoverBrush" Color="#1C4C3A" />
+      <SolidColorBrush x:Key="UiAccentTextBrush" Color="#245E48" />
+      <SolidColorBrush x:Key="UiAccentSoftBrush" Color="#E3E9DF" />
+      <SolidColorBrush x:Key="UiAccentDisabledBrush" Color="#DFE7DF" />
+      <SolidColorBrush x:Key="UiOnAccentBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="UiSelectionBrush" Color="#245E48" />
+      <SolidColorBrush x:Key="UiSelectionTextBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="UiDangerBrush" Color="#A83232" />
+      <SolidColorBrush x:Key="UiWarningBrush" Color="#855000" />
+      <SolidColorBrush x:Key="UiSuccessBrush" Color="#245E48" />
+      <SolidColorBrush x:Key="UiBrandBrush" Color="#1E7454" />
+      <SolidColorBrush x:Key="UiFocusBrush" Color="#245E48" />
+      <SolidColorBrush x:Key="UiSqlKeywordBrush" Color="#214D9B" />
+      <SolidColorBrush x:Key="UiSqlStringBrush" Color="#8A3620" />
+      <SolidColorBrush x:Key="UiSqlCommentBrush" Color="#536653" />
+      <SolidColorBrush x:Key="UiSqlNumberBrush" Color="#67408F" />
+      <SolidColorBrush x:Key="UiSqlIdentifierBrush" Color="#23686F" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="UiCanvasBrush" Color="#23262B" />
+      <SolidColorBrush x:Key="UiSurfaceBrush" Color="#2D3035" />
+      <SolidColorBrush x:Key="UiSurfaceMutedBrush" Color="#373B42" />
+      <SolidColorBrush x:Key="UiPaperBrush" Color="#282B30" />
+      <SolidColorBrush x:Key="UiBorderBrush" Color="#78808B" />
+      <SolidColorBrush x:Key="UiSoftBorderBrush" Color="#454B54" />
+      <SolidColorBrush x:Key="UiTextBrush" Color="#F1F2F4" />
+      <SolidColorBrush x:Key="UiMutedTextBrush" Color="#C0C4CA" />
+      <SolidColorBrush x:Key="UiDisabledTextBrush" Color="#9298A1" />
+      <SolidColorBrush x:Key="UiAccentBrush" Color="#36745C" />
+      <SolidColorBrush x:Key="UiAccentHoverBrush" Color="#39795F" />
+      <SolidColorBrush x:Key="UiAccentTextBrush" Color="#9BD4B5" />
+      <SolidColorBrush x:Key="UiAccentSoftBrush" Color="#34463D" />
+      <SolidColorBrush x:Key="UiAccentDisabledBrush" Color="#37443E" />
+      <SolidColorBrush x:Key="UiOnAccentBrush" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="UiSelectionBrush" Color="#9BD4B5" />
+      <SolidColorBrush x:Key="UiSelectionTextBrush" Color="#23262B" />
+      <SolidColorBrush x:Key="UiDangerBrush" Color="#FF9E9E" />
+      <SolidColorBrush x:Key="UiWarningBrush" Color="#EBC477" />
+      <SolidColorBrush x:Key="UiSuccessBrush" Color="#9BD4B5" />
+      <SolidColorBrush x:Key="UiBrandBrush" Color="#9BD4B5" />
+      <SolidColorBrush x:Key="UiFocusBrush" Color="#9BD4B5" />
+      <SolidColorBrush x:Key="UiSqlKeywordBrush" Color="#A7C7FF" />
+      <SolidColorBrush x:Key="UiSqlStringBrush" Color="#F2BB9C" />
+      <SolidColorBrush x:Key="UiSqlCommentBrush" Color="#B0C4AA" />
+      <SolidColorBrush x:Key="UiSqlNumberBrush" Color="#D8B8F7" />
+      <SolidColorBrush x:Key="UiSqlIdentifierBrush" Color="#9DD8DF" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
   <Thickness x:Key="UiPagePadding">24,20</Thickness>
   <Thickness x:Key="UiCardPadding">18</Thickness>
   <Thickness x:Key="UiButtonPadding">14,8</Thickness>

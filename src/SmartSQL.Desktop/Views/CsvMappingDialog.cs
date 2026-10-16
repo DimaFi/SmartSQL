@@ -15,8 +15,8 @@ public sealed class CsvMappingDialog : Window
     private readonly string _format;
     private readonly StackPanel _mappings = new() { Spacing = 8 };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _warning = new() { Foreground = Brushes.DarkOrange, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _warning = new() { Classes = { "warning" }, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly CheckBox _confirmOmissions = new() { Content = "Понимаю, что пропущенные столбцы не будут импортированы, а несопоставленные поля останутся пустыми." };
     private readonly List<MappingRow> _rows = [];
     private readonly Button _continue = new() { Content = "Проверить данные" };

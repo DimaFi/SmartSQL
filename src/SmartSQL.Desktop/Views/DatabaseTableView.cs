@@ -301,7 +301,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         }
         catch (ArgumentException exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             return;
         }
@@ -316,7 +316,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         }
         catch (ArgumentException exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             return;
         }
@@ -368,7 +368,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         }
         catch (ArgumentException exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             return;
         }
@@ -391,7 +391,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (_closed)
                     return;
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Запись изменилась · SmartSQL", "Изменение не применено",
                         exception.Message,
@@ -408,7 +408,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (_closed)
                     return;
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Результат записи неизвестен · SmartSQL", "Проверьте значение",
                         exception.Message,
@@ -448,7 +448,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Ячейка сохранена, но обновление страницы отменено. Обновите страницу перед следующим изменением." + providerMessage;
                 }
                 return;
@@ -458,7 +458,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = $"Ячейка сохранена, но обновить страницу не удалось. {exception.Message}" + providerMessage;
                 }
                 return;
@@ -468,7 +468,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Ячейка сохранена, но обновить страницу не удалось. Обновите страницу перед следующим изменением." + providerMessage;
                 }
                 return;
@@ -494,7 +494,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         }
         catch (ArgumentException exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             return;
         }
@@ -516,7 +516,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (_closed)
                     return;
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Результат добавления неизвестен · SmartSQL", "Проверьте новую запись",
                         exception.Message,
@@ -547,7 +547,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Запись добавлена, но обновление страницы отменено. Обновите страницу перед следующей записью.";
                 }
                 return;
@@ -557,7 +557,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = $"Запись добавлена, но обновить страницу не удалось. {exception.Message}";
                 }
                 return;
@@ -567,7 +567,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Запись добавлена, но обновить страницу не удалось. Обновите страницу перед следующей записью.";
                 }
                 return;
@@ -596,7 +596,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         }
         catch (ArgumentException exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             return;
         }
@@ -628,7 +628,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (_closed)
                     return;
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Строка изменилась · SmartSQL", "Удаление не выполнено",
                         exception.Message,
@@ -645,7 +645,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (_closed)
                     return;
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
                 if (await ConfirmReloadAsync("Результат удаления неизвестен · SmartSQL", "Проверьте выбранную строку",
                         exception.Message,
@@ -698,7 +698,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Строка удалена, но обновление страницы отменено. Обновите страницу перед следующей операцией.";
                 }
                 return;
@@ -708,7 +708,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = $"Строка удалена, но обновить страницу не удалось. {exception.Message}";
                 }
                 return;
@@ -718,14 +718,14 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 if (!_closed)
                 {
                     _reloadRequiredBeforeWrite = true;
-                    _status.Foreground = Brushes.Firebrick;
+                    _status.Classes.Set("error", true);
                     _status.Text = "Строка удалена, но обновить страницу не удалось. Обновите страницу перед следующей операцией.";
                 }
                 return;
             }
             if (!_closed)
             {
-                _status.ClearValue(TextBlock.ForegroundProperty);
+                _status.Classes.Set("error", false);
                 _status.Text = string.IsNullOrWhiteSpace(result.Message)
                     ? "Строка удалена. Страница обновлена."
                     : $"Строка удалена. Страница обновлена. {result.Message}";
@@ -783,7 +783,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             await LoadTableCoreAsync(table, offset, cancellationToken);
             if (!_closed)
             {
-                _status.ClearValue(TextBlock.ForegroundProperty);
+                _status.Classes.Set("error", false);
                 _status.Text = successMessage;
             }
         }
@@ -792,7 +792,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             if (!_closed)
             {
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = canceledMessage;
             }
         }
@@ -801,7 +801,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             if (!_closed)
             {
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = $"{failurePrefix} {exception.Message}";
             }
         }
@@ -810,7 +810,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             if (!_closed)
             {
                 _reloadRequiredBeforeWrite = true;
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = $"{failurePrefix} Обновите страницу перед следующей безопасной операцией.";
             }
         }
@@ -1070,7 +1070,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         _operationCompletion = completion;
         using var operation = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
         _operation = operation;
-        _status.ClearValue(TextBlock.ForegroundProperty);
+        _status.Classes.Set("error", false);
         _status.Text = progress;
         UpdateControls();
         try
@@ -1090,7 +1090,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         {
             if (!_closed)
             {
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = exception.Message;
             }
         }
@@ -1098,7 +1098,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         {
             if (!_closed)
             {
-                _status.Foreground = Brushes.Firebrick;
+                _status.Classes.Set("error", true);
                 _status.Text = "Не удалось получить данные. Проверьте подключение, права пользователя и доступность выбранного объекта.";
             }
         }

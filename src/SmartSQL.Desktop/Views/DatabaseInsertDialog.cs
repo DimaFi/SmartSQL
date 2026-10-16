@@ -15,7 +15,7 @@ public sealed class DatabaseInsertDialog : Window
     private readonly DatabaseInsertCapabilities _capabilities;
     private readonly List<FieldInput> _fields = [];
     private readonly TextBlock _preview = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _save = new() { Content = "Добавить одну запись", Classes = { "primary" } };
     private bool _updating;
 
@@ -136,7 +136,7 @@ public sealed class DatabaseInsertDialog : Window
             MaxHeight = column.Column.Kind == DatabaseEditValueKind.Text ? 120 : 52,
             IsEnabled = (mode.SelectedItem as ModeChoice)?.Mode == DatabaseInsertValueMode.Value
         };
-        var error = new TextBlock { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+        var error = new TextBlock { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
         var input = new FieldInput { Metadata = column, Mode = mode, Value = value, Error = error };
         _fields.Add(input);
         mode.SelectionChanged += (_, _) =>

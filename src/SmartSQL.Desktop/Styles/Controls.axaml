@@ -50,6 +50,15 @@
     <Setter Property="Foreground" Value="{DynamicResource UiMutedTextBrush}" />
     <Setter Property="Margin" Value="12,16,12,8" />
   </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource UiDangerBrush}" />
+  </Style>
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{DynamicResource UiWarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.success">
+    <Setter Property="Foreground" Value="{DynamicResource UiSuccessBrush}" />
+  </Style>
   <Style Selector="Button">
     <Setter Property="MinHeight" Value="36" />
     <Setter Property="Padding" Value="{DynamicResource UiButtonPadding}" />
@@ -75,17 +84,17 @@
   <Style Selector="Button.primary">
     <Setter Property="Background" Value="{DynamicResource UiAccentBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource UiAccentBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{DynamicResource UiOnAccentBrush}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource UiAccentHoverBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource UiAccentHoverBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{DynamicResource UiOnAccentBrush}" />
   </Style>
   <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource UiAccentHoverBrush}" />
-    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Foreground" Value="{DynamicResource UiOnAccentBrush}" />
   </Style>
   <Style Selector="Button.quiet, Button.navigation, Button.navitem">
     <Setter Property="Background" Value="Transparent" />
@@ -99,12 +108,12 @@
   </Style>
   <Style Selector="Button.navigation.active, Button.navitem.active">
     <Setter Property="Background" Value="{DynamicResource UiAccentSoftBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource UiAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiAccentTextBrush}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="Button.navigation.active:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.navitem.active:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource UiAccentSoftBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource UiAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiAccentTextBrush}" />
   </Style>
   <Style Selector="Button.danger">
     <Setter Property="Foreground" Value="{DynamicResource UiDangerBrush}" />
@@ -124,7 +133,7 @@
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="CornerRadius" Value="0" />
   </Style>
-  <!-- Disabled commands remain legible but recede into the warm surface. -->
+  <!-- Disabled commands remain legible in both palettes. -->
   <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource UiSurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource UiSoftBorderBrush}" />
@@ -145,6 +154,10 @@
     <Setter Property="CornerRadius" Value="{DynamicResource UiControlRadius}" />
     <Setter Property="BorderBrush" Value="{DynamicResource UiBorderBrush}" />
     <Setter Property="Background" Value="{DynamicResource UiSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiTextBrush}" />
+    <Setter Property="CaretBrush" Value="{DynamicResource UiTextBrush}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource UiSelectionBrush}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource UiSelectionTextBrush}" />
     <Setter Property="Padding" Value="12,8" />
   </Style>
   <Style Selector="ComboBox">
@@ -152,6 +165,7 @@
     <Setter Property="CornerRadius" Value="{DynamicResource UiControlRadius}" />
     <Setter Property="BorderBrush" Value="{DynamicResource UiBorderBrush}" />
     <Setter Property="Background" Value="{DynamicResource UiSurfaceBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiTextBrush}" />
     <Setter Property="Padding" Value="12,8" />
   </Style>
   <Style Selector="Menu.toolbarMenu">
@@ -194,7 +208,7 @@
   </Style>
   <Style Selector="ListBox.navigation ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource UiAccentSoftBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource UiAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiAccentTextBrush}" />
   </Style>
   <Style Selector="DataGrid">
     <Setter Property="Background" Value="{DynamicResource UiPaperBrush}" />
@@ -218,6 +232,7 @@
   </Style>
   <Style Selector="DataGridRow">
     <Setter Property="Background" Value="{DynamicResource UiPaperBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource UiTextBrush}" />
   </Style>
   <Style Selector="DataGridRow:pointerover">
     <Setter Property="Background" Value="{DynamicResource UiSurfaceBrush}" />

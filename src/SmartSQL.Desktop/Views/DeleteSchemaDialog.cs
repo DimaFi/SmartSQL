@@ -13,9 +13,9 @@ public sealed class DeleteSchemaDialog : Window
     private readonly TableDefinition _table;
     private readonly bool _deleteTable;
     private readonly ComboBox _fieldBox = new();
-    private readonly TextBlock _impact = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.DarkOrange };
+    private readonly TextBlock _impact = new() { TextWrapping = TextWrapping.Wrap, Classes = { "warning" } };
     private readonly TextBox _confirmation = new() { PlaceholderText = "Введите название для подтверждения" };
-    private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick };
+    private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, Classes = { "error" } };
 
     public DeleteSchemaDialog(IDataWorkspace workspace, TableDefinition table, bool deleteTable)
     {

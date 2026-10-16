@@ -22,7 +22,7 @@ public sealed class CsvNewTableDialog : Window
     private readonly TextBox _tableName;
     private readonly StackPanel _fieldRows = new() { Spacing = 8 };
     private readonly TextBlock _summary = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _import = new() { Content = "Создать и импортировать" };
     private readonly List<(TextBox Name, ComboBox Type)> _rows = [];
 

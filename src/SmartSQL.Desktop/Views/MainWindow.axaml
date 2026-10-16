@@ -9,7 +9,7 @@
     <Border Grid.Row="0" Classes="toolbar" Padding="22,12">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center" IsVisible="False">
-          <PathIcon Width="38" Height="38" Foreground="{DynamicResource UiAccentBrush}"
+          <PathIcon Width="38" Height="38" Foreground="{DynamicResource UiAccentTextBrush}"
                     Data="{DynamicResource UiIconBrand}" />
           <StackPanel VerticalAlignment="Center" Spacing="0">
             <TextBlock FontSize="21" FontWeight="Bold" Text="SmartSQL" />
@@ -93,7 +93,7 @@
         <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
           <Border Grid.Row="0" Padding="10" CornerRadius="9" Background="{DynamicResource UiSurfaceMutedBrush}">
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="9">
-              <PathIcon Width="22" Height="22" Foreground="{DynamicResource UiAccentBrush}"
+              <PathIcon Width="22" Height="22" Foreground="{DynamicResource UiAccentTextBrush}"
                         Data="{DynamicResource UiIconDatabase}" />
               <StackPanel Grid.Column="1" Spacing="1">
                 <TextBlock x:Name="DatabaseNameText" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -161,7 +161,7 @@
                 <Grid MinWidth="120" ColumnDefinitions="Auto,*" ColumnSpacing="11" ClipToBounds="True">
                   <Border Width="42" Height="42" CornerRadius="9" Background="{DynamicResource UiAccentSoftBrush}">
                     <PathIcon Width="23" Height="23" HorizontalAlignment="Center" VerticalAlignment="Center"
-                              Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconTable}" />
+                              Foreground="{DynamicResource UiAccentTextBrush}" Data="{DynamicResource UiIconTable}" />
                   </Border>
                   <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1" MinWidth="0">
                     <TextBlock x:Name="CurrentTableText" Classes="pageTitle" Text="Выберите или создайте таблицу"
@@ -235,7 +235,7 @@
                   <Border Width="62" Height="62" CornerRadius="18" HorizontalAlignment="Center"
                           Background="{DynamicResource UiAccentSoftBrush}">
                     <PathIcon Width="32" Height="32" HorizontalAlignment="Center" VerticalAlignment="Center"
-                              Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconTable}" />
+                              Foreground="{DynamicResource UiAccentTextBrush}" Data="{DynamicResource UiIconTable}" />
                   </Border>
                   <TextBlock Classes="pageTitle" Text="{DynamicResource UiTextWelcomeTitle}" TextAlignment="Center" />
                   <TextBlock Classes="muted" TextWrapping="Wrap" TextAlignment="Center"
@@ -258,11 +258,11 @@
                       BorderThickness="0,1,0,0">
                 <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                   <StackPanel Grid.Column="0" MinWidth="70" VerticalAlignment="Center">
-                    <TextBlock x:Name="StatusText" TextWrapping="Wrap" Foreground="{DynamicResource UiAccentBrush}" />
+                    <TextBlock x:Name="StatusText" TextWrapping="Wrap" Foreground="{DynamicResource UiAccentTextBrush}" />
                     <TextBlock x:Name="DatabasePathText" Classes="caption" TextTrimming="CharacterEllipsis" />
                   </StackPanel>
                   <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                    <PathIcon Width="15" Height="15" Foreground="{DynamicResource UiAccentBrush}"
+                    <PathIcon Width="15" Height="15" Foreground="{DynamicResource UiAccentTextBrush}"
                               Data="{DynamicResource UiIconCheck}" />
                     <TextBlock Classes="caption" Text="{DynamicResource UiTextSaved}" />
                   </StackPanel>
@@ -354,7 +354,7 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="11" VerticalAlignment="Center">
               <Border Width="38" Height="38" CornerRadius="19" Background="{DynamicResource UiSurfaceBrush}">
                 <PathIcon Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center"
-                          Foreground="{DynamicResource UiAccentBrush}" Data="{DynamicResource UiIconHelp}" />
+                          Foreground="{DynamicResource UiAccentTextBrush}" Data="{DynamicResource UiIconHelp}" />
               </Border>
               <StackPanel VerticalAlignment="Center" Spacing="1">
                 <TextBlock FontWeight="SemiBold" Text="{DynamicResource UiTextSortHintTitle}" />

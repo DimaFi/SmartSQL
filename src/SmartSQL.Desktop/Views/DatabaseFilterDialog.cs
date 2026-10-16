@@ -13,7 +13,7 @@ public sealed class DatabaseFilterDialog : Window
 {
     private readonly DatabaseQueryCapabilities _capabilities;
     private readonly StackPanel _conditions = new() { Spacing = 10 };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _add = new() { Content = "+ Условие" };
     private readonly Button _apply = new() { Content = "Применить фильтры", Classes = { "primary" } };
     private readonly List<ConditionRow> _rows = [];

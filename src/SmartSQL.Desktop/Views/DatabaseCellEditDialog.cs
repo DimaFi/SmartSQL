@@ -29,7 +29,7 @@ public sealed class DatabaseCellEditDialog : Window
     private readonly CheckBox _setNull = new() { Content = "Сохранить NULL (отсутствующее значение)" };
     private readonly TextBlock _typeHint = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _preview = new() { TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly Button _save = new() { Content = "Сохранить одну ячейку", Classes = { "primary" } };
     private string? _old;
     private bool _updating;

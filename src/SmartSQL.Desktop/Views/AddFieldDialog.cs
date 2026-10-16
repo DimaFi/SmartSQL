@@ -26,7 +26,7 @@ public sealed class AddFieldDialog : Window
             SelectedIndex = 0,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
-        var error = new TextBlock { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+        var error = new TextBlock { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
         var cancel = new Button { Content = "Отмена" };
         cancel.Click += (_, _) => Close(null);
         var create = new Button { Content = "Добавить" };

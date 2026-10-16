@@ -6,6 +6,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Platform.Storage;
 using SmartSQL.Application;
 using SmartSQL.Desktop.Presentation;
@@ -47,6 +48,7 @@ public sealed class WorkspaceWindow : Window
     private bool _shutdownFinished;
     private int _connectionNumber;
     private int _sqlNumber;
+    private readonly string? _themeStartupWarning;
 
     private sealed class ConnectionEntry
     {
@@ -78,9 +80,17 @@ public sealed class WorkspaceWindow : Window
         public Task? CloseTask { get; set; }
     }
 
-    public WorkspaceWindow()
+    public WorkspaceWindow(string? themeStartupWarning = null)
     {
+        _themeStartupWarning = themeStartupWarning;
         Title = "SmartSQL";
+        // Keep native caption actions explicit, independent of the workspace layout.
+        WindowDecorations = WindowDecorations.Full;
+        ExtendClientAreaToDecorationsHint = false;
+        CanResize = true;
+        CanMinimize = true;
+        CanMaximize = true;
+        ShowInTaskbar = true;
         Width = 1520;
         Height = 940;
         MinWidth = 960;
@@ -135,15 +145,43 @@ public sealed class WorkspaceWindow : Window
         AddAction(actions, "Обновить каталог", RefreshSelectedAsync, "Обновить каталог выбранного подключения");
         AddAction(actions, "Отключить", DisconnectSelectedAsync, "Закрыть выбранное подключение и его вкладки");
         var brandIcon = UiIcon.Create("UiIconBrand", 30);
-        brandIcon.Foreground = new SolidColorBrush(Color.Parse("#1E7454"));
+        brandIcon.Bind(PathIcon.ForegroundProperty, new DynamicResourceExtension("UiBrandBrush"));
         var title = new StackPanel
         {
             Orientation = Orientation.Horizontal, Spacing = 10, VerticalAlignment = VerticalAlignment.Center,
             Children = { brandIcon, new TextBlock { Text = "SmartSQL", FontSize = 24, FontWeight = FontWeight.SemiBold } }
         };
-        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 12 };
+        var currentTheme = Avalonia.Application.Current?.RequestedThemeVariant == Avalonia.Styling.ThemeVariant.Light
+            ? ApplicationTheme.Light : ApplicationTheme.Gray;
+        var theme = new Button
+        {
+            Content = currentTheme == ApplicationTheme.Gray ? "Тема: серая" : "Тема: светлая", MinWidth = 148
+        };
+        void UpdateThemeCaption()
+        {
+            theme.Content = currentTheme == ApplicationTheme.Gray ? "Тема: серая" : "Тема: светлая";
+            var action = currentTheme == ApplicationTheme.Gray ? "Включить светлую тему" : "Включить серую тему";
+            AutomationProperties.SetName(theme, action);
+            ToolTip.SetTip(theme, action + ". Выбор сохраняется для следующего запуска.");
+        }
+        UpdateThemeCaption();
+        theme.Click += (_, _) =>
+        {
+            if (Avalonia.Application.Current is not { } application) return;
+            currentTheme = currentTheme == ApplicationTheme.Gray ? ApplicationTheme.Light : ApplicationTheme.Gray;
+            ThemePreferences.Apply(application, currentTheme);
+            UpdateThemeCaption();
+            try { ThemePreferences.CreateDefault().Save(currentTheme); }
+            catch (Exception)
+            {
+                _status.Text = "Тема изменена для текущего сеанса, но сохранить выбор не удалось. Проверьте файл настроек и права доступа.";
+            }
+        };
+        var heading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto"), ColumnSpacing = 12 };
         heading.Children.Add(title);
-        Grid.SetColumn(_mode, 1);
+        Grid.SetColumn(theme, 1);
+        heading.Children.Add(theme);
+        Grid.SetColumn(_mode, 2);
         heading.Children.Add(_mode);
         var toolbar = new StackPanel { Spacing = 8, Children = { heading, actions } };
         var navigator = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8 };
@@ -219,6 +257,8 @@ public sealed class WorkspaceWindow : Window
         {
             _starting = false;
             _mode.IsEnabled = !_shuttingDown;
+            if (_themeStartupWarning is not null)
+                _status.Text = string.IsNullOrEmpty(_status.Text) ? _themeStartupWarning : _status.Text + " " + _themeStartupWarning;
         }
     }
 

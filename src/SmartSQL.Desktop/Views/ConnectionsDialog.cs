@@ -27,7 +27,7 @@ public sealed class ConnectionsDialog : Window
     private readonly CheckBox _allowEditing = new() { Content = "Разрешить редактирование данных" };
     private readonly ComboBox _ssl = new();
     private readonly TextBlock _sslHint = new() { TextWrapping = TextWrapping.Wrap, Classes = { "muted" } };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Classes = { "error" } };
     private readonly Button _save = new() { Content = "Сохранить профиль", Classes = { "secondary" } };
     private readonly Button _delete = new() { Content = "Удалить профиль", IsEnabled = false, Classes = { "quiet", "danger" } };
     private readonly Button _add = new() { Content = "+ Новый профиль", Classes = { "secondary" }, HorizontalAlignment = HorizontalAlignment.Stretch };

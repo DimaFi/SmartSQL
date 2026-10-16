@@ -11,7 +11,7 @@ public sealed class RestoreBackupDialog : Window
     private readonly IDataWorkspace _workspace;
     private readonly string _sourcePath;
     private readonly TextBox _confirmation = new() { PlaceholderText = "Введите имя текущего файла" };
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Firebrick };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Classes = { "error" } };
     private readonly Button _restore = new() { Content = "Восстановить" };
 
     public RestoreBackupDialog(IDataWorkspace workspace, string sourcePath)
@@ -45,7 +45,7 @@ public sealed class RestoreBackupDialog : Window
                 {
                     Text = "Текущие таблицы и записи будут заменены содержимым выбранной копии. Перед заменой SmartSQL автоматически сохранит текущее состояние рядом с базой.",
                     TextWrapping = TextWrapping.Wrap,
-                    Foreground = Brushes.DarkOrange
+                    Classes = { "warning" }
                 },
                 new TextBlock { Text = $"Для подтверждения введите имя текущего файла: {currentName}", TextWrapping = TextWrapping.Wrap },
                 _confirmation,
@@ -71,14 +71,16 @@ public sealed class RestoreBackupDialog : Window
         try
         {
             _restore.IsEnabled = false;
-            _status.Foreground = Brushes.DarkOrange;
+            _status.Classes.Set("error", false);
+            _status.Classes.Set("warning", true);
             _status.Text = "Проверка копии и восстановление…";
             var result = await Task.Run(() => _workspace.RestoreBackup(_sourcePath));
             Close(result);
         }
         catch (Exception exception)
         {
-            _status.Foreground = Brushes.Firebrick;
+            _status.Classes.Set("warning", false);
+            _status.Classes.Set("error", true);
             _status.Text = exception.Message;
             _restore.IsEnabled = true;
         }

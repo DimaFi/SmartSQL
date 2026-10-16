@@ -11,7 +11,7 @@ public sealed class FilterDialog : Window
 {
     private readonly TableDefinition _table;
     private readonly StackPanel _conditions = new() { Spacing = 8 };
-    private readonly TextBlock _error = new() { Foreground = Brushes.Firebrick, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
     private readonly List<ConditionRow> _rows = [];
 
     private sealed record FieldChoice(FieldDefinition Field)
