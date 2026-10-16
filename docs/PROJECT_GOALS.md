@@ -12,6 +12,14 @@ SmartSQL aims to become a universal intelligent system for managing structured d
 
 The user should be able to create, import, view, search, modify, and export structured data without knowing SQL, DBMS commands, or implementation details of a concrete database engine.
 
+## Product Role — User Clarification, 16 October 2026
+
+SmartSQL is a desktop client and workflow automation layer over established DBMS engines. Its value is reducing the entry barrier: understandable actions, guided setup/import, suitable defaults, validation, clear results and recoverable operations. Developing a new database engine, storage format, query optimizer, transaction manager or replacement DBMS server is outside the product goal.
+
+Existing SQLite/PostgreSQL engines execute data operations through packaged drivers/adapters. SQLite runs inside the local application; PostgreSQL runs as an existing local or remote server. Another database GUI is not required. Ordinary direct database workflows do not require a SmartSQL backend, cloud account or AI model. Application-specific managed-project metadata remains an onboarding feature and is not imposed on existing native databases.
+
+New features should explain which user task they simplify, which existing engine/library/service performs the underlying operation, what the user actually needs, and how success/failure/recovery is presented. See [architecture](ARCHITECTURE.md) and D052 in [decisions](DECISIONS.md).
+
 ## Main User Scenarios
 
 - Create a new structured data project.

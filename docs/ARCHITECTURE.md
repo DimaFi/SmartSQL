@@ -8,6 +8,19 @@ The universal model, editable managed SQLite provider, typed fields, desktop CRU
 
 The product includes a common database-client interface for ordinary existing databases across supported DBMSs. `IDataWorkspace` owns managed metadata and physical tables; `IDatabaseBrowser` supplies native metadata and pages without managed identifiers or type conversion. `IDatabaseEditor` adds optional provider-confirmed cell updates; `IDatabaseRowCreator` and `IDatabaseRowDeleter` add independent single-row insertion/deletion. None implies another write capability or schema editing. Native provider differences remain explicit.
 
+## Product Responsibilities and Runtime Commands
+
+The user reaffirmed on 16 October 2026 that SmartSQL simplifies and automates work with established DBMSs; it does not implement a new DBMS engine/server. Engine storage, indexes, query planning, native transactions, locking and native authorization belong to the selected DBMS. SmartSQL owns guided workflows, supported-operation selection, application validation, provider-specific command generation, conflict/result presentation, import/export and recovery orchestration. Application permission checks complement, never replace, DBMS authorization.
+
+Current native-table flow is `button/dialog -> validated operation request -> provider adapter -> driver -> existing DBMS -> result/status`. Desktop currently orchestrates operations through Application contracts; this diagram does not imply that every handler already passes through a separate Application service. PostgreSQL uses Npgsql; local SQLite uses Microsoft.Data.Sqlite with the packaged SQLite engine. SQL generation and native connections remain in Infrastructure.
+
+- Local SQLite needs a writable project path; no separate DBMS server, database GUI, cloud account, AI model or network connection is needed for ordinary local work.
+- PostgreSQL needs a running local/remote server, endpoint/network access and the appropriate database role/TLS settings. The client PC needs no local PostgreSQL server when it connects to a remote server; another GUI is optional. No SmartSQL backend proxies these current direct connections.
+- Import/export uses format readers/writers plus the relevant data provider; appearance/tab navigation runs inside the desktop UI. Not every button sends SQL or invokes AI.
+- Future cloud delivery uses official service APIs to transfer verified backup artifacts. It is separate from committing edits to a working database. Future AI proposes structured actions through Action/Permission rather than replacing the DBMS.
+
+Existing adapter and safety code integrates established engines; it is not a new transaction/storage implementation. A SmartSQL server or additional technology needs a concrete separately justified task. See D052 and the user-path/dependency sections of [WORK_PLAN](WORK_PLAN.md).
+
 ## Layered Architecture
 
 Compile-time project references point toward the independent core:
