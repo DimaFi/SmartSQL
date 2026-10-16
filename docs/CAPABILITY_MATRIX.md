@@ -1,10 +1,12 @@
 # Матрица возможностей SmartSQL
 
-Фактическая основа на 16 октября 2026 — T12, Debug 0 warnings/errors, 614 passed/0 skipped (1/129/445/39), 60 real PG facts. Это последний кодовый прогон, не тест новых функций плана. Ручная приёмка частичная: [evidence/остаток](WORKSPACE_UI_ACCEPTANCE.md). Новый screen tool не инициализировался; UI не объявляется принятым.
+Фактическая основа на 16 октября 2026 — M01.01 поверх T12, Debug 0 warnings/errors, 638 passed/0 skipped (1/129/469/39), 60 real PG facts. Это последний кодовый прогон; будущие функции плана им не приняты. Ручная приёмка частичная: [evidence/остаток](WORKSPACE_UI_ACCEPTANCE.md). Новый screen tool не инициализировался; UI не объявляется принятым.
 
-**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). Следующий M01.01.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
+**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). Следующий кодовый срез M01.02; M01.01 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
 
 Gray/Light и память темы независимы от Simple/Advanced/permissions, theme button закреплена рядом с режимом. Native caption buttons явные; user подтвердил их возврат. Изменение темы сохраняет SQL/results. Общая UI/DPI/IME/Narrator-приёмка остаётся T23.
+
+Managed project OpenExisting/CreateNew теперь разделены: чужой/пустой/отсутствующий файл не инициализируется, создание без overwrite, runtime ReadWrite без recreate. [Охват и оставшиеся проверки](MANAGED_PROJECT_OPENING.md). ML knowledge/examples/holdout готовятся отдельно; модель не обучена и не интегрирована.
 
 ## Общее рабочее место
 

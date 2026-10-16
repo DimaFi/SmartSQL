@@ -597,7 +597,7 @@ public sealed class WorkspaceWindow : Window
         if (entry.Native is not null) await RefreshNativeCatalogAsync(entry);
         else if (entry.ManagedPath is { } path)
         {
-            var workspace = new SqliteWorkspace(path);
+            var workspace = SqliteWorkspace.OpenExisting(path);
             GetManagedConnection(path, workspace.GetTables());
             foreach (var tab in _openTabs.Where(tab => tab.Connection == entry)) UpdateTabHeader(tab);
             _status.Text = "Каталог проекта обновлён.";
@@ -649,9 +649,13 @@ public sealed class WorkspaceWindow : Window
                 FileTypeFilter = [new FilePickerFileType("Проекты SmartSQL") { Patterns = ["*.db"] }]
             });
             if (files.Count == 0 || _shuttingDown) return;
-            var path = files[0].TryGetLocalPath() ?? throw new InvalidOperationException();
-            if (!File.Exists(path)) throw new FileNotFoundException();
+            var path = files[0].TryGetLocalPath()
+                ?? throw new InvalidOperationException("Выберите локальный файл проекта SmartSQL.");
             OpenManagedView(new MainWindow(path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _status.Text = $"Не удалось открыть проект: {exception.Message}";
         }
         finally { _dialogOpen = false; }
     }
@@ -668,9 +672,14 @@ public sealed class WorkspaceWindow : Window
                 SuggestedStartLocation = await StorageProvider.TryGetFolderFromPathAsync(WorkspacePaths.DataDirectory)
             });
             if (file is null || _shuttingDown) return;
-            var path = file.TryGetLocalPath() ?? throw new InvalidOperationException();
+            var path = file.TryGetLocalPath()
+                ?? throw new InvalidOperationException("Выберите локальный путь нового проекта SmartSQL.");
             if (File.Exists(path)) { _status.Text = "Файл уже существует. Используйте «Открыть проект»."; return; }
-            OpenManagedView(new MainWindow(path));
+            OpenManagedView(new MainWindow(SqliteWorkspace.CreateNew(path)));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            _status.Text = $"Не удалось создать проект: {exception.Message}";
         }
         finally { _dialogOpen = false; }
     }

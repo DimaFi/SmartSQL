@@ -9,7 +9,9 @@ internal static class DemoWorkspace
     public static (string Path, Guid MainTableId) OpenOrCreate()
     {
         var path = WorkspacePaths.DemoDatabasePath;
-        var workspace = new SqliteWorkspace(path);
+        var workspace = File.Exists(path)
+            ? SqliteWorkspace.OpenExisting(path)
+            : SqliteWorkspace.CreateNew(path);
         var existing = workspace.GetTables();
         if (existing.Count > 0)
             return (path, existing.FirstOrDefault(table => table.Name == "Студенты и практика")?.Id ?? existing[0].Id);

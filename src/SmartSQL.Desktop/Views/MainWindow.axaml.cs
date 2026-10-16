@@ -41,7 +41,7 @@ public partial class MainWindow : UserControl
     public Guid? SelectedTableId => _currentTable?.Id;
     public bool CanClose => !_transferInProgress;
 
-    public MainWindow() : this(null, null)
+    public MainWindow() : this((string?)null, null)
     {
     }
 
@@ -58,7 +58,10 @@ public partial class MainWindow : UserControl
 
         try
         {
-            SetWorkspace(WorkspacePaths.DefaultDatabasePath, tableId);
+            var defaultPath = WorkspacePaths.DefaultDatabasePath;
+            SetWorkspace(File.Exists(defaultPath)
+                ? SqliteWorkspace.OpenExisting(defaultPath)
+                : SqliteWorkspace.CreateNew(defaultPath), tableId);
         }
         catch (Exception exception)
         {
@@ -66,9 +69,20 @@ public partial class MainWindow : UserControl
         }
     }
 
-    private void SetWorkspace(string path, Guid? tableId = null)
+    public MainWindow(IDataWorkspace workspace, Guid? tableId = null)
     {
-        var workspace = new SqliteWorkspace(path);
+        ArgumentNullException.ThrowIfNull(workspace);
+        InitializeComponent();
+        AttachedToVisualTree += (_, _) => ApplyInitialAttachedState();
+        InitializePresentation();
+        SetWorkspace(workspace, tableId);
+    }
+
+    private void SetWorkspace(string path, Guid? tableId = null) =>
+        SetWorkspace(SqliteWorkspace.OpenExisting(path), tableId);
+
+    private void SetWorkspace(IDataWorkspace workspace, Guid? tableId = null)
+    {
         _workspace = workspace;
         _currentTable = null;
         _offset = 0;
@@ -206,7 +220,7 @@ public partial class MainWindow : UserControl
             var path = file.TryGetLocalPath() ?? throw new InvalidOperationException("Нужен локальный путь к файлу базы.");
             if (File.Exists(path))
                 throw new IOException("Файл уже существует. Чтобы открыть его, используйте «Открыть базу».");
-            SetWorkspace(path);
+            SetWorkspace(SqliteWorkspace.CreateNew(path));
             WorkspaceOpened?.Invoke(path);
         }
         catch (Exception exception)

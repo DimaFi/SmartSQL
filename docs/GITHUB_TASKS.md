@@ -1,10 +1,10 @@
 # Индекс задач GitHub
 
-Полный канонический план: [WORK_PLAN.md](WORK_PLAN.md), 18 этапов и 123 подзадачи; следующий M01.01. Краткий статус: [TASKS.md](TASKS.md); ограничения/проверки: [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md), [WORKSPACE_UI_ACCEPTANCE.md](WORKSPACE_UI_ACCEPTANCE.md). Номера T01–T25 и реальные issue URL сохраняются, дубликаты не создаются.
+Полный канонический план: [WORK_PLAN.md](WORK_PLAN.md), 18 этапов и 123 подзадачи; следующий M01.02, M01.01 код/автотесты готов, UI открыт. Краткий статус: [TASKS.md](TASKS.md); ограничения/проверки: [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md), [WORKSPACE_UI_ACCEPTANCE.md](WORKSPACE_UI_ACCEPTANCE.md). Номера T01–T25 и реальные issue URL сохраняются, дубликаты не создаются.
 
 Репозиторий: [DimaFi/SmartSQL](https://github.com/DimaFi/SmartSQL). [Общий план #1](https://github.com/DimaFi/SmartSQL/issues/1). Источник для инструментов: [github-issues.json](github-issues.json). 25 задач + PLAN = 26 записей. Состояния issues при обновлении плана не закрываются/не открываются автоматически.
 
-Последняя проверка кода — T12: 614 tests, 60 PG facts, без warnings/errors/skips. Cloud/onboarding/новые provider slices не реализованы только от публикации плана. [Проверенные EXE/ZIP и receipts](DELIVERY.md); source commit текущего приложения не обязательно HEAD документации.
+Последняя проверка кода — M01.01: 638 tests (1/129/469/39), 60 PG facts, без warnings/errors/skips. Независимое final review не выполнено после agent usage limit; UI открыт. Cloud/onboarding/новые provider slices не реализованы только от публикации плана. [Проверенные EXE/ZIP и receipts](DELIVERY.md); source commit текущего приложения не обязательно HEAD документации.
 
 | ID | GitHub | Задача | Этапы исполнения |
 | --- | --- | --- | --- |

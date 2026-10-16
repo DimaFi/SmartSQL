@@ -135,5 +135,5 @@ public sealed class ClipboardImportTests
         return source.Prepare(source.SuggestMapping());
     }
 
-    private static SqliteWorkspace NewWorkspace() => new(Path.Combine(TestPaths.Root, "smartsql-tests", $"clipboard-{Guid.NewGuid():N}.db"));
+    private static SqliteWorkspace NewWorkspace() => SqliteWorkspace.CreateNew(Path.Combine(TestPaths.Root, "smartsql-tests", $"clipboard-{Guid.NewGuid():N}.db"));
 }

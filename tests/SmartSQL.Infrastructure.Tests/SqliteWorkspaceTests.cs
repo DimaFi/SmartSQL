@@ -11,7 +11,7 @@ public sealed class SqliteWorkspaceTests
     public void TableAndRecordSurviveReopen()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["ФИО", "Группа"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?>
         {
@@ -19,7 +19,7 @@ public sealed class SqliteWorkspaceTests
             [table.Fields[1].Id] = "3 курс"
         });
 
-        var reopened = new SqliteWorkspace(file);
+        var reopened = SqliteWorkspace.OpenExisting(file);
         var loadedTable = Xunit.Assert.Single(reopened.GetTables());
         Xunit.Assert.Equal("Студенты", loadedTable.Name);
         var record = Xunit.Assert.Single(reopened.GetRecords(loadedTable.Id));
@@ -31,7 +31,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvCanCreateTableAndRowsAtomically()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var source = CsvTransfer.InspectNewTable("Имя;Курс\nАнна;3\nИлья;4\n");
         var preview = source.PrepareNewTable("Студенты",
             [new FieldInput("Имя", FieldType.Text), new FieldInput("Курс", FieldType.Number)]);
@@ -50,7 +50,7 @@ public sealed class SqliteWorkspaceTests
     public void JsonRoundTripPreservesTypedValuesAndRejectsSchemaMismatch()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var fields = new[]
         {
             new FieldInput("Имя", FieldType.Text),
@@ -91,7 +91,7 @@ public sealed class SqliteWorkspaceTests
     public void JsonRejectsInvalidValueBeforeImport()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Данные", [new FieldInput("Курс", FieldType.Number)]);
         const string json = """
             {"format":"SmartSQL.Table.v1","table":"Данные","fields":[{"name":"Курс","type":"Number"}],"records":[[3],["ошибка"]]}
@@ -104,7 +104,7 @@ public sealed class SqliteWorkspaceTests
     public void NamesCannotInjectSql()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         workspace.CreateTable("'; DROP TABLE smartsql_tables; --", ["Имя; DELETE FROM smartsql_fields"]);
         Xunit.Assert.Single(workspace.GetTables());
     }
@@ -113,13 +113,13 @@ public sealed class SqliteWorkspaceTests
     public void BackupIsReadableAndDoesNotOverwriteExistingFile()
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
-        var workspace = new SqliteWorkspace(Path.Combine(directory, "main.db"));
+        var workspace = SqliteWorkspace.CreateNew(Path.Combine(directory, "main.db"));
         var table = workspace.CreateTable("Студенты", ["ФИО"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Анна" });
         var backupPath = Path.Combine(directory, "backup.db");
         workspace.CreateBackup(backupPath);
 
-        var backup = new SqliteWorkspace(backupPath);
+        var backup = SqliteWorkspace.OpenExisting(backupPath);
         Xunit.Assert.Equal("Анна", Xunit.Assert.Single(backup.GetRecords(table.Id)).Values[table.Fields[0].Id]);
         Xunit.Assert.Throws<IOException>(() => workspace.CreateBackup(backupPath));
     }
@@ -129,7 +129,7 @@ public sealed class SqliteWorkspaceTests
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
         var path = Path.Combine(directory, "legacy.db");
-        var workspace = new SqliteWorkspace(path);
+        var workspace = SqliteWorkspace.CreateNew(path);
         workspace.CreateTable("Студенты", ["Имя"]);
         using (var connection = new SqliteConnection($"Data Source={path}"))
         {
@@ -139,7 +139,7 @@ public sealed class SqliteWorkspaceTests
             command.ExecuteNonQuery();
         }
 
-        var upgraded = new SqliteWorkspace(path);
+        var upgraded = SqliteWorkspace.OpenExisting(path);
         Xunit.Assert.Single(upgraded.GetTables());
         Xunit.Assert.Single(Directory.GetFiles(directory, "legacy.before-upgrade-*.db"));
     }
@@ -148,7 +148,7 @@ public sealed class SqliteWorkspaceTests
     public void RecordsCanBePagedEditedAndDeleted()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Практики", ["Студент"]);
         var first = workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Анна" });
         var second = workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Мария" });
@@ -165,7 +165,7 @@ public sealed class SqliteWorkspaceTests
     public void SearchAndSortWorkWithCyrillicText()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["ФИО"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Яна" });
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Анна" });
@@ -191,10 +191,10 @@ public sealed class SqliteWorkspaceTests
             command.CommandText = "CREATE TABLE unrelated (id INTEGER)";
             command.ExecuteNonQuery();
         }
-        Xunit.Assert.Throws<InvalidOperationException>(() => new SqliteWorkspace(unrelated));
+        Xunit.Assert.Throws<InvalidOperationException>(() => SqliteWorkspace.OpenExisting(unrelated));
 
         var newer = Path.Combine(directory, "newer.db");
-        new SqliteWorkspace(newer);
+        SqliteWorkspace.CreateNew(newer);
         using (var connection = new SqliteConnection($"Data Source={newer}"))
         {
             connection.Open();
@@ -202,14 +202,14 @@ public sealed class SqliteWorkspaceTests
             command.CommandText = "PRAGMA user_version = 999";
             command.ExecuteNonQuery();
         }
-        Xunit.Assert.Throws<InvalidOperationException>(() => new SqliteWorkspace(newer));
+        Xunit.Assert.Throws<InvalidOperationException>(() => SqliteWorkspace.OpenExisting(newer));
     }
 
     [Xunit.Fact]
     public void CsvImportMapsHeadersAndCommitsAllRows()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["ФИО", "Группа"]);
         using var reader = new StringReader("\uFEFFГруппа;ФИО\r\n3 курс;\"Анна; Иванова\"\r\n4 курс;\"Мария\nПетрова\"\r\n");
         Xunit.Assert.Equal(2, CsvTransfer.Import(workspace, table.Id, reader));
@@ -223,7 +223,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvImportRejectsBadRowsWithoutPartialWrite()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["ФИО", "Группа"]);
         using var reader = new StringReader("ФИО,Группа\nАнна,3\nМария\n");
         Xunit.Assert.Throws<FormatException>(() => CsvTransfer.Import(workspace, table.Id, reader));
@@ -234,7 +234,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvExportCanProtectExcelFromFormulaCells()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["ФИО"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "=1+1" });
         using var writer = new StringWriter();
@@ -246,7 +246,7 @@ public sealed class SqliteWorkspaceTests
     public void TypedFieldsValidatePersistAndSortNumbers()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Практики",
             [new FieldInput("Баллы", FieldType.Number), new FieldInput("Дата", FieldType.Date), new FieldInput("Документы", FieldType.Boolean)]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?>
@@ -254,7 +254,7 @@ public sealed class SqliteWorkspaceTests
             [table.Fields[0].Id] = "10,5", [table.Fields[1].Id] = "21.09.2026", [table.Fields[2].Id] = "Да"
         });
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "2" });
-        var reopened = new SqliteWorkspace(file);
+        var reopened = SqliteWorkspace.OpenExisting(file);
         var loaded = Xunit.Assert.Single(reopened.GetTables());
         Xunit.Assert.Equal(FieldType.Date, loaded.Fields[1].Type);
         var sorted = reopened.QueryRecords(table.Id, 0, 10, null, table.Fields[0].Id, false);
@@ -285,7 +285,7 @@ public sealed class SqliteWorkspaceTests
             command.CommandText = "INSERT INTO smartsql_tables VALUES ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Люди'); INSERT INTO smartsql_fields VALUES ('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Имя', 0)";
             command.ExecuteNonQuery();
         }
-        var workspace = new SqliteWorkspace(path);
+        var workspace = SqliteWorkspace.OpenExisting(path);
         Xunit.Assert.Equal(3, workspace.SchemaVersion);
         Xunit.Assert.Equal(FieldType.Text, Xunit.Assert.Single(workspace.GetTables()[0].Fields).Type);
         Xunit.Assert.Single(Directory.GetFiles(directory, "old.before-upgrade-*.db"));
@@ -295,13 +295,13 @@ public sealed class SqliteWorkspaceTests
     public void AddingTypedFieldPreservesExistingRecords()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Люди", ["Имя"]);
         var record = workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Анна" });
         var date = workspace.AddField(table.Id, new FieldInput("Дата", FieldType.Date));
         workspace.UpdateCell(table.Id, record.Id, date.Id, "21.09.2026");
 
-        var reopened = new SqliteWorkspace(file);
+        var reopened = SqliteWorkspace.OpenExisting(file);
         Xunit.Assert.Equal(2, reopened.GetTables()[0].Fields.Count);
         var loaded = Xunit.Assert.Single(reopened.GetRecords(table.Id));
         Xunit.Assert.Equal("Анна", loaded.Values[table.Fields[0].Id]);
@@ -313,7 +313,7 @@ public sealed class SqliteWorkspaceTests
     public void InvalidTypedCsvRowRollsBackEntireImport()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Оценки", [new FieldInput("Балл", FieldType.Number)]);
         using var reader = new StringReader("Балл\n5\nне число\n");
         Xunit.Assert.Throws<FormatException>(() => CsvTransfer.Import(workspace, table.Id, reader));
@@ -324,7 +324,7 @@ public sealed class SqliteWorkspaceTests
     public void FieldFiltersCombineWithSearchAndCompareTypedValues()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Практики",
             [new FieldInput("Студент", FieldType.Text), new FieldInput("Балл", FieldType.Number), new FieldInput("Дата", FieldType.Date)]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?>
@@ -355,7 +355,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvPreviewDoesNotWriteUntilCommitted()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Люди", ["Имя"]);
         using var reader = new StringReader("Имя\nАнна\nМария\n");
         var preview = CsvTransfer.PrepareImport(workspace, table.Id, reader);
@@ -371,7 +371,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvPreviewReportsTypedErrorBeforeWrite()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Оценки", [new FieldInput("Балл", FieldType.Number)]);
         using var reader = new StringReader("Балл\n5\nошибка\n");
         var error = Xunit.Assert.Throws<FormatException>(() => CsvTransfer.PrepareImport(workspace, table.Id, reader));
@@ -383,7 +383,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvColumnsCanBeMappedInDifferentOrderWithExplicitOmissions()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Студенты", ["Имя", "Группа", "Телефон"]);
         var source = CsvTransfer.Inspect(table, "Курс;Студент;Лишнее\n3;Анна;не импортировать\n");
         var preview = source.Prepare(new Dictionary<int, Guid>
@@ -407,7 +407,7 @@ public sealed class SqliteWorkspaceTests
     public void CsvMappingRejectsDuplicateTargetField()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Люди", ["Имя"]);
         var source = CsvTransfer.Inspect(table, "Первый,Второй\nАнна,Мария\n", ',');
         Xunit.Assert.Throws<ArgumentException>(() => source.Prepare(new Dictionary<int, Guid>
@@ -422,7 +422,7 @@ public sealed class SqliteWorkspaceTests
     public void TableAndFieldsCanBeRenamedWithoutChangingRecordsOrTypes()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Люди",
             [new FieldInput("Имя", FieldType.Text), new FieldInput("Возраст", FieldType.Number)]);
         var record = workspace.AddRecord(table.Id, new Dictionary<Guid, string?>
@@ -436,7 +436,7 @@ public sealed class SqliteWorkspaceTests
         Xunit.Assert.Equal("Студенты", renamed.Name);
         Xunit.Assert.Equal(["ФИО", "Полных лет"], renamed.Fields.Select(field => field.Name).ToArray());
         Xunit.Assert.Equal(FieldType.Number, renamed.Fields[1].Type);
-        var loaded = Xunit.Assert.Single(new SqliteWorkspace(file).GetRecords(table.Id));
+        var loaded = Xunit.Assert.Single(SqliteWorkspace.OpenExisting(file).GetRecords(table.Id));
         Xunit.Assert.Equal(record.Id, loaded.Id);
         Xunit.Assert.Equal("Анна", loaded.Values[table.Fields[0].Id]);
         Xunit.Assert.Throws<ArgumentException>(() => workspace.UpdateSchema(table.Id, "Студенты",
@@ -447,11 +447,11 @@ public sealed class SqliteWorkspaceTests
     public void SavedFiltersPersistCanBeReplacedAndDeleted()
     {
         var file = Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db");
-        var workspace = new SqliteWorkspace(file);
+        var workspace = SqliteWorkspace.CreateNew(file);
         var table = workspace.CreateTable("Люди", [new FieldInput("Возраст", FieldType.Number)]);
         var saved = workspace.SaveFilter(table.Id, "Совершеннолетние",
             [new RecordFilter(table.Fields[0].Id, FilterOperator.GreaterThan, "17")]);
-        var reopened = new SqliteWorkspace(file);
+        var reopened = SqliteWorkspace.OpenExisting(file);
         var loaded = Xunit.Assert.Single(reopened.GetSavedFilters(table.Id));
         Xunit.Assert.Equal(saved.Id, loaded.Id);
         Xunit.Assert.Equal("17", loaded.Filters[0].Value);
@@ -470,7 +470,7 @@ public sealed class SqliteWorkspaceTests
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
         var path = Path.Combine(directory, "version2.db");
-        var workspace = new SqliteWorkspace(path);
+        var workspace = SqliteWorkspace.CreateNew(path);
         using (var connection = new SqliteConnection($"Data Source={path}"))
         {
             connection.Open();
@@ -478,7 +478,7 @@ public sealed class SqliteWorkspaceTests
             command.CommandText = "DROP TABLE smartsql_saved_filter_items; DROP TABLE smartsql_saved_filters; PRAGMA user_version = 2";
             command.ExecuteNonQuery();
         }
-        var upgraded = new SqliteWorkspace(path);
+        var upgraded = SqliteWorkspace.OpenExisting(path);
         Xunit.Assert.Equal(3, upgraded.SchemaVersion);
         Xunit.Assert.Single(Directory.GetFiles(directory, "version2.before-upgrade-*.db"));
     }
@@ -487,7 +487,7 @@ public sealed class SqliteWorkspaceTests
     public void FieldDeletionCreatesBackupAndRemovesAffectedSavedFilters()
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
-        var workspace = new SqliteWorkspace(Path.Combine(directory, "main.db"));
+        var workspace = SqliteWorkspace.CreateNew(Path.Combine(directory, "main.db"));
         var table = workspace.CreateTable("Люди", ["Имя", "Телефон"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?>
         {
@@ -505,7 +505,7 @@ public sealed class SqliteWorkspaceTests
         Xunit.Assert.Single(workspace.GetTables()[0].Fields);
         var record = Xunit.Assert.Single(workspace.GetRecords(table.Id));
         Xunit.Assert.Equal("Анна", record.Values[table.Fields[0].Id]);
-        var backup = new SqliteWorkspace(result.BackupPath);
+        var backup = SqliteWorkspace.OpenExisting(result.BackupPath);
         Xunit.Assert.Equal(2, backup.GetTables()[0].Fields.Count);
     }
 
@@ -513,24 +513,24 @@ public sealed class SqliteWorkspaceTests
     public void TableDeletionCreatesRecoverableBackupAndRemovesTable()
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
-        var workspace = new SqliteWorkspace(Path.Combine(directory, "main.db"));
+        var workspace = SqliteWorkspace.CreateNew(Path.Combine(directory, "main.db"));
         var table = workspace.CreateTable("Люди", ["Имя"]);
         workspace.AddRecord(table.Id, new Dictionary<Guid, string?> { [table.Fields[0].Id] = "Анна" });
         var impact = workspace.GetTableDeletionImpact(table.Id);
         Xunit.Assert.Equal(1, impact.RecordCount);
         var result = workspace.DeleteTable(table.Id);
         Xunit.Assert.Empty(workspace.GetTables());
-        Xunit.Assert.Single(new SqliteWorkspace(result.BackupPath).GetRecords(table.Id));
+        Xunit.Assert.Single(SqliteWorkspace.OpenExisting(result.BackupPath).GetRecords(table.Id));
     }
 
     [Xunit.Fact]
     public void RestoreReplacesDatabaseAfterValidationAndPreservesCurrentSafetyCopy()
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
-        var active = new SqliteWorkspace(Path.Combine(directory, "active.db"));
+        var active = SqliteWorkspace.CreateNew(Path.Combine(directory, "active.db"));
         var oldTable = active.CreateTable("Текущая", ["Значение"]);
         active.AddRecord(oldTable.Id, new Dictionary<Guid, string?> { [oldTable.Fields[0].Id] = "до" });
-        var source = new SqliteWorkspace(Path.Combine(directory, "backup.db"));
+        var source = SqliteWorkspace.CreateNew(Path.Combine(directory, "backup.db"));
         var restoredTable = source.CreateTable("Из копии", ["Значение"]);
         source.AddRecord(restoredTable.Id, new Dictionary<Guid, string?> { [restoredTable.Fields[0].Id] = "после" });
 
@@ -538,7 +538,7 @@ public sealed class SqliteWorkspaceTests
         Xunit.Assert.True(File.Exists(result.SafetyBackupPath));
         Xunit.Assert.Equal("Из копии", Xunit.Assert.Single(active.GetTables()).Name);
         Xunit.Assert.Equal("после", Xunit.Assert.Single(active.GetRecords(restoredTable.Id)).Values[restoredTable.Fields[0].Id]);
-        var safety = new SqliteWorkspace(result.SafetyBackupPath);
+        var safety = SqliteWorkspace.OpenExisting(result.SafetyBackupPath);
         Xunit.Assert.Equal("Текущая", Xunit.Assert.Single(safety.GetTables()).Name);
         Xunit.Assert.Equal("Из копии", Xunit.Assert.Single(source.GetTables()).Name);
     }
@@ -547,7 +547,7 @@ public sealed class SqliteWorkspaceTests
     public void RestoreRejectsUnrelatedDatabaseWithoutChangingCurrentData()
     {
         var directory = Path.Combine(TestPaths.Root, "smartsql-tests", Guid.NewGuid().ToString("N"));
-        var active = new SqliteWorkspace(Path.Combine(directory, "active.db"));
+        var active = SqliteWorkspace.CreateNew(Path.Combine(directory, "active.db"));
         var table = active.CreateTable("Люди", ["Имя"]);
         var unrelatedPath = Path.Combine(directory, "other.db");
         using (var connection = new SqliteConnection($"Data Source={unrelatedPath}"))

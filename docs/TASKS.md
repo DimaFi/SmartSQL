@@ -1,8 +1,8 @@
 # Задачи SmartSQL: краткий реестр
 
-**Единственный полный порядок, подзадачи и acceptance — [WORK_PLAN.md](WORK_PLAN.md): 18 этапов M01–M18, 123 конкретные подзадачи.** T01–T25 сохраняют прежние номера/URL; это соответствие, не другая очередь. Текущая следующая реализация — **M01.01**; M02/manual acceptance остаётся открытой.
+**Единственный полный порядок, подзадачи и acceptance — [WORK_PLAN.md](WORK_PLAN.md): 18 этапов M01–M18, 123 конкретные подзадачи.** T01–T25 сохраняют прежние номера/URL; это соответствие, не другая очередь. Текущая следующая реализация — **M01.02** (M01.01 код/автотесты готов, UI открыт); M02/manual acceptance остаётся открытой.
 
-Последняя кодовая основа: T12, Debug 0 warnings/errors, 614 passed/0 skipped (1/129/445/39), 60 реальных PG-фактов. Этот документальный срез приложение не меняет и не является новым прогоном. [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
+Последний кодовый срез M01.01: Debug 0 warnings/errors, 638 passed/0 skipped (1/129/469/39), 60 реальных PG-фактов. Явные open/create проверены; UI gate открыт. Подробнее: [контракт](MANAGED_PROJECT_OPENING.md). [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
 
 | ID / GitHub | Задача | Этапы | Фактический статус |
 | --- | --- | --- | --- |
@@ -27,7 +27,7 @@
 | [T19](https://github.com/DimaFi/SmartSQL/issues/20) | Связи, смена типов, структура и перенос | M16 | Managed primitives есть; полный schema/migration scope не реализован |
 | [T20](https://github.com/DimaFi/SmartSQL/issues/21) | Копии на облачных дисках и личных серверах | M05–M08 | Local backup primitives есть; Google/Яндекс/автоматика не реализованы |
 | [T21](https://github.com/DimaFi/SmartSQL/issues/22) | Action/Permission и аудит | M17 | Action/Permission/audit не реализованы |
-| [T22](https://github.com/DimaFi/SmartSQL/issues/23) | Локальный помощник | M18 | Изолированные stubs есть; реальной модели/интеграции нет |
+| [T22](https://github.com/DimaFi/SmartSQL/issues/23) | Локальный помощник | M18 | Stubs и подготовка knowledge/examples/holdout отдельно; реальной модели/интеграции нет |
 | [T23](https://github.com/DimaFi/SmartSQL/issues/24) | интерфейс и доступность | M01/M03/M04/M07/M10 и каждый UI-срез | Часть UI принята; полный проход открыт |
 | [T24](https://github.com/DimaFi/SmartSQL/issues/25) | диплом и поставка | M11, M01, M03–M08 recovery/release gates | EXE/ZIP preview.6 есть; installer/public release gates открыты |
 | [T25](https://github.com/DimaFi/SmartSQL/issues/26) | качество и хранение | Разделы 7–9 WORK_PLAN; каждый этап | Постоянная обязанность |

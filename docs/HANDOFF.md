@@ -6,7 +6,7 @@
 
 ## Следующая конкретная работа
 
-**M01.01: разделить managed open/create**, чтобы ошибочно выбранный ordinary/пустой/отсутствующий SQLite-файл не создавался/не получал служебную схему. Сначала parent фиксирует контракт/ошибки/границы legacy schema, затем disjoint implementation/tests/review. Parent интегрирует UI callers, запускает проверки, ведёт docs/Git/publish.
+**M01.02: полная совместимость managed-формата и проверяемая защита upgrade.** M01.01 реализован/проверен: явные OpenExisting/CreateNew, отказ empty/ordinary/missing, atomic no-overwrite creation и ReadWrite runtime без recreate fallback. Проверить metadata/data/physical schema integrity, фактическую копию перед upgrade и понятность upgrade сообщений; не менять safe open/create. Ручная M01.01 UI-приёмка остаётся открыта.
 
 M01.03 отдельно определяет product storage вне versioned binaries, EXE/launcher и ПК без D:; правило D: нашей разработки не менять. После M01 — M03/M04 first-use/Excel и M05 snapshot/restore; M06 Google+Яндекс, M07 автоматика/статус. Native export M09 можно вести параллельно после его read/format contracts; T13 не потерян. M02/manual debt идёт при доступном screen tool, M10/T23 — после каждой UI-функции и отдельным полным проходом.
 
@@ -20,12 +20,14 @@ M01.03 отдельно определяет product storage вне versioned bi
 
 ## Проверенная основа
 
-- Code: `28a4bcbbaa97e7ac0eab6c4239aca51078a77ff9` (T12); последний pre-consolidation audit publication `5cd35692c2c620d9cde1ec07c7806c65f0f94f1a`. Текущий HEAD определять по Git.
-- Последний full Debug: **614 passed / 0 skipped / 0 warnings/errors**, Domain 1 / Application 129 / Infrastructure 445 / Desktop 39; **60 реальных PG-фактов**. Планирование код не меняло и не создало новый тестовый прогон.
+- Текущий кодовый срез: M01.01, его commit/HEAD определять по Git. Историческая T12 основа `28a4bcbbaa97e7ac0eab6c4239aca51078a77ff9`; старые EXE receipts относятся к своему source SHA.
+- Последний full Debug M01.01: **638 passed / 0 skipped / 0 warnings/errors**, Domain 1 / Application 129 / Infrastructure 469 / Desktop 39; **60 реальных PG-фактов**. 24 новых opening cases; TRX `*2026-10-16_23_36_49*.trx` и `*2026-10-16_23_36_50*.trx`. [Контракт/границы](MANAGED_PROJECT_OPENING.md).
 - Managed SQLite CRUD/четыре типа/структура/фильтры/paste/CSV/JSON/XLSX/backup/restore; ordinary SQLite browse/typed query/opt-in single-cell UPDATE с обязательной копией; PostgreSQL native read/guarded UPDATE/INSERT/DELETE; shared tree/tabs/mode; read-only SQL/highlighting/history/files; первый object-owned structure inspector.
 - Gray/Light и закреплённая theme button, явный Simple/Advanced/память, native caption buttons; user S-branding в EXE/окнах/taskbar частично принят.
 - Ограничения: native SQLite INSERT/DELETE/general undo нет; все PG incoming FK блокируют DELETE; SQL-write нет, SQLite SQL UTF-8/часть columnless CTE ограничены; T12 incoming/domain/view dependencies не включает. Успешный GetStructureAsync сохраняет current handles, остальные guards не ослаблены.
 - Полная ручная T04/T11/T12/T23 открыта. Screen tool не инициализировался (kernel assets/path/os error 3); это не доказанный app defect. Предыдущая partial UI evidence в WORKSPACE_UI_ACCEPTANCE, новый проход не заявлять.
+
+Субагент частично написал тесты; все три назначенных агента достигли usage limit. Parent реализовал provider/callers, дополнил тесты, провёл build/full tests и source review. Полное независимое финальное ревью не выполнено. Повторная computer-use инициализация снова отказала, новая ручная приёмка не заявляется.
 
 ## Поставка и среда
 
@@ -40,6 +42,10 @@ Owned PG fixture `.workspace/postgresql-tests` (17), 127.0.0.1:15432, smartsql_b
 Аудит [USER_ENTRY_AND_CLOUD_AUDIT](USER_ENTRY_AND_CLOUD_AUDIT.md) и три subreports сведены в M01–M08. Пользователь выбрал **Google Диск и Яндекс Диск**, приоритет — автоматические копии и восстановление; дешёвая команда через общий PostgreSQL, snapshots по очереди отдельно. Никакой cloud delivery/автоматики/OAuth регистрации/нового Excel wizard пока нет.
 
 Нерешённые входы — раздел 7 WORK_PLAN: product paths, empty/NULL/format compatibility, encryption/keys/secret store, retention/outbox, OAuth/test accounts, PG backup scope/utilities, closed-app background, ISCC/signing/clean machine/screen tool, расширенные writes и ML resources. Согласованные приоритеты не спрашивать заново; блокер одного входа не останавливает независимую работу.
+
+## Непрерывные материалы для будущей модели
+
+По новому запросу пользователя: D:\Code\SmartSQL-model\knowledge — 14 архитектурных facts, 5 provider profiles, 18 synthetic training candidates и 10 отдельных holdout cases. README описывает ограничения/обновление; model-local Refresh-KnowledgeSources/Validate-Knowledge связывают public source snapshots с clean verified product commit и hashes. Материалы не являются runtime permissions, обучение/модель/server/weights/Desktop integration не запускались. Исходники/скрипты/данные корпуса только в ML workspace, нового model remote нет. После каждого релевантного проверенного среза обновлять facts/examples/sources и проверять разделение train/eval; raw source plans не выдавать за готовый scope. D054, AGENTS rule22.
 
 ## Работа с субагентами и завершение
 

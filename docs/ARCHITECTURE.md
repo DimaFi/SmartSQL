@@ -10,6 +10,8 @@ The product includes a common database-client interface for ordinary existing da
 
 ## Product Responsibilities and Runtime Commands
 
+Managed startup now exposes explicit `SqliteWorkspace.CreateNew` / `OpenExisting` rather than an open-or-create constructor. The former initializes a private sibling then publishes without overwrite; the latter validates the existing format read-only before supported legacy upgrades. Runtime connections use ReadWrite without create fallback. This is Infrastructure behavior; IDataWorkspace and core dependency direction are unchanged. See [M01.01 contract and remaining acceptance](MANAGED_PROJECT_OPENING.md), D053.
+
 The user reaffirmed on 16 October 2026 that SmartSQL simplifies and automates work with established DBMSs; it does not implement a new DBMS engine/server. Engine storage, indexes, query planning, native transactions, locking and native authorization belong to the selected DBMS. SmartSQL owns guided workflows, supported-operation selection, application validation, provider-specific command generation, conflict/result presentation, import/export and recovery orchestration. Application permission checks complement, never replace, DBMS authorization.
 
 Current native-table flow is `button/dialog -> validated operation request -> provider adapter -> driver -> existing DBMS -> result/status`. Desktop currently orchestrates operations through Application contracts; this diagram does not imply that every handler already passes through a separate Application service. PostgreSQL uses Npgsql; local SQLite uses Microsoft.Data.Sqlite with the packaged SQLite engine. SQL generation and native connections remain in Infrastructure.

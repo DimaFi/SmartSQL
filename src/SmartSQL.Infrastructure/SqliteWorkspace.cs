@@ -5,7 +5,7 @@ using SmartSQL.Domain;
 
 namespace SmartSQL.Infrastructure;
 
-public sealed class SqliteWorkspace : IDataWorkspace
+public sealed partial class SqliteWorkspace : IDataWorkspace
 {
     private const int CurrentSchemaVersion = 3;
     private readonly bool _pooling;
@@ -14,92 +14,24 @@ public sealed class SqliteWorkspace : IDataWorkspace
     public string FilePath { get; }
     public int SchemaVersion => CurrentSchemaVersion;
 
-    public SqliteWorkspace(string filePath) : this(filePath, createMigrationBackup: true, usePooling: true)
-    {
-    }
-
-    private SqliteWorkspace(string filePath, bool createMigrationBackup, bool usePooling)
+    private SqliteWorkspace(string filePath, bool createMigrationBackup, bool usePooling, bool initializeNew = false)
     {
         _pooling = usePooling;
         FilePath = Path.GetFullPath(filePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        using var connection = OpenConnection();
-        using var versionCommand = connection.CreateCommand();
-        versionCommand.CommandText = "PRAGMA user_version";
-        var version = Convert.ToInt32(versionCommand.ExecuteScalar());
-        if (version > CurrentSchemaVersion)
-            throw new InvalidOperationException($"Эта база создана более новой версией SmartSQL (схема {version}). Обновите приложение.");
-        if (version == CurrentSchemaVersion)
+        if (!initializeNew)
         {
-            using var validate = connection.CreateCommand();
-            validate.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('smartsql_tables', 'smartsql_fields', 'smartsql_saved_filters', 'smartsql_saved_filter_items')";
-            if (Convert.ToInt32(validate.ExecuteScalar()) != 4)
-                throw new InvalidOperationException("Выбранный файл не является базой SmartSQL или его структура повреждена.");
-            validate.CommandText = "SELECT COUNT(*) FROM pragma_table_info('smartsql_fields') WHERE name = 'field_type'";
-            if (Convert.ToInt32(validate.ExecuteScalar()) != 1)
-                throw new InvalidOperationException("Выбранный файл не является базой SmartSQL или его структура повреждена.");
-            return;
+            using var probe = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = FilePath, Mode = SqliteOpenMode.ReadOnly, Pooling = false
+            }.ToString());
+            probe.Open();
+            var version = ReadManagedVersion(probe);
+            ValidateManagedMetadata(probe, version);
+            if (version == CurrentSchemaVersion)
+                return;
         }
-
-        using var inspect = connection.CreateCommand();
-        inspect.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'smartsql_tables'";
-        var isSmartSql = Convert.ToInt32(inspect.ExecuteScalar()) > 0;
-        inspect.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'";
-        var hasUserTables = Convert.ToInt32(inspect.ExecuteScalar()) > 0;
-        if (hasUserTables && !isSmartSql)
-            throw new InvalidOperationException("Выбранный файл не является базой SmartSQL.");
-        if (hasUserTables && createMigrationBackup)
-        {
-            var backupPath = Path.Combine(Path.GetDirectoryName(FilePath)!,
-                $"{Path.GetFileNameWithoutExtension(FilePath)}.before-upgrade-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.db");
-            CreateBackup(backupPath);
-        }
-
-        using var transaction = connection.BeginTransaction();
-        using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
-            CREATE TABLE IF NOT EXISTS smartsql_tables (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE
-            );
-            CREATE TABLE IF NOT EXISTS smartsql_fields (
-                id TEXT PRIMARY KEY,
-                table_id TEXT NOT NULL REFERENCES smartsql_tables(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
-                position INTEGER NOT NULL,
-                UNIQUE(table_id, name),
-                UNIQUE(table_id, position)
-            );
-            """;
-        command.ExecuteNonQuery();
-        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info('smartsql_fields') WHERE name = 'field_type'";
-        if (Convert.ToInt32(command.ExecuteScalar()) == 0)
-        {
-            command.CommandText = "ALTER TABLE smartsql_fields ADD COLUMN field_type TEXT NOT NULL DEFAULT 'Text'";
-            command.ExecuteNonQuery();
-        }
-        command.CommandText = """
-            CREATE TABLE IF NOT EXISTS smartsql_saved_filters (
-                id TEXT PRIMARY KEY,
-                table_id TEXT NOT NULL REFERENCES smartsql_tables(id) ON DELETE CASCADE,
-                name TEXT NOT NULL,
-                UNIQUE(table_id, name)
-            );
-            CREATE TABLE IF NOT EXISTS smartsql_saved_filter_items (
-                saved_filter_id TEXT NOT NULL REFERENCES smartsql_saved_filters(id) ON DELETE CASCADE,
-                position INTEGER NOT NULL,
-                field_id TEXT NOT NULL REFERENCES smartsql_fields(id) ON DELETE CASCADE,
-                operator TEXT NOT NULL,
-                value TEXT NULL,
-                PRIMARY KEY(saved_filter_id, position)
-            );
-            PRAGMA user_version = 3;
-            """;
-        command.ExecuteNonQuery();
-        transaction.Commit();
+        InitializeManagedFile(initializeNew, createMigrationBackup);
     }
-
     public void CreateBackup(string destinationPath)
     {
         var fullPath = Path.GetFullPath(destinationPath);
@@ -670,7 +602,7 @@ public sealed class SqliteWorkspace : IDataWorkspace
 
     private SqliteConnection OpenConnection()
     {
-        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = FilePath, Pooling = _pooling }.ToString());
+        var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = FilePath, Mode = SqliteOpenMode.ReadWrite, Pooling = _pooling }.ToString());
         connection.Open();
         using var command = connection.CreateCommand();
         command.CommandText = "PRAGMA foreign_keys = ON";

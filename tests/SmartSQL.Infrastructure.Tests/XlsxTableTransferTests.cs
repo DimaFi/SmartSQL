@@ -301,7 +301,7 @@ public sealed class XlsxTableTransferTests
     private const string Header = "<row r='1'><c r='A1' t='inlineStr'><is><t>Значение</t></is></c></row>";
     private const string DateStyles = "<numFmts count='1'><numFmt numFmtId='164' formatCode='yyyy-mm-dd'/></numFmts><cellXfs count='2'><xf numFmtId='0'/><xf numFmtId='164'/></cellXfs>";
 
-    private static SqliteWorkspace NewWorkspace() => new(Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db"));
+    private static SqliteWorkspace NewWorkspace() => SqliteWorkspace.CreateNew(Path.Combine(TestPaths.Root, "smartsql-tests", $"{Guid.NewGuid():N}.db"));
 
     private static MemoryStream Package(string rows, string? secondSheet = null, string? sharedStrings = null,
         string? styles = null, bool date1904 = false, string extraSheetXml = "", string? sheetRelationships = null, string? rawWorksheet = null)
