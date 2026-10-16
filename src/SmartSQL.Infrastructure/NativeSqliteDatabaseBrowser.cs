@@ -183,7 +183,8 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseEditor
         internal SqliteCommand Command(string sql) => new(sql, Connection, Transaction) { CommandTimeout = 3 };
     }
 
-    private async Task<T> ReadAsync<T>(Func<Context, T> operation, CancellationToken token)
+    private async Task<T> ReadAsync<T>(Func<Context, T> operation, CancellationToken token,
+        bool invalidateEditSnapshots = true)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         await _gate.WaitAsync(token).ConfigureAwait(false);
@@ -191,7 +192,7 @@ public sealed partial class NativeSqliteDatabaseBrowser : IDatabaseEditor
         try
         {
             ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-            InvalidateEditSnapshots();
+            if (invalidateEditSnapshots) InvalidateEditSnapshots();
             var result = await Task.Run(() =>
             {
                 token.ThrowIfCancellationRequested();

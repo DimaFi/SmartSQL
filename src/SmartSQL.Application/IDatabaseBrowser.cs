@@ -8,6 +8,17 @@ public interface IDatabaseBrowser : IAsyncDisposable
     Task<IReadOnlyList<DatabaseTableRef>> GetTablesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<DatabaseColumn>> GetColumnsAsync(DatabaseTableRef table,
         CancellationToken cancellationToken = default);
+    async Task<DatabaseStructure> GetStructureAsync(DatabaseTableRef table,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var columns = await GetColumnsAsync(table, cancellationToken).ConfigureAwait(false);
+        var structure = new DatabaseStructure(table, columns, DatabaseMetadataCoverage.Unavailable, [],
+            DatabaseMetadataCoverage.Unavailable, [], null,
+            [new DatabaseDiagnostic("structure_unsupported", "Провайдер пока предоставляет только столбцы. Ключи, ограничения и индексы не подтверждены.")]);
+        DatabaseStructureLimits.Validate(structure);
+        return structure;
+    }
     Task<DatabaseQueryCapabilities> GetQueryCapabilitiesAsync(DatabaseTableRef table,
         CancellationToken cancellationToken = default)
     {

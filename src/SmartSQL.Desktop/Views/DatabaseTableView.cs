@@ -24,6 +24,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
     private Func<CancellationToken, Task<IDatabaseBrowser>>? _connectAsync;
     private readonly Border _inspector = new();
     private readonly CheckBox _showStructure = new() { Content = "Структура", VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _structureDetails = new() { Content = "Подробнее…", IsEnabled = false, FontSize = 12, Padding = new Thickness(10, 5), MinHeight = 30 };
     private readonly HashSet<Window> _dialogs = [];
     private Task? _initialization;
     private Task? _disposal;
@@ -105,6 +106,9 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         };
         _cancelOperation.Click += (_, _) => { _operation?.Cancel(); _status.Text = "Отмена операции…"; };
         _showStructure.IsCheckedChanged += (_, _) => _inspector.IsVisible = _showStructure.IsChecked == true;
+        _structureDetails.Click += async (_, _) => await ShowStructureDetailsAsync();
+        AutomationProperties.SetName(_structureDetails, "Подробная структура выбранного объекта только для чтения");
+        ToolTip.SetTip(_structureDetails, "Поля, ограничения, индексы и доступное определение объекта. Без изменения структуры или данных.");
         _applyQuery.Classes.Add("primary");
         _editCell.Classes.Add("primary");
         _insertRow.Classes.Add("primary");
@@ -140,7 +144,11 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
         dataArea.Children.Add(_data);
         Add(dataArea, actions, 1);
         var inspectorContent = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8 };
-        inspectorContent.Children.Add(new TextBlock { Text = "Структура", Classes = { "sectionTitle" } });
+        var inspectorHeading = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), ColumnSpacing = 8 };
+        inspectorHeading.Children.Add(new TextBlock { Text = "Структура", Classes = { "sectionTitle" }, VerticalAlignment = VerticalAlignment.Center });
+        Grid.SetColumn(_structureDetails, 1);
+        inspectorHeading.Children.Add(_structureDetails);
+        inspectorContent.Children.Add(inspectorHeading);
         Add(inspectorContent, _structure, 1);
         _inspector.Child = inspectorContent;
         _inspector.Width = 310;
@@ -228,6 +236,19 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
                 Header = label, Binding = new Binding(binding) { Mode = BindingMode.OneWay },
                 Width = new DataGridLength(width)
             });
+    }
+
+    private async Task ShowStructureDetailsAsync()
+    {
+        if (_busy || _closed || _browser is not { } browser) return;
+        await RunOperationAsync(async cancellationToken =>
+        {
+            var structure = await browser.GetStructureAsync(_table, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_closed) return;
+            await ShowOwnedDialogAsync<object?>(new DatabaseStructureDialog(structure));
+            if (!_closed) _status.Text = "Просмотр структуры завершён. Страница данных и условия выборки сохранены.";
+        }, "Чтение подробной структуры объекта…");
     }
 
     private async Task ConnectAsync()
@@ -1124,6 +1145,7 @@ public sealed class DatabaseTableView : UserControl, IAsyncDisposable
             && queryCapabilities.Table == _table;
         _clearQuery.IsEnabled = queryEnabled;
         _refreshTable.IsEnabled = connected && !_busy && !_closed;
+        _structureDetails.IsEnabled = queryEnabled;
         _previous.IsEnabled = !_busy && _page is { Offset: > 0 };
         _next.IsEnabled = !_busy && _page is { HasMore: true };
         _editCell.IsEnabled = !_busy && !_reloadRequiredBeforeWrite && _editor is not null
