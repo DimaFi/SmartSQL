@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "DimaFi/SmartSQL",
   "publicationStatus": "published",
-  "snapshotUpdateStatus": "All 26 PLAN/T01-T25 canonical-plan issue bodies prepared locally; publication pending",
+  "snapshotUpdateStatus": "All 26 PLAN/T01-T25 canonical-plan issue bodies published and read-back verified 2026-10-16; original states retained (T05 closed, others open)",
   "issues": [
     {
       "taskId": "PLAN",
@@ -240,6 +240,10 @@
     "taskIdentityPolicy": "T01-T25 preserved; Mxx.yy are execution subtasks",
     "review": "Three scoped read-only reviews; managed regression/mode contract/localization sequencing findings integrated; source-of-truth pointers reconciled",
     "codeChanged": false,
-    "publicationStatus": "prepared locally; publication pending"
+    "publicationStatus": "Plan commit published and remote SHA verified; all 26 issue bodies read-back verified; issue states unchanged 2026-10-16",
+    "verifiedPlanCommit": "1ccc9075aa07eb25a88963ec50a5da86cba17d01",
+    "verifiedIssueCount": 26,
+    "issueStatesPreserved": true,
+    "validation": "18 unique milestones; 123 unique sequential subtasks; stable T01-T25 and PLAN mapping; all changed local Markdown links; git diff --check; documentation-only change, no application build/test rerun"
   }
 }

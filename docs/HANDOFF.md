@@ -10,6 +10,12 @@
 
 M01.03 отдельно определяет product storage вне versioned binaries, EXE/launcher и ПК без D:; правило D: нашей разработки не менять. После M01 — M03/M04 first-use/Excel и M05 snapshot/restore; M06 Google+Яндекс, M07 автоматика/статус. Native export M09 можно вести параллельно после его read/format contracts; T13 не потерян. M02/manual debt идёт при доступном screen tool, M10/T23 — после каждой UI-функции и отдельным полным проходом.
 
+## Завершённая консолидация плана — 16 октября
+
+Полный M01–M18/123 план проверен тремя субагентами по независимым направлениям; замечания по managed regression, Simple/Advanced/shell contract и порядку English приняты и повторно проверены. Устаревшие competing queues и статусы в индексах/архитектурных/UI документах согласованы. Проверены уникальность/последовательность ID, локальные ссылки, 26 issue mappings и diff whitespace. Код приложения не менялся, новый build/tests/EXE не выполнялся.
+
+Коммит плана `1ccc9075aa07eb25a88963ec50a5da86cba17d01` опубликован, remote main SHA подтверждён на момент публикации. Все 26 существующих PLAN/T01–T25 issue bodies обновлены и read-back сверены; состояния сохранены (T05 closed, остальные open). Receipt в github-issues.json, текущий HEAD читать из Git. Следующий шаг остаётся M01.01; опубликованный план не закрывает ручную приёмку и будущие функции.
+
 ## Проверенная основа
 
 - Code: `28a4bcbbaa97e7ac0eab6c4239aca51078a77ff9` (T12); последний pre-consolidation audit publication `5cd35692c2c620d9cde1ec07c7806c65f0f94f1a`. Текущий HEAD определять по Git.
