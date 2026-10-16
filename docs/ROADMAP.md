@@ -6,13 +6,9 @@ The stage numbers below are a scope/history map, not a promise of serial deliver
 
 SmartSQL is moving toward a universal desktop database client in the DBeaver direction: one interface for connections, browsing tables, editing records, search/filtering, data exchange, and migration across supported DBMSs. An approachable interface and safe structured actions remain core requirements. Additional providers must eventually support ordinary existing databases, not just SmartSQL-managed projects.
 
-The user currently prioritizes comfortable PostgreSQL/SQLite workflows, both interface modes, a first-run choice and a permanent switch. A shared tabbed main window is the chosen future direction. There is no calendar deadline. The checked next sequence is:
+The full current execution sequence is M01–M18 in [WORK_PLAN](WORK_PLAN.md); its next implementation is **M01.01: separate safe opening of an existing managed project from explicit creation**. Shared connection/object/SQL tabs, remembered Simple/Advanced choice, Gray/Light themes, typed native queries and the first native inspector are already implemented, with remaining manual acceptance recorded separately.
 
-1. Accept the current PostgreSQL editing UI; add safe native INSERT/DELETE capabilities. Develop ordinary SQLite browsing independently, without managed metadata migration.
-2. Integrate connection/object tabs, typed native filters/sorting, and supported ordinary SQLite editing. Complete Russian workflows and refine both modes.
-3. Add bounded manual SQL for reading, native structure inspection and external data exchange with compatibility reporting; deliver a usable PostgreSQL/SQLite release.
-4. Complete English localization; add MySQL/MariaDB, then SQL Server through verified provider slices.
-5. Expand relationships, schema/type changes and migration. Validate diploma scenarios and compatibility throughout. Implement Action/Permission before integrated AI; add external backup destinations after stable database workflows.
+The confirmed user priorities include three entry paths (existing DBMS, experienced user without a DBMS, Excel newcomer) and **Google Drive + Yandex Disk automatic backup and recovery**. Safe persistent product data and verified snapshot/restore precede cloud delivery. Native exchange, complete UI polish, reproducible application/installer delivery, localization, further providers and Action/Permission before AI remain in the canonical plan, including dependencies and legal parallel work. This historical Stage map does not defer cloud work until every external database feature is complete.
 
 Development data, caches, backups and test artifacts stay on D:. Calendar dates are not assigned. See WORK_PLAN for dependencies and the distinction between code verification and manual UI acceptance.
 
@@ -42,7 +38,7 @@ Status: first usable slice implemented (records, individual cells, adding, renam
 
 Build the first usable local interface with Avalonia 12 and an Excel-like data grid workflow.
 
-Status: first usable slice implemented (typed table constructor, grid editing, paging, search, sort, combined reusable saved filters, one-step undo, validated bulk paste from Excel). A shared light green theme, Russian shell resources and simple/expanded modes provide grouped commands and a structure inspector; presentation is separate from data operations.
+Status: first usable slice implemented (typed table constructor, grid editing, paging, search, sort, combined reusable saved filters, one-step undo, validated bulk paste from Excel). Semantic Gray/Light themes with a green accent, Russian shell resources and remembered Simple/Advanced modes provide grouped commands and a structure inspector; presentation is separate from data operations. Complete layout/accessibility/manual acceptance remains open.
 
 ## Stage 6 - Import/Export CSV/JSON/XLSX
 
@@ -52,9 +48,9 @@ Status: CSV column mapping, preview, import, and export for existing tables, ato
 
 ## Stage 7 - PostgreSQL Provider
 
-PostgreSQL support uses native browsing and explicitly enabled keyed updates without private SmartSQL metadata. The next slices add safe inserts/deletes, typed querying and native exchange; unsupported capabilities remain explicit.
+PostgreSQL support uses native browsing and explicitly enabled keyed operations without private SmartSQL metadata. Single-row insertion/deletion, typed querying, shared tabs and read-only SQL are implemented; native exchange and broader write workflows remain planned. Unsupported capabilities remain explicit.
 
-Status: native browsing and an explicit single-cell editor implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search and explicit text sorting. Editing defaults off, requires a reliable primary key and supported fields, rechecks metadata/permissions/row versions, and rolls back precision loss. Real dedicated PostgreSQL integration covers native values, permissions, conflicts, protected/unsupported metadata and transient handles. Single-row insertion/deletion and ordinary SQLite read-only browsing are implemented. Deletion confirms one row with independent DELETE rights and a one-time handle; every incoming foreign key remains blocked. Shared tabs, typed native querying, broader FK workflows and general undo remain planned.
+Status: native browsing and an explicit single-cell editor implemented: nonsecret connection profiles, ordinary PostgreSQL catalog/table/column inspection, native type/null/PK metadata, pages, literal text search, typed AND filters and native sorting. Editing defaults off, requires a reliable primary key and supported fields, rechecks metadata/permissions/row versions, and rolls back precision loss. Real dedicated PostgreSQL integration covers native values, permissions, conflicts, protected/unsupported metadata and transient handles. Single-row insertion/deletion and ordinary SQLite browsing with a separate opt-in, backup-protected cell UPDATE slice are implemented. Deletion confirms one row with independent DELETE rights and a one-time handle; every incoming foreign key remains blocked. Shared tabs, bounded read-only SQL and object-owned constraints/indexes/definitions are implemented. Native exchange, extended incoming/dependency metadata, broader FK workflows and general undo remain planned; existing UI acceptance is partial.
 
 ## Stage 8 - MySQL/MariaDB Provider
 
@@ -86,7 +82,7 @@ Implement automatic backups, manual backups, restore, and project transfer suppo
 
 Status: local SQLite manual backup, automatic safety backup, and validated restore implemented; packaged project transfer remains.
 
-Future scope requested by the user: cloud drives and personal servers as backup destinations, with basic destination/access/schedule/retention settings, integrity checks and tested restore. Implement after external database workflows are stable; local synchronized folders/network storage can precede direct cloud/protocol adapters. Credentials and backup contents remain outside Git.
+Confirmed future scope: Google Drive and Yandex Disk first, automatic backups and tested recovery, quick status/access, scheduling, retention and version/conflict handling. M05–M08 define verified standalone snapshots, local durable delivery state, both official cloud adapters and separate PostgreSQL backup scope. Completed copies are delivered; a live SQLite working database is not shared through a synchronization folder. Mail/cloud/network/personal-server destinations follow their own verified adapter scope. Credentials and backup contents remain outside Git.
 
 ## Stage 15 - Diploma Use Case: Teaching Practice
 

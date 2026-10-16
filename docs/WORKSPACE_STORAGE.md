@@ -1,5 +1,7 @@
 # Project storage on D:
 
+This is the current **development and test policy**, not a requirement for every future user's PC to have D:. [WORK_PLAN M01](WORK_PLAN.md) records the pending product storage decision for installed/portable builds, stable paths across versions and copy-first migration. That decision has not changed the active D: workspace policy or runtime defaults described below.
+
 The main checkout remains `D:\Code\SmartSQL`. The independent experimental local-assistant source is `D:\Code\SmartSQL-model`. Source/test directory layouts are unchanged; installed Codex, .NET SDK, Windows and other system tools remain installed where they were.
 
 Use each workspace's own helpers so project-created files stay in that workspace on D:

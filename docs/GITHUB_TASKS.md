@@ -1,70 +1,37 @@
-# Задачи SmartSQL в GitHub
+# Индекс задач GitHub
 
-## Аудит входа и облачного восстановления — 16 октября 2026
+Полный канонический план: [WORK_PLAN.md](WORK_PLAN.md), 18 этапов и 123 подзадачи; следующий M01.01. Краткий статус: [TASKS.md](TASKS.md); ограничения/проверки: [CAPABILITY_MATRIX.md](CAPABILITY_MATRIX.md), [WORKSPACE_UI_ACCEPTANCE.md](WORKSPACE_UI_ACCEPTANCE.md). Номера T01–T25 и реальные issue URL сохраняются, дубликаты не создаются.
 
-Пользователь подтвердил Google Диск и Яндекс Диск как первые назначения; приоритет облачного сценария — автоматические копии и восстановление. Для одновременной команды — общий сервер PostgreSQL; поочерёдная передача проверенных копий описывается отдельно. [Полный аудит](USER_ENTRY_AND_CLOUD_AUDIT.md) подготовлен с тремя субагентами, исходниками и официальными источниками; выводы client/server и cloud прошли независимое ревью.
+Репозиторий: [DimaFi/SmartSQL](https://github.com/DimaFi/SmartSQL). [Общий план #1](https://github.com/DimaFi/SmartSQL/issues/1). Источник для инструментов: [github-issues.json](github-issues.json). 25 задач + PLAN = 26 записей. Состояния issues при обновлении плана не закрываются/не открываются автоматически.
 
-Найдены пробелы: ошибочное открытие пустого SQLite как проекта может создать managed-схему; default data зависит от версии/способа запуска; launcher/installer/prewrite backup ориентированы на D:; нет мастера XLSX → новый проект и общей облачной очереди/restore. Предлагаемый следующий цикл — безопасное открытие/устойчивые данные → onboarding/Excel → проверенные snapshots/restore → Google/Яндекс → автоматический режим и быстрый доступ. Это аудит и предложение реализации, не готовые функции. Правило D: для нашей разработки не изменено; T13 и долг T04/T11/T12/T23 сохраняются. D051 фиксирует подтверждённые требования.
+Последняя проверка кода — T12: 614 tests, 60 PG facts, без warnings/errors/skips. Cloud/onboarding/новые provider slices не реализованы только от публикации плана. [Проверенные EXE/ZIP и receipts](DELIVERY.md); source commit текущего приложения не обязательно HEAD документации.
 
-## Текущий срез 16 октября 2026: первый инспектор T12
-
-В обычных PostgreSQL/SQLite объектах панель «Структура» → «Подробнее…» открывает поля, собственные ограничения, индексы и доступные нативные определения. Секции явно показывают полноту; неизвестные свойства не подменяются догадками. PostgreSQL сохраняет PK/FK/UNIQUE/CHECK/exclusion, deferred/validated и expression/partial/INCLUDE/invalid indexes; SQLite показывает PRAGMA и исходный SQL с частичной структурированной интерпретацией. Входящие FK, domain constraints и граф зависимостей не входят в охват. Изменение структуры/прав/политики удаления не добавлено. Успешное чтение сохраняет страницу, фильтры и write handles. [Границы и проверка](NATIVE_INSPECTOR_PLAN.md), D050.
-
-Debug: 0 предупреждений/ошибок; все **614 тестов** (Domain 1 / Application 129 / Infrastructure 445 / Desktop 39), включая **60 реальных PostgreSQL-фактов**, прошли без пропусков. Новые 21 проверки охватывают контракт/лимиты, quoted/compound keys, FK target permissions, deferred/NOT VALID/exclusion, expression/partial/INCLUDE, failed concurrent invalid index, view/materialized view, actual UPDATE после инспекции, UTF-16 и повреждённый UTF-8 SQLite, неизменность файлов, отмену/disposal. Субагенты подготовили провайдеры/UI и нашли дефект кодировки; после их usage limit основной агент завершил исправления, тесты и интеграцию. Полное независимое ревью не заявляется. Собственный PostgreSQL-кластер штатно остановлен.
-
-Новая ручная приёмка не выполнена: computer-use не инициализируется (`failed to write kernel assets ... os error 3`). Независимый код T12 выполнен во время ограничения; T11 не объявлен принятым. Открыты T12 UI/полные значения/копирование/отмена/закрытие/обе темы/размеры/DPI/Narrator, оставшиеся PostgreSQL/SQL-файлы/несколько SQL-вкладок T11, T04 и полный T23. После приёмки следующий функциональный срез — T13 (экспорт внешней таблицы/SQL-результата с названной областью, точностью и NULL). Установщик не собран, ISCC отсутствует.
-
-Созданы и проверены 15 октября 2026. [Общий план](https://github.com/DimaFi/SmartSQL/issues/1). Критерии и зависимости: [TASKS.md](TASKS.md), [WORK_PLAN.md](WORK_PLAN.md). Сопоставление для инструментов: [github-issues.json](github-issues.json).
-
-Первоначальная публикация полной локальной истории подтверждена коммитом [2dda16a](https://github.com/DimaFi/SmartSQL/commit/2dda16a48b44977253fc16cf6a6bd5e8835b69d1). Это SHA первоначального опубликованного среза; чистая публикация T09 подтверждена удалённым SHA `2302472`. Текущий локальный срез: Debug без предупреждений, 593 теста (Domain 1 / Application 118 / Infrastructure 435 / Desktop 39), включая 55 реальных PostgreSQL-проверок без пропусков; независимые ревью T09/T10 существенных проблем не выявили. Ручная UI-приёмка остаётся частичной. Сценарии оболочки: [чек-лист](WORKSPACE_UI_ACCEPTANCE.md).
-
-| ID | GitHub | Задача | Состояние |
+| ID | GitHub | Задача | Этапы исполнения |
 | --- | --- | --- | --- |
-| T01 | [#2](https://github.com/DimaFi/SmartSQL/issues/2) | Добавление одной строки PostgreSQL | Код/автопроверки готовы; UI — T04 |
-| T02 | [#3](https://github.com/DimaFi/SmartSQL/issues/3) | Просмотр обычного SQLite | Код/автопроверки готовы; UI — T04 |
-| T03 | [#4](https://github.com/DimaFi/SmartSQL/issues/4) | Общий обозреватель и форма новой строки | Код/автопроверки готовы; UI — T04 |
-| T04 | [#5](https://github.com/DimaFi/SmartSQL/issues/5) | Ручная приёмка новых PostgreSQL/SQLite сценариев | Ручная приёмка открыта |
-| T05 | [#6](https://github.com/DimaFi/SmartSQL/issues/6) | Публикация плана и передачи работы в GitHub | Публикация выполнена |
-| T06 | [#7](https://github.com/DimaFi/SmartSQL/issues/7) | Безопасное удаление строки PostgreSQL | Код/автопроверки готовы; UI — T04 |
-| T07 | [#8](https://github.com/DimaFi/SmartSQL/issues/8) | Главное окно с деревом подключений и вкладками | Код/автопроверки готовы; UI — T04 |
-| T08 | [#9](https://github.com/DimaFi/SmartSQL/issues/9) | Выбор режима при первом запуске и постоянный переключатель | Код/автопроверки готовы; UI — T04 |
-| T09 | [#10](https://github.com/DimaFi/SmartSQL/issues/10) | Фильтры по типам и нативная сортировка | Код/автопроверки готовы; UI частично принят |
-| T10 | [#11](https://github.com/DimaFi/SmartSQL/issues/11) | Изменения обычного SQLite по подтверждённым ключам | Первый срез и автопроверки готовы; UI частично принят |
-| T11 | [#12](https://github.com/DimaFi/SmartSQL/issues/12) | Ручной SQL сначала для чтения | Подсветка добавлена; полная UI-приёмка открыта |
-| T12 | [#13](https://github.com/DimaFi/SmartSQL/issues/13) | Нативный инспектор PK/FK/индексов/ограничений | Первый срез кода/автопроверок готов; ручная приёмка открыта |
-| T13 | [#14](https://github.com/DimaFi/SmartSQL/issues/14) | Экспорт внешней таблицы/результата | Запланировано |
-| T14 | [#15](https://github.com/DimaFi/SmartSQL/issues/15) | Импорт/вставка Excel во внешние таблицы | Запланировано |
-| T15 | [#16](https://github.com/DimaFi/SmartSQL/issues/16) | Быстрые расчёты и простые графики | Запланировано |
-| T16 | [#17](https://github.com/DimaFi/SmartSQL/issues/17) | Полный английский интерфейс | Запланировано |
-| T17 | [#18](https://github.com/DimaFi/SmartSQL/issues/18) | MySQL/MariaDB | Запланировано |
-| T18 | [#19](https://github.com/DimaFi/SmartSQL/issues/19) | SQL Server | Запланировано |
-| T19 | [#20](https://github.com/DimaFi/SmartSQL/issues/20) | Связи, смена типов, структура и перенос | Запланировано |
-| T20 | [#21](https://github.com/DimaFi/SmartSQL/issues/21) | Копии на облачных дисках и личных серверах | Запланировано |
-| T21 | [#22](https://github.com/DimaFi/SmartSQL/issues/22) | Action/Permission и аудит | Запланировано |
-| T22 | [#23](https://github.com/DimaFi/SmartSQL/issues/23) | Локальный помощник | Запланировано |
-| T23 | [#24](https://github.com/DimaFi/SmartSQL/issues/24) | интерфейс и доступность | Сквозная работа; приёмка доступности и полный polish UI открыты |
-| T24 | [#25](https://github.com/DimaFi/SmartSQL/issues/25) | диплом и поставка | Чистый T09 preview проверен; T10 preview.2 запланирован, инсталлятор не собран |
-| T25 | [#26](https://github.com/DimaFi/SmartSQL/issues/26) | качество и хранение | Сквозная работа |
+| T01 | [#2](https://github.com/DimaFi/SmartSQL/issues/2) | Добавление одной строки PostgreSQL | M02.01, M09.06 |
+| T02 | [#3](https://github.com/DimaFi/SmartSQL/issues/3) | Просмотр обычного SQLite | M02, M03, M09 |
+| T03 | [#4](https://github.com/DimaFi/SmartSQL/issues/4) | Общий обозреватель и форма новой строки | M02, M10 |
+| T04 | [#5](https://github.com/DimaFi/SmartSQL/issues/5) | Ручная приёмка новых PostgreSQL/SQLite сценариев | M02, M10, M11 |
+| T05 | [#6](https://github.com/DimaFi/SmartSQL/issues/6) | Публикация плана и передачи работы в GitHub | Раздел 8 WORK_PLAN, T25 |
+| T06 | [#7](https://github.com/DimaFi/SmartSQL/issues/7) | Безопасное удаление строки PostgreSQL | M02.01, M16.01, M16.05 |
+| T07 | [#8](https://github.com/DimaFi/SmartSQL/issues/8) | Главное окно с деревом подключений и вкладками | M02.02, M03, M10 |
+| T08 | [#9](https://github.com/DimaFi/SmartSQL/issues/9) | Выбор режима при первом запуске и постоянный переключатель | M02.09, M03, M10 |
+| T09 | [#10](https://github.com/DimaFi/SmartSQL/issues/10) | Фильтры по типам и нативная сортировка | M02.03, M09, M12 |
+| T10 | [#11](https://github.com/DimaFi/SmartSQL/issues/11) | Изменения обычного SQLite по подтверждённым ключам | M02.04, M16.04 |
+| T11 | [#12](https://github.com/DimaFi/SmartSQL/issues/12) | Ручной SQL сначала для чтения | M02.05–M02.07, M10; optional M16.08 |
+| T12 | [#13](https://github.com/DimaFi/SmartSQL/issues/13) | Нативный инспектор PK/FK/индексов/ограничений | M02.08, M16.01 |
+| T13 | [#14](https://github.com/DimaFi/SmartSQL/issues/14) | Экспорт внешней таблицы/результата | M09.01–M09.04 |
+| T14 | [#15](https://github.com/DimaFi/SmartSQL/issues/15) | Импорт/вставка Excel во внешние таблицы | M09.05–M09.08; M04 reusable managed wizard |
+| T15 | [#16](https://github.com/DimaFi/SmartSQL/issues/16) | Быстрые расчёты и простые графики | M12 |
+| T16 | [#17](https://github.com/DimaFi/SmartSQL/issues/17) | Полный английский интерфейс | M13 |
+| T17 | [#18](https://github.com/DimaFi/SmartSQL/issues/18) | MySQL/MariaDB | M14 |
+| T18 | [#19](https://github.com/DimaFi/SmartSQL/issues/19) | SQL Server | M15 |
+| T19 | [#20](https://github.com/DimaFi/SmartSQL/issues/20) | Связи, смена типов, структура и перенос | M16 |
+| T20 | [#21](https://github.com/DimaFi/SmartSQL/issues/21) | Копии на облачных дисках и личных серверах | M05–M08 |
+| T21 | [#22](https://github.com/DimaFi/SmartSQL/issues/22) | Action/Permission и аудит | M17 |
+| T22 | [#23](https://github.com/DimaFi/SmartSQL/issues/23) | Локальный помощник | M18 |
+| T23 | [#24](https://github.com/DimaFi/SmartSQL/issues/24) | интерфейс и доступность | M01/M03/M04/M07/M10 и каждый UI-срез |
+| T24 | [#25](https://github.com/DimaFi/SmartSQL/issues/25) | диплом и поставка | M11, M01, M03–M08 recovery/release gates |
+| T25 | [#26](https://github.com/DimaFi/SmartSQL/issues/26) | качество и хранение | Разделы 7–9 WORK_PLAN; каждый этап |
 
-T05 закрывается после проверки публикации обновлённого индекса в Git. Другие задачи не закрываются автоматически: готовность кода не означает пройденную ручную приёмку. SmartSQL-ML остаётся отдельным локальным репозиторием; модель/её история этим этапом не опубликованы.
-
-Срез T09 проверен в локально опубликованном self-contained EXE на синтетической SQLite-базе: фильтр `id > 200` показал строки 201–205, а переключение в расширенный режим сохранило фильтр. Сброс вернул 100 строк первой страницы; сценарии NULL, сочетания с поиском, PostgreSQL, экранный диктор и масштабирование остаются открытыми.
-
-Векторный знак уточнён по пользовательской букве S как две ленты. ICO содержит 9 размеров от 16 до 256 пикселей, назначен через `ApplicationIcon` и общий `WindowIcon`; зелёный знак визуально подтверждён в заголовке окна, файловом диалоге и на панели задач.
-
-Первый срез T10 реализует только явно включаемое для текущего подключения изменение одной ячейки обычной SQLite-таблицы. Провайдер подтверждает PK, схему и полную исходную raw-строку, сохраняет точность, блокирует опасные ограничения/FK/триггеры/индексы и перед записью под `BEGIN IMMEDIATE` создаёт инкрементальную проверенную копию на D:. INSERT, DELETE и общее Undo не входят в этот срез и не добавляются без отдельной задачи.
-
-В изолированном Debug-сеансе `D:\Code\SmartSQL\.workspace\ui-t10-20261015` диалог открылся в рекомендуемом read-only режиме, а кнопка редактирования оставалась недоступной до явного флажка. В таблице из 205 строк имя `id=1` изменилось с «Тестовая строка 1» на «Проверено T10»; сравнение всех 205×6 ячеек подтвердило единственное изменение. Создана одна резервная копия со старым именем, `quick_check=ok` и `user_version=73`; CHECK-таблица показана только для чтения с видимой причиной. Экземпляр закрыт, но код выхода отдельно не измерялся. Открыты NULL, конфликт, медленное закрытие, PostgreSQL, экранный диктор, DPI и полное T23-выравнивание/плавность.
-
-Чистый self-contained артефакт T09 `0.7.0-preview.1` (`build-verified-t09-2302472`) создан из удалённо проверенного SHA `2302472` с `sourceDirty=false`: 237 файлов, ZIP около 75 МБ, все SHA проверены, runtime включён. Это проверочная публикация, не установленный релиз. Чистый T10 preview.2 / verified-t10-a676505 создан из remote SHA a676505: sourceDirty=false, 237 файлов, все SHA подтверждены. Чистая T11 self-contained поставка `0.7.0-preview.3/win-x64-self-contained-verified-t11-3d72f15` создана из удалённо проверенного `3d72f15ffbfdba6307f582d55e2330742cf2c1dc`: sourceDirty=false, все 237 файлов payload проверены. ZIP 78 712 164 байт; SHA256 `93803ef2e3f62b6afbc043aa960ed77f643ecc3fa2e681a613ae8182685504a8`. Эта release-папка проверена сборкой/manifest/SHA; экранная SQL-приёмка выполнялась в Debug, не объявляется полной приёмкой нового EXE или installer. Inno Setup представлен только каркасом: ISCC отсутствует, поэтому установщик не собран и не проверен.
-
-По явному запросу пользователя будущий T23-проход должен охватить весь интерфейс: исправить неровности выравнивания и отступов, несогласованные состояния, недостаточно плавные переходы и неясную обратную связь без изменения согласованного плана функций.
-
-Первый срез T11 добавил native-parsed read-only SQL-вкладки, точные результаты, отмену/лимиты, локальную историю и UTF-8 .sql. Ручная SQLite-проверка частичная; SQL/PG UI и весь T23-проход открыты. [Границы](READ_ONLY_SQL.md).
-Тела PLAN/T09/T10/T11/T23/T24 опубликованы через API; повторное чтение подтвердило совпадение и открытое состояние.
-
-Чистая автономная сборка тем/подсветки `0.7.0-preview.4/win-x64-self-contained-verified-ui-8867f5c` создана 16 октября из опубликованного и удалённо проверенного `8867f5c553a3073712456ad3055a09793246d367`: sourceDirty=false, self-contained Windows x64. Все 237 файлов payload сверены с manifest; ZIP 78 723 033 байта, SHA256 `29565c7fc8d35662da77419ac184463905f1a50c412e37b5d6eaf1d60dd6c188`. EXE FileDescription/ProductName — SmartSQL. Каталог `app` не содержит runtime-данных; новая ZIP не включает настройки/базы. Экранная приёмка этого среза выполнялась в Debug; новый Release EXE и installer не объявляются полностью принятыми. Тестовый PostgreSQL-кластер штатно остановлен.
-
-Чистая автономная T11-поставка `0.7.0-preview.5/win-x64-self-contained-verified-t11-lifecycle-30c6829` создана 16 октября из удалённо проверенного `30c682944f076d5d724c4630fb76ac3a7eadab2a`: sourceDirty=false, self-contained Windows x64, все 237 SHA файлов payload подтверждены. ZIP 78724845 байт; SHA256 `7a9e02ac981f1fbd03fb32bc7c44661b40568f66292463e747eee9888bd22be3`. app не содержит runtime-данных; FileDescription/ProductName — SmartSQL. Новый Release EXE не запускался на экране из-за сбоя инструмента; installer не собран, ISCC отсутствует. Результат проверки кода — 593 теста (1/118/435/39), 55 PG-фактов без пропусков. Тестовый PostgreSQL-кластер штатно остановлен.
-
-Чистая автономная T12-поставка `0.7.0-preview.6/win-x64-self-contained-verified-t12-28a4bcb` создана 16 октября из удалённо проверенного `28a4bcbbaa97e7ac0eab6c4239aca51078a77ff9`: sourceDirty=false, self-contained Windows x64, все 237 payload SHA/размеров и состав ZIP проверены. ZIP 78753789 байт; SHA256 `236a17e2c089f8c0f2664f3058cfdfc56a6cb1735b569fe79c2fb81aab1578f3`. Runtime-данных нет, FileDescription/ProductName — SmartSQL. Новый EXE не запускался на экране: повторная инициализация computer-use снова завершилась kernel assets/path/os error3. Проверка кода — 614 тестов (1/129/445/39), 60 PG-фактов без пропусков; собственный кластер остановлен. Installer не собран; ручная T11/T12/T04/T23 приёмка открыта.
+Фактическое подтверждение последней публикации хранится в github-issues.json; pending не означает опубликовано. Полный текст плана находится в WORK_PLAN, в issues — связанный краткий scope и evidence.
