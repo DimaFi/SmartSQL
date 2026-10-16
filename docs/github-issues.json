@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "DimaFi/SmartSQL",
   "publicationStatus": "published",
-  "snapshotUpdateStatus": "PLAN/T08/T20/T23/T24 user-entry and cloud-recovery audit prepared locally; publication pending",
+  "snapshotUpdateStatus": "PLAN/T08/T20/T23/T24 user-entry and cloud-recovery audit bodies published and read-back verified open 2026-10-16",
   "issues": [
     {
       "taskId": "PLAN",
@@ -228,6 +228,7 @@
     "concurrentWork": "shared PostgreSQL server; sequential snapshot handoff separately",
     "scope": "static code audit and official-source research with three subagents; no application change or cloud acceptance",
     "implementationStatus": "not implemented; proposed staged cycle and existing UI debt retained",
-    "publicationStatus": "prepared locally; GitHub publication pending"
+    "publicationStatus": "Audit commit and PLAN/T08/T20/T23/T24 bodies published, read-back verified open 2026-10-16",
+    "verifiedAuditCommit": "4d6450a9438ce4cae46faaeae96bf34f0cfc2422"
   }
 }
