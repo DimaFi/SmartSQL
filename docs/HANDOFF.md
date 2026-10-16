@@ -31,7 +31,7 @@ M01.03 отдельно определяет product storage вне versioned bi
 
 ## Поставка и среда
 
-Последняя clean self-contained Windows x64: `D:\Code\SmartSQL-builds\0.7.0-preview.6\win-x64-self-contained-verified-t12-28a4bcb\app\SmartSQL.Desktop.exe`; sourceDirty=false, 237 payload-файлов. ZIP SHA256 `236a17e2c089f8c0f2664f3058cfdfc56a6cb1735b569fe79c2fb81aab1578f3`. Новый Release UI/installer не принят. ISCC отсутствовал при последней проверке; installer не собирался. Старые build/runtime data не перезаписывать.
+Историческая T12 clean self-contained Windows x64: `D:\Code\SmartSQL-builds\0.7.0-preview.6\win-x64-self-contained-verified-t12-28a4bcb\app\SmartSQL.Desktop.exe`; sourceDirty=false, 237 payload-файлов. ZIP SHA256 `236a17e2c089f8c0f2664f3058cfdfc56a6cb1735b569fe79c2fb81aab1578f3`. Новый Release UI/installer не принят. ISCC отсутствовал при последней проверке; installer не собирался. Старые build/runtime data не перезаписывать.
 
 Всё создаваемое для разработки/тестов/публикации на D:. Только scripts/Build.ps1, Test.ps1, Run.ps1 и delivery helpers. ML целиком отдельно `D:\Code\SmartSQL-model`; 9 прошлых stub-тестов не реальная модель/интеграция, remote ML проверить до claims.
 
@@ -52,3 +52,11 @@ Owned PG fixture `.workspace/postgresql-tests` (17), 127.0.0.1:15432, smartsql_b
 Протокол — раздел 8 WORK_PLAN: exact Mxx.yy/T-ID, fixed contract, точные владельцы файлов, независимое review. Предпочтения gpt-5.6-sol high или gpt-6.1-sol medium, без Astra/extra-high. Текущие 4 слота включают parent; builds/tests/fixture/Git/docs integration/publish координирует parent.
 
 После каждого среза обновить actual status/evidence, матрицу/UI checklist/HANDOFF и existing issues. Не повторять весь план здесь. Commit/push без данных/секретов; remote SHA и body read-back verify обязательны до claims. Закрытый code slice с открытой UI-приёмкой явно так и называется. Если срез прерван, оставить карточку Mxx.yy с реально изменёнными файлами/проверками/следующим действием.
+
+M01.01 preview.7: чистая self-contained Windows x64 поставка `0.7.0-preview.7/win-x64-self-contained-verified-m0101-74fe89e` из опубликованного `74fe89e7cb1d71234926d870443ca561d9f7ccbd` (sourceDirty=false). Все 237 payload SHA/размеров и состав ZIP проверены: 78 756 941 байт, SHA256 `f30ed3a4c01e44080b55c189b109eb386700077ad6960f831ad80958c2c65de4`. Runtime-данных/модели нет. Debug 638 tests (1/129/469/39), 60 real PG facts, 0 warnings/errors/skips; owned PG stopped. Новый EXE на экране не запускался: computer-use initialization по-прежнему kernel assets/path/os error3. Installer не собран, M01.01/T04/T11/T12/T23 ручная приёмка открыта. Следующий кодовый срез M01.02.
+
+Корпус модели локально закоммичен в 30a7d3635cfa809792b9175a7bce8f431dc74f99 (remote не настроен/публикация модели не заявляется). Проверены 18 source hashes на продуктовый code commit 74fe89e7cb1d71234926d870443ca561d9f7ccbd и идентичность всех 18 Git blobs captured bytes; 14 facts, 5 profiles, 18 train candidates/10 holdout. Model-local Test-Knowledge положительный/отрицательные tamper/leakage checks прошли; Build 0 warnings/errors и 9 stub tests прошли, это не качество реальной модели. Следующее обновление корпуса после релевантного проверенного code slice.
+
+## Остановка по просьбе пользователя
+
+16 октября пользователь попросил остановиться и продолжить завтра. Новые задачи/тесты не запускать в этой сессии. Следующая реализация M01.02; M01.01 код/638 тестов готов, ручная UI-приёмка и полное независимое review открыты. Собственный PG остановлен, фоновых model/training процессов нет. Preview.7 проверена, ML knowledge локально сохранён/проверен (30a7d36), шесть GitHub issue bodies опубликованы/read-back verified. Продолжать после нового запроса пользователя; автоматический запуск на завтра не назначен.

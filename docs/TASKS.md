@@ -29,7 +29,7 @@
 | [T21](https://github.com/DimaFi/SmartSQL/issues/22) | Action/Permission и аудит | M17 | Action/Permission/audit не реализованы |
 | [T22](https://github.com/DimaFi/SmartSQL/issues/23) | Локальный помощник | M18 | Stubs и подготовка knowledge/examples/holdout отдельно; реальной модели/интеграции нет |
 | [T23](https://github.com/DimaFi/SmartSQL/issues/24) | интерфейс и доступность | M01/M03/M04/M07/M10 и каждый UI-срез | Часть UI принята; полный проход открыт |
-| [T24](https://github.com/DimaFi/SmartSQL/issues/25) | диплом и поставка | M11, M01, M03–M08 recovery/release gates | EXE/ZIP preview.6 есть; installer/public release gates открыты |
+| [T24](https://github.com/DimaFi/SmartSQL/issues/25) | диплом и поставка | M11, M01, M03–M08 recovery/release gates | EXE/ZIP preview.7 есть; installer/public release gates открыты |
 | [T25](https://github.com/DimaFi/SmartSQL/issues/26) | качество и хранение | Разделы 7–9 WORK_PLAN; каждый этап | Постоянная обязанность |
 
 T05 выполнен исторически; T25 ведётся постоянно. Входные решения/реальные OAuth/ISCC/screen blockers описаны в разделе 7 плана. Старые Stage/N/A-группировки не являются самостоятельной очередью.

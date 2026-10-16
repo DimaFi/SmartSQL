@@ -35,3 +35,5 @@
 | T25 | [#26](https://github.com/DimaFi/SmartSQL/issues/26) | качество и хранение | Разделы 7–9 WORK_PLAN; каждый этап |
 
 Фактическое подтверждение последней публикации хранится в github-issues.json; pending не означает опубликовано. Полный текст плана находится в WORK_PLAN, в issues — связанный краткий scope и evidence.
+
+M01.01 preview.7: чистая self-contained Windows x64 поставка `0.7.0-preview.7/win-x64-self-contained-verified-m0101-74fe89e` из опубликованного `74fe89e7cb1d71234926d870443ca561d9f7ccbd` (sourceDirty=false). Все 237 payload SHA/размеров и состав ZIP проверены: 78 756 941 байт, SHA256 `f30ed3a4c01e44080b55c189b109eb386700077ad6960f831ad80958c2c65de4`. Runtime-данных/модели нет. Debug 638 tests (1/129/469/39), 60 real PG facts, 0 warnings/errors/skips; owned PG stopped. Новый EXE на экране не запускался: computer-use initialization по-прежнему kernel assets/path/os error3. Installer не собран, M01.01/T04/T11/T12/T23 ручная приёмка открыта. Следующий кодовый срез M01.02.
