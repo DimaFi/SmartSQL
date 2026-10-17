@@ -97,6 +97,35 @@ public sealed class StorageManifestReaderTests : IDisposable
     }
 
     [Fact]
+    public void Utf8ByteLimitIsNotACharacterLimit()
+    {
+        // Cyrillic characters take two UTF-8 bytes. A character-count guard would
+        // incorrectly accept this file, even though it is over the 4 KB limit.
+        var json = """{"schemaVersion":1,"dataDirectory":"""" +
+            new string('Ж', StorageManifestReader.MaximumManifestBytes / 2) + "\"}";
+        var bytes = Encoding.UTF8.GetBytes(json);
+        Assert.True(bytes.Length > StorageManifestReader.MaximumManifestBytes);
+        Write(StorageManifestKind.Portable, bytes);
+        Assert.Throws<StorageRootSelectionException>(() => StorageManifestReader.ReadOptional(
+            PathFor(StorageManifestKind.Portable), StorageManifestKind.Portable));
+        Assert.Equal(bytes, File.ReadAllBytes(PathFor(StorageManifestKind.Portable)));
+    }
+
+    [Fact]
+    public void ExistingMalformedJsonMustBePassedToStrictPolicyInsteadOfFallingBack()
+    {
+        const string damaged = """{"schemaVersion":1,"rootId":"oops"}""";
+        Write(StorageManifestKind.RootIdentity, Encoding.UTF8.GetBytes(damaged));
+        var read = StorageManifestReader.ReadOptional(
+            PathFor(StorageManifestKind.RootIdentity), StorageManifestKind.RootIdentity);
+        Assert.True(read.IsPresent);
+        Assert.Equal(damaged, read.Json);
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.ParseRootIdentity(read.Json));
+        Assert.Single(Directory.GetFiles(_root));
+    }
+
+    [Fact]
     public void InvalidUtf8AndBomAreExplicitFailuresAndSourceIsUnchanged()
     {
         var path = PathFor(StorageManifestKind.Portable);
