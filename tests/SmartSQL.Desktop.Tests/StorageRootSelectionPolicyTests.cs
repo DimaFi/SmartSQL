@@ -16,9 +16,9 @@ public sealed class StorageRootSelectionPolicyTests
         bool overridePresent = false, string? overrideValue = null,
         bool portablePresent = false, string? portable = null,
         bool bootstrapPresent = false, string? bootstrap = null,
-        IReadOnlyList<string>? legacy = null) =>
+        IReadOnlyList<string>? legacy = null, bool legacyDiscoveryCompleted = false) =>
         new(AppFolder, DefaultFolder, overridePresent, overrideValue,
-            portablePresent, portable, bootstrapPresent, bootstrap, legacy);
+            portablePresent, portable, bootstrapPresent, bootstrap, legacy, legacyDiscoveryCompleted);
 
     private static string Bootstrap(string path, Guid? id = null) =>
         $$"""{"schemaVersion":1,"dataDirectory":{{System.Text.Json.JsonSerializer.Serialize(path)}},"rootId":"{{id ?? Id}}"}""";
@@ -27,7 +27,7 @@ public sealed class StorageRootSelectionPolicyTests
     public void FirstUseIsOnlyACandidateAndDoesNotCreateAProject()
     {
         var marker = Path.Combine(DefaultFolder, "storage-root.json");
-        var result = StorageRootSelectionPolicy.Select(Input());
+        var result = StorageRootSelectionPolicy.Select(Input(legacyDiscoveryCompleted: true));
         Assert.Equal(StorageSelectionKind.FirstUseCandidate, result.Kind);
         Assert.Equal(Path.GetFullPath(DefaultFolder), result.DataDirectory);
         Assert.Null(result.ExpectedRootId);
@@ -175,12 +175,26 @@ public sealed class StorageRootSelectionPolicyTests
         var marker = """{"schemaVersion":1,"rootId":"ebca7b93-09a8-49b7-b798-092fe674298c"}""";
         var portable = StorageRootSelectionPolicy.Select(
             Input(portablePresent: true, portable: """{"schemaVersion":1,"dataDirectory":"user-data"}"""));
-        var firstUse = StorageRootSelectionPolicy.Select(Input());
+        var firstUse = StorageRootSelectionPolicy.Select(Input(legacyDiscoveryCompleted: true));
 
         Assert.Throws<StorageRootSelectionException>(() =>
             StorageRootSelectionPolicy.RequireMatchingInstalledRoot(portable, marker));
         Assert.Throws<StorageRootSelectionException>(() =>
             StorageRootSelectionPolicy.RequireMatchingInstalledRoot(firstUse, marker));
+    }
+
+    [Fact]
+    public void FirstUseIsRejectedUntilTheBoundedLegacySearchIsConfirmedComplete()
+    {
+        var error = Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.Select(Input()));
+        Assert.Contains("проверку", error.Message);
+        Assert.False(Directory.Exists(DefaultFolder));
+
+        var selected = StorageRootSelectionPolicy.Select(Input(legacyDiscoveryCompleted: true));
+        Assert.Equal(StorageSelectionKind.FirstUseCandidate, selected.Kind);
+        Assert.Equal(Path.GetFullPath(DefaultFolder), selected.DataDirectory);
+        Assert.False(Directory.Exists(DefaultFolder));
     }
 
     [Fact]
