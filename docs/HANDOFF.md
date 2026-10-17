@@ -82,3 +82,15 @@ ML knowledge M01.02: локальный commit 310e14d223e04dbdbbf8f6b688af2fb5e
 D056 / [PRODUCT_STORAGE](PRODUCT_STORAGE.md): обычный конечный Windows ПК использует стабильный per-user root, portable явный, env override не меняет installed selection; одинаковый resolver для EXE/ярлыков/launcher. Legacy app/data/local vs run-data/local выявлены чтением кода; миграция только copy-first позже. Dev/tests/preview/ML по-прежнему D:. Это docs-only stage: код/EXE не менялись, build/tests повторно не запускались; последний реальный прогон 676 tests M01.02. Luna narrow read-only review без блокеров; ссылки/123 IDs/статусы проверены. Следующая реализация **M01.04**, M01.05/M01.06 и ручная приёмка открыты.
 
 Пользователь попросил приоритетные задания для GPT-6 в браузере: [BROWSER_GPT6_TASKS](BROWSER_GPT6_TASKS.md), общий контекст и 4 отдельных prompts: storage review, official Google/Яндекс integration brief, onboarding, encryption/recovery. Начать с 1/2; результаты вернуть parent, не менять WORK_PLAN и не считать claims сторонней модели проверенным кодом. Секреты/данные/SQL history туда не отправлять.
+
+## Временная остановка по просьбе пользователя — 17 октября
+
+Пользователь попросил остановиться и продолжить в чате. Новую реализацию/агентов/build/tests/UI не запускать до нового запроса. Следующий пункт **M01.04**: unified root resolver/startup errors по D056/PRODUCT_STORAGE; M01.03 — только принятое решение, runtime не менялся. Перед продолжением читать этот HANDOFF, TASKS, WORK_PLAN, PRODUCT_STORAGE и Git status/history. Не повторять полный аудит вместо реализации.
+
+M01.03 опубликован в 5a9c3beff39585091495ee678b34eacecfbdeaf5, remote SHA подтверждён. 56 local links, 123 unique M-task IDs, 18 stages, 26 issue markers проверены; Luna read-only review без блокеров, 6 issue bodies опубликованы/read-back verified без изменения state. Новый build/tests/EXE не выполнялся; кодовая база M01.02: 676 tests, preview.8, ручная UI-приёмка открыта.
+
+ML knowledge локально сохранён в ddc57874b174911425cfd52db98eef1f2ddc34f4: 21 public source hashes/Git blobs проверены на clean product 5a9c3be, 16 facts/5 profiles/21 synthetic train candidates/12 separate holdout; Test-Knowledge positive/tamper/leakage passed. A16 помечен planned: policy не выдаётся за готовый runtime. Обучение/inference/weights не запускались, ML remote не настроен.
+
+Для GPT-6 в браузере: BROWSER_GPT6_TASKS.md — общий контекст, необходимые вложения и 4 готовых задания. Приоритет 1 storage/migration review, 2 официальный Google/Яндекс integration brief, 3 onboarding, 4 encryption/key recovery после 2. Ответы вернуть для проверки/интеграции, секреты и реальные данные не передавать.
+
+Временная экономия по-прежнему истекает 2026-10-18T04:36:50Z / 18 октября 07:36:50 Europe/Istanbul. Одноразовое напоминание smartsql только отменяет эту preference; оно не возобновляет остановленную работу.
