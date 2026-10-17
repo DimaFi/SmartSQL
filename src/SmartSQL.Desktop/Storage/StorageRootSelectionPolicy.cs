@@ -60,6 +60,9 @@ public static class StorageRootSelectionPolicy
         var legacy = DistinctLegacyPaths(input.LegacyRootsWithData);
         if (legacy.Count > 0)
             return new(StorageSelectionKind.LegacySelectionRequired, null, null, legacy);
+        if (!input.LegacyDiscoveryCompleted)
+            throw new StorageRootSelectionException(
+                "Перед первым запуском необходимо завершить проверку известных прежних хранилищ.");
 
         // Only a *candidate*. The IO stage must prove the target is empty and no old
         // state exists before creating either root marker or installed bootstrap.
@@ -226,7 +229,8 @@ public sealed record StorageRootSelectionInput(
     string? PortableMarkerJson = null,
     bool InstalledBootstrapPresent = false,
     string? InstalledBootstrapJson = null,
-    IReadOnlyList<string>? LegacyRootsWithData = null);
+    IReadOnlyList<string>? LegacyRootsWithData = null,
+    bool LegacyDiscoveryCompleted = false);
 
 public sealed record StorageRootSelection(
     StorageSelectionKind Kind,
