@@ -82,6 +82,26 @@ public static class StorageRootSelectionPolicy
         return id;
     }
 
+    /// <summary>
+    /// Enforces bootstrap/root marker pairing for an *already selected installed* root.
+    /// Does not prove the directory's physical identity, freshness or writability.
+    /// Those checks belong to the later filesystem/handle stage.
+    /// </summary>
+    public static string RequireMatchingInstalledRoot(StorageRootSelection selection, string? rootMarkerJson)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        if (selection.Kind != StorageSelectionKind.InstalledExisting ||
+            selection.ExpectedRootId is null || string.IsNullOrWhiteSpace(selection.DataDirectory))
+            throw new StorageRootSelectionException("Для проверки rootId требуется установленное хранилище.");
+
+        var markerId = ParseRootIdentity(rootMarkerJson);
+        if (markerId != selection.ExpectedRootId.Value)
+            throw new StorageRootSelectionException(
+                "storage.json и storage-root.json указывают на разные хранилища. Выбор необходимо проверить вручную.");
+
+        return selection.DataDirectory;
+    }
+
     private static IReadOnlyList<string> DistinctLegacyPaths(IReadOnlyList<string>? candidatePaths)
     {
         if (candidatePaths is null || candidatePaths.Count == 0)
