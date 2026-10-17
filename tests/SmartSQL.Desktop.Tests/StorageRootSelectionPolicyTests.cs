@@ -73,9 +73,9 @@ public sealed class StorageRootSelectionPolicyTests
     [Fact]
     public void PortableAbsolutePathIsSupportedWithoutInstalledBootstrap()
     {
-        var json = """{"schemaVersion":1,"dataDirectory":""" +
-            System.Text.Json.JsonSerializer.Serialize(OverrideFolder) + "}";
-        var result = StorageRootSelectionPolicy.Select(Input(portablePresent: true, portable: json));
+        var json = System.Text.Json.JsonSerializer.Serialize(new { schemaVersion = 1, dataDirectory = OverrideFolder });
+
+
         Assert.Equal(StorageSelectionKind.Portable, result.Kind);
         Assert.Equal(Path.GetFullPath(OverrideFolder), result.DataDirectory);
     }
@@ -102,7 +102,7 @@ public sealed class StorageRootSelectionPolicyTests
     [Fact]
     public void OversizedPortableMarkerIsRejectedWithoutTruncation()
     {
-        var json = """{"schemaVersion":1,"dataDirectory":"""" + new string('a', 4100) + ""}";
+        var json = System.Text.Json.JsonSerializer.Serialize(new { schemaVersion = 1, dataDirectory = new string('a', 4100) });
         Assert.Throws<StorageRootSelectionException>(() => StorageRootSelectionPolicy.Select(
             Input(portablePresent: true, portable: json)));
     }
