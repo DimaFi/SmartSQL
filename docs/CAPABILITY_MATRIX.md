@@ -2,7 +2,7 @@
 
 Фактическая основа на 17 октября 2026 — M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется.
 
-**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). Следующий кодовый срез M01.03; M01.01/M01.02 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
+**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). M01.03/D056 storage decision готов; следующий кодовый срез M01.04; M01.01/M01.02 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
 
 Gray/Light и память темы независимы от Simple/Advanced/permissions, theme button закреплена рядом с режимом. Native caption buttons явные; user подтвердил их возврат. Изменение темы сохраняет SQL/results. Общая UI/DPI/IME/Narrator-приёмка остаётся T23.
 
@@ -46,3 +46,5 @@ MySQL/MariaDB и SQL Server **только запланированы**: про�
 Основания в коде: [управляемое рабочее пространство](../src/SmartSQL.Application/IDataWorkspace.cs), [SQLite](../src/SmartSQL.Infrastructure/SqliteWorkspace.cs), [локальная валидация](../src/SmartSQL.Application/FieldValue.cs), [нативный просмотр](../src/SmartSQL.Application/IDatabaseBrowser.cs), [запись](../src/SmartSQL.Application/IDatabaseEditor.cs), [поиск](../src/SmartSQL.Application/DatabaseBrowseQuery.cs), [PostgreSQL-редактор](../src/SmartSQL.Infrastructure/PostgresEditing.cs), [проверки безопасности](../src/SmartSQL.Infrastructure/PostgresEditingSql.cs), [JSON-обмен](JSON_TABLE_FORMAT.md).
 
 Будущие срезы/их зависимости находятся в WORK_PLAN M01–M18; эта матрица не является второй очередью.
+
+M01.03/D056: [принятая storage policy](PRODUCT_STORAGE.md), не runtime capability. Current EXE/launcher root mismatch ещё требует M01.04; bootstrap/portable marker/migration не реализованы. Документирование не меняет результат 676 tests/preview.8 и не закрывает UI gates.
