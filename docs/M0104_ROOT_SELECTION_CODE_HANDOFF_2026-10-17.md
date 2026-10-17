@@ -26,7 +26,7 @@
 4. В `WorkspacePaths` сохранить выбранный root один раз за process lifetime; передать во все `ThemePreferences`, history, profiles, backups и DB paths. После проверок удалить независимый consumer-default из `Run-Published.ps1`. Не ломать намеренный explicit D:-dev launcher.
 5. Поднять безопасный early startup UI до `WorkspaceWindow`; ошибки env/portable/bootstrap показать по-русски, без fallback и пустой БД, с Retry/Select existing/Exit.
 6. Разделить dev-only D:-guard и production LocalApplicationData для theme settings с явной policy, **не** с записью в реальный профиль разработчика.
-7. Проверить реальные **два процесса**, kill/fault injection, Unity? — не требуется; no-D clean Windows VM, portable moved folder, legacy two roots, checksum existing files, active WAL, no accidental managed CREATE.
+7. Проверить реальные **два процесса**, kill/fault injection, no-D clean Windows VM, portable moved folder, legacy two roots, checksum existing files, active WAL, no accidental managed CREATE.
 8. После build/tests/review/UI gates обновить `docs/WORK_PLAN.md`, HANDOFF, CAPABILITY_MATRIX и issue bodies по факту. M01.05 copy-first и M01.06 expanded path races отдельны.
 
 ## Точный prompt для Codex
