@@ -1,6 +1,6 @@
 # Ручная проверка M01.04 — единое хранилище preview.9
 
-Эта проверка занимает примерно 10–15 минут. Итоговая сборка: `D:\Code\SmartSQL-builds\0.7.0-preview.9\win-x64-self-contained-verified-m0104-20261017\app` (preview.9; manifest/checksum будут сверены перед передачей).
+Эта проверка занимает примерно 10–15 минут. Итоговая сборка: `D:\Code\SmartSQL-builds\0.7.0-preview.9\win-x64-self-contained-verified-m0104-20261017\app`. Preview.9 опубликована из чистого commit `0a2c1edc982b48d9228142a20740fd9f0209aece`: все 238 payload-файлов и 240 записей ZIP сверены перед передачей. [Запустить EXE](D:/Code/SmartSQL-builds/0.7.0-preview.9/win-x64-self-contained-verified-m0104-20261017/app/SmartSQL.Desktop.exe).
 
 После публикации сборка содержит portable-marker рядом с EXE. Поэтому прямой запуск `SmartSQL.Desktop.exe` и запуск `Run-SmartSQL.ps1` должны использовать один и тот же выделенный root:
 

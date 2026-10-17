@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "DimaFi/SmartSQL",
   "publicationStatus": "published",
-  "snapshotUpdateStatus": "M01.04 runtime local verified, publication pending",
+  "snapshotUpdateStatus": "M01.04 runtime published and six issue bodies read-back verified; preview.9 user acceptance open",
   "issues": [
     {
       "taskId": "PLAN",
