@@ -6,7 +6,7 @@
 
 ## Следующая конкретная работа
 
-**M01.02: полная совместимость managed-формата и проверяемая защита upgrade.** M01.01 реализован/проверен: явные OpenExisting/CreateNew, отказ empty/ordinary/missing, atomic no-overwrite creation и ReadWrite runtime без recreate fallback. Проверить metadata/data/physical schema integrity, фактическую копию перед upgrade и понятность upgrade сообщений; не менять safe open/create. Ручная M01.01 UI-приёмка остаётся открыта.
+**M01.03: product storage decision.** M01.01/M01.02 код и автотесты готовы: 676 passed, 60 real PG facts, Debug 0 warnings/errors/skips; независимое ограниченное review без блокеров. Явный managed open/create, raw compatibility и verified pre-upgrade backup реализованы. Ручная UI-приёмка остаётся открытой.
 
 M01.03 отдельно определяет product storage вне versioned binaries, EXE/launcher и ПК без D:; правило D: нашей разработки не менять. После M01 — M03/M04 first-use/Excel и M05 snapshot/restore; M06 Google+Яндекс, M07 автоматика/статус. Native export M09 можно вести параллельно после его read/format contracts; T13 не потерян. M02/manual debt идёт при доступном screen tool, M10/T23 — после каждой UI-функции и отдельным полным проходом.
 
@@ -72,3 +72,7 @@ M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 
 Проверка идёт до изменения и повторяется под writer transaction. Legacy field-FK/unique omission и gaps позиции сохраняются; malformed metadata/physical schema/storage/encoding, extra objects/indexes/constraints отвергаются без преобразования. Backup API копирует также committed WAL; копия read-only валидируется и сравнивается fingerprint, затем публикуется без overwrite. Upgrade сообщает версии/путь/SHA; при неуспешной последующей миграции проверенная защитная копия может остаться. Лимиты и контракт: MANAGED_PROJECT_OPENING. Native права, cloud и AI не расширены.
 
 Следующий срез **M01.03 product storage decision**. M01.01/M01.02 UI остаётся открытым вместе с T04/T11/T12/T23. Не повторять M01.02 вместо следующего среза; дальнейшая path identity/failure matrix M01.06.
+
+M01.02 preview.8: чистая self-contained Windows x64 поставка `D:\Code\SmartSQL-builds\0.7.0-preview.8\win-x64-self-contained-verified-m0102-1ac1480\app\SmartSQL.Desktop.exe` из опубликованного/remote-SHA verified `1ac1480cf08a17d937f6d07b1abf92062b5e682d` (sourceDirty=false). Все 237 payload SHA/размеров, 239 ZIP entries и их байты проверены: ZIP 78 766 276 байт, SHA256 `794acc1f6a0bf64afc01df9b46a80de77b5ff2059ce3d0261b540879ec1ae071`. Runtime/model artifacts отсутствуют. Новый EXE на экране не запускался из-за computer-use initialization failure; installer не собран. Debug 676 tests/60 real PG facts/0 skips/warnings/errors; owned PG stopped. Следующий кодовый срез M01.03, manual acceptance открыт.
+
+ML knowledge M01.02: локальный commit 310e14d223e04dbdbbf8f6b688af2fb5e1cbada4, remote не настроен. 20 source hashes и Git blobs captured bytes подтверждены на clean product commit 1ac1480cf08a17d937f6d07b1abf92062b5e682d; 15 facts/5 provider profiles/20 synthetic train candidates/11 separate holdout. Model-local Test-Knowledge positive/tamper/leakage проверки прошли; реальная модель не запускалась/не обучалась, stub build/tests не повторялись для data-only update.
