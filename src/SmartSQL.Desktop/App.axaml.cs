@@ -13,6 +13,12 @@ public partial class App : Avalonia.Application
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
+        ThemePreferences.Apply(this, ApplicationTheme.Gray);
+        if (WorkspacePaths.IsReady) LoadStoredTheme();
+    }
+
+    private void LoadStoredTheme()
+    {
         try { ThemePreferences.Apply(this, ThemePreferences.CreateDefault().Load()); }
         catch (Exception)
         {
@@ -25,7 +31,18 @@ public partial class App : Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new WorkspaceWindow(_themeWarning);
+            desktop.MainWindow = WorkspacePaths.IsReady ? new WorkspaceWindow(_themeWarning)
+                : new StartupStorageWindow(WorkspacePaths.StartupError ?? "Хранилище не выбрано.", selected =>
+                {
+                    if (!WorkspacePaths.TryInitializeRuntime(selected)) return WorkspacePaths.StartupError;
+                    LoadStoredTheme();
+                    var previous = desktop.MainWindow;
+                    var workspace = new WorkspaceWindow(_themeWarning);
+                    desktop.MainWindow = workspace;
+                    workspace.Show();
+                    previous?.Close();
+                    return null;
+                });
         }
 
         base.OnFrameworkInitializationCompleted();

@@ -82,3 +82,12 @@
 - [ ] Restore legacy-копии: исходный backup сохраняется, проверяется собственный temp; предыдущие UI gates остаются открыты.
 
 Автотесты 676 passed не заменяют этот проход. Повторная computer-use initialization отказала (kernel assets/path/os error 3); новых экранных результатов нет.
+
+## M01.04 runtime — открытая пользовательская приёмка preview.9
+
+- [ ] Прямой EXE / PowerShell7 Run-SmartSQL без параметров: та же dedicated папка D:\Code\SmartSQL-user-tests\m0104, mode/theme/synthetic data сохраняются.
+- [ ] Startup refusal и обычный retry/выбор existing/cancel picker/close: без WorkspaceWindow/default DB до root; caption/keyboard/DPI/Narrator отдельно.
+- [ ] Второй экземпляр той же папки: понятный отказ; после закрытия первого обычный вход работает.
+- [ ] Чистый end-user ПК/VM без D:/SDK, installed default/update/uninstall/RDP ещё не проверены.
+
+[Чек-лист пользователю](USER_TEST_M0104.md). Full 771 tests не заменяют эту приёмку. Новых screen results нет: Computer Use initialization kernel assets/path/os error3.

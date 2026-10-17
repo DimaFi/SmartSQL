@@ -7,8 +7,9 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        WorkspacePaths.InitializeRuntime();
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        WorkspacePaths.TryInitializeRuntime();
+        try { BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+        finally { WorkspacePaths.Shutdown(); }
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

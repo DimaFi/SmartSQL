@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <ProjectReference Include="..\..\src\SmartSQL.Desktop\SmartSQL.Desktop.csproj" />
+    <ProjectReference Include="..\SmartSQL.Storage.Probe\SmartSQL.Storage.Probe.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />

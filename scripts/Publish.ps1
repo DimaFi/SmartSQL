@@ -6,6 +6,7 @@ param(
     [ValidateSet('SelfContained', 'FrameworkDependent')]
     [string]$Deployment = 'SelfContained',
     [string]$OutputRoot = 'D:\Code\SmartSQL-builds',
+    [string]$PortableDataDirectory,
     [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$')]
     [string]$BuildId,
     [switch]$Offline,
@@ -64,6 +65,30 @@ $buildRoot = [IO.Path]::GetFullPath((Join-Path $versionRoot "win-x64-$deployment
 if (!$buildRoot.StartsWith($deliveryRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw 'Resolved output escaped OutputRoot.' }
 Assert-DeliveryPath $buildRoot
 if (Test-Path -LiteralPath $buildRoot) { throw "Publication already exists; choose a new BuildId. Nothing was overwritten: $buildRoot" }
+if ($PSBoundParameters.ContainsKey('PortableDataDirectory')) {
+    if ([string]::IsNullOrWhiteSpace($PortableDataDirectory) -or ![IO.Path]::IsPathFullyQualified($PortableDataDirectory)) {
+        throw 'PortableDataDirectory must be a non-empty absolute directory on D:.'
+    }
+    $portableDataRoot = [IO.Path]::GetFullPath($PortableDataDirectory).TrimEnd('\', '/')
+    if ([IO.Path]::GetPathRoot($portableDataRoot) -ine 'D:\' -or $portableDataRoot -ieq 'D:') {
+        throw 'PortableDataDirectory must be a named directory on D:.'
+    }
+    Assert-DeliveryPath $portableDataRoot
+    if ($portableDataRoot -ieq $sourceRoot -or
+        $portableDataRoot.StartsWith($sourceRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or
+        $sourceRoot.StartsWith($portableDataRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'PortableDataDirectory must be outside the source workspace.'
+    }
+    if ($portableDataRoot -ieq $deliveryRoot -or $portableDataRoot.StartsWith($deliveryRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'PortableDataDirectory must be outside OutputRoot so replacing a publication cannot replace user data.'
+    }
+    if ($buildRoot -ieq $portableDataRoot -or $buildRoot.StartsWith($portableDataRoot + '\', [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'The publication build directory must not be inside PortableDataDirectory.'
+    }
+    if (Test-Path -LiteralPath $portableDataRoot -PathType Leaf) {
+        throw 'PortableDataDirectory points to a file, not a directory.'
+    }
+}
 [IO.Directory]::CreateDirectory($versionRoot) | Out-Null
 # Atomic creation refuses concurrent publication to the same version/build identifier.
 New-Item -ItemType Directory -Path $buildRoot -ErrorAction Stop | Out-Null
@@ -99,6 +124,11 @@ try {
     $publishedIcon = Join-Path $sourceRoot 'src/SmartSQL.Desktop/Assets/SmartSQL.ico'
     if (Test-Path -LiteralPath $publishedIcon -PathType Leaf) {
         Copy-Item -LiteralPath $publishedIcon -Destination (Join-Path $applicationRoot 'SmartSQL.ico')
+    }
+    if ($PSBoundParameters.ContainsKey('PortableDataDirectory')) {
+        [ordered]@{ schemaVersion = 1; dataDirectory = $portableDataRoot } |
+            ConvertTo-Json |
+            Set-Content -LiteralPath (Join-Path $applicationRoot 'smartsql.portable.json') -Encoding utf8NoBOM
     }
     $fileHashes = @(Get-ChildItem -LiteralPath $applicationRoot -File -Recurse | Sort-Object FullName | ForEach-Object {
         [ordered]@{ path = [IO.Path]::GetRelativePath($applicationRoot, $_.FullName).Replace('\', '/'); bytes = $_.Length; sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }

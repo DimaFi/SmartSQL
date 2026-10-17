@@ -62,3 +62,7 @@ Domain -> Desktop
 Application -> Desktop
 cyclic dependencies
 ```
+
+## Latest M01.04 runtime checkpoint — 17 October
+
+Runtime storage is now wired before Avalonia/theme/preferences/default DB, with cached process lease, conservative local FS/legacy guards, no-overwrite root marker and atomic installed bootstrap, Global selection/root mutexes, startup error UI and shared EXE/launcher resolution. Full Debug 771 tests (1/144/492/134), 60 real PG, zero skips/warnings/errors; 13 FS and 4 real-process crash/concurrency cases added. See docs/RUNTIME_STORAGE_M0104.md for exact scope and limits. This supersedes earlier inactive-foundation status. Manual UI/clean-no-D/RDP and full M01.06 remain open. User requests personal acceptance next: publish preview.9 with explicit dedicated D:/Code/SmartSQL-user-tests/m0104 marker and explain docs/USER_TEST_M0104.md. Do not proceed to M01.05 until user's acceptance feedback; no old roots migrated/adopted, no cloud/AI/new providers/installer delivered.

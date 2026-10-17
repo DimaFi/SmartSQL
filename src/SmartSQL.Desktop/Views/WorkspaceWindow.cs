@@ -199,7 +199,15 @@ public sealed class WorkspaceWindow : Window
         center.Children.Add(_tabs);
         Grid.SetColumn(center, 2);
         body.Children.Add(center);
-        var footer = new StackPanel { Spacing = 3, Children = { _status, _context } };
+        var storageLocation = new TextBox
+        {
+            Text = "Хранилище SmartSQL: " + WorkspacePaths.DataDirectory,
+            IsReadOnly = true, BorderThickness = new Thickness(0), Padding = new Thickness(0),
+            FontSize = 12, MaxHeight = 38
+        };
+        AutomationProperties.SetName(storageLocation, "Папка данных и настроек SmartSQL");
+        ToolTip.SetTip(storageLocation, "Папка настроек и локальных данных. Открытые внешние проекты остаются по выбранным вами путям.");
+        var footer = new StackPanel { Spacing = 3, Children = { _status, _context, storageLocation } };
         var layout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto") };
         layout.Children.Add(new Border { Classes = { "toolbar" }, Padding = new Thickness(16, 10), Child = toolbar });
         Grid.SetRow(body, 1);

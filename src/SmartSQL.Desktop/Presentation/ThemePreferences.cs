@@ -16,7 +16,9 @@ public sealed class ThemePreferences
     private const string Format = "SmartSQL.ThemePreferences.v1";
     private readonly object _gate = new();
 
-    public ThemePreferences(string absoluteFilePath)
+    public ThemePreferences(string absoluteFilePath) : this(absoluteFilePath, approvedRuntimeRoot: false) { }
+
+    private ThemePreferences(string absoluteFilePath, bool approvedRuntimeRoot)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(absoluteFilePath);
         if (!Path.IsPathFullyQualified(absoluteFilePath))
@@ -24,13 +26,13 @@ public sealed class ThemePreferences
         FilePath = Path.GetFullPath(absoluteFilePath);
         if (string.IsNullOrEmpty(Path.GetFileName(FilePath)))
             throw new ArgumentException("Укажите файл настроек темы.", nameof(absoluteFilePath));
-        if (OperatingSystem.IsWindows() && !string.Equals(Path.GetPathRoot(FilePath), "D:\\", StringComparison.OrdinalIgnoreCase))
+        if (!approvedRuntimeRoot && OperatingSystem.IsWindows() && !string.Equals(Path.GetPathRoot(FilePath), "D:\\", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Настройки темы этого рабочего окружения сохраняются на D:.", nameof(absoluteFilePath));
     }
 
     public string FilePath { get; }
 
-    public static ThemePreferences CreateDefault() => new(Path.Combine(WorkspacePaths.DataDirectory, "theme-preferences.json"));
+    public static ThemePreferences CreateDefault() => new(Path.Combine(WorkspacePaths.DataDirectory, "theme-preferences.json"), approvedRuntimeRoot: true);
 
     /// <summary>Missing means Gray. Invalid existing preferences are reported, never reset on load.</summary>
     public ApplicationTheme Load()

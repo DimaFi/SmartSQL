@@ -38,45 +38,39 @@ Assert-DeliveryPath $publishedApplication
 $publishedExecutable = Join-Path $publishedApplication 'SmartSQL.Desktop.exe'
 Assert-DeliveryPath $publishedExecutable
 if (!(Test-Path -LiteralPath $publishedExecutable -PathType Leaf)) { throw "Published executable not found: $publishedExecutable" }
-if ([string]::IsNullOrWhiteSpace($DataDirectory)) {
-    # Published builds use <build>/app; a ZIP extracted directly to its own folder
-    # keeps runtime data inside that folder, never a shared parent such as D:\Apps.
-    $publishedRuntimeRoot = if ([IO.Path]::GetFileName($publishedApplication) -ieq 'app') {
-        Split-Path -Parent $publishedApplication
-    } else { $publishedApplication }
-    $DataDirectory = Join-Path $publishedRuntimeRoot 'run-data/local'
-}
-if (![IO.Path]::IsPathFullyQualified($DataDirectory)) { throw 'DataDirectory must be an absolute directory on D:.' }
-$publishedData = [IO.Path]::GetFullPath($DataDirectory)
-if ([IO.Path]::GetPathRoot($publishedData) -ine 'D:\' -or $publishedData.TrimEnd('\') -ieq 'D:') { throw 'Runtime data must be in a named directory on D:.' }
-$publishedTemp = Join-Path $publishedData 'temp'
-Assert-DeliveryPath $publishedData
-Assert-DeliveryPath $publishedTemp
-Assert-DeliveryPath (Join-Path $publishedData 'dotnet-bundles')
-Assert-DeliveryPath (Join-Path $publishedData 'cache')
 $publishedEnvironment = [ordered]@{
-    SMARTSQL_DATA_DIRECTORY = $publishedData
-    SMARTSQL_TEMP_DIRECTORY = $publishedTemp
-    TEMP = $publishedTemp; TMP = $publishedTemp; TMPDIR = $publishedTemp
-    DOTNET_BUNDLE_EXTRACT_BASE_DIR = (Join-Path $publishedData 'dotnet-bundles')
-    XDG_CACHE_HOME = (Join-Path $publishedData 'cache')
     AVALONIA_TELEMETRY_OPTOUT = '1'
     DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 }
+$hasExplicitDataDirectory = $PSBoundParameters.ContainsKey('DataDirectory')
+if ($hasExplicitDataDirectory) {
+    if ([string]::IsNullOrWhiteSpace($DataDirectory) -or ![IO.Path]::IsPathFullyQualified($DataDirectory)) {
+        throw 'DataDirectory must be a non-empty absolute directory on D:.'
+    }
+    $publishedData = [IO.Path]::GetFullPath($DataDirectory).TrimEnd('\', '/')
+    if ([IO.Path]::GetPathRoot($publishedData) -ine 'D:\' -or $publishedData -ieq 'D:') {
+        throw 'Runtime data must be in a named directory on D:.'
+    }
+    Assert-DeliveryPath $publishedData
+    $publishedEnvironment['SMARTSQL_DATA_DIRECTORY'] = $publishedData
+}
 $publishedPrevious = @{}
 try {
-    [IO.Directory]::CreateDirectory($publishedData) | Out-Null
-    [IO.Directory]::CreateDirectory($publishedTemp) | Out-Null
     foreach ($entry in $publishedEnvironment.GetEnumerator()) {
         $publishedPrevious[$entry.Key] = [Environment]::GetEnvironmentVariable($entry.Key, 'Process')
         [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, 'Process')
     }
     # This is the requested interactive application; the child inherits only process-local settings.
     $publishedProcess = Start-Process -FilePath $publishedExecutable -WorkingDirectory $publishedApplication -PassThru
-    Write-Host "SmartSQL PID: $($publishedProcess.Id); isolated data: $publishedData"
+    if ($hasExplicitDataDirectory) {
+        Write-Host "SmartSQL PID: $($publishedProcess.Id); explicit data override: $publishedData"
+    }
+    else {
+        Write-Host "SmartSQL PID: $($publishedProcess.Id); data root is selected by SmartSQL"
+    }
     if ($Wait) {
         $publishedProcess.WaitForExit()
-        if ($publishedProcess.ExitCode -ne 0) { throw "SmartSQL exited with code $($publishedProcess.ExitCode). Data preserved: $publishedData" }
+        if ($publishedProcess.ExitCode -ne 0) { throw "SmartSQL exited with code $($publishedProcess.ExitCode)." }
     }
     $publishedProcess
 }
