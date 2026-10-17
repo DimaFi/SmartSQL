@@ -17,6 +17,10 @@ public sealed partial class SqliteWorkspace
         {
             throw new InvalidOperationException("Файл повреждён или не является базой SQLite. Исходный файл не преобразован.", exception);
         }
+        catch (SqliteException exception) when (exception.SqliteErrorCode is 1 or 9 or 18 or 19)
+        {
+            throw new InvalidOperationException("Не удалось подтвердить совместимость проекта в пределах проверки. Файл не обновлён. Проверьте структуру, целостность и размер данных.", exception);
+        }
     }
 
     /// <summary>Initializes a private sibling file and publishes it without overwriting any destination.</summary>
@@ -146,18 +150,18 @@ public sealed partial class SqliteWorkspace
     private void InitializeManagedFile(bool initializeNew, bool createMigrationBackup)
     {
         using var connection = OpenConnection();
+        using var budget = new ManagedValidationBudget(connection);
         using var transaction = connection.BeginTransaction();
         var version = ReadManagedVersion(connection, transaction);
         if (!initializeNew)
+        {
             ValidateManagedMetadata(connection, version, transaction);
+            ValidateManagedContents(connection, version, transaction);
+        }
         if (version == CurrentSchemaVersion)
             return;
-        if (!initializeNew && createMigrationBackup)
-        {
-            var backupPath = Path.Combine(Path.GetDirectoryName(FilePath)!,
-                $"{Path.GetFileNameWithoutExtension(FilePath)}.before-upgrade-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}.db");
-            CreateBackup(backupPath);
-        }
+        (string Path, string Sha256)? verifiedCopy = !initializeNew && createMigrationBackup
+            ? CreateVerifiedUpgradeBackup(connection, transaction, version) : null;
         using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
@@ -191,6 +195,9 @@ public sealed partial class SqliteWorkspace
             """;
         command.ExecuteNonQuery();
         ValidateManagedMetadata(connection, CurrentSchemaVersion, transaction);
+        ValidateManagedContents(connection, CurrentSchemaVersion, transaction);
         transaction.Commit();
+        if (verifiedCopy is not null)
+            Upgrade = new(version, CurrentSchemaVersion, verifiedCopy.Value.Path, verifiedCopy.Value.Sha256);
     }
 }

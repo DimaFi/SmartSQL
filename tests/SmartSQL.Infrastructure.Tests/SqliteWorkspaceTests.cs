@@ -279,6 +279,7 @@ public sealed class SqliteWorkspaceTests
             command.CommandText = """
                 CREATE TABLE smartsql_tables (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE);
                 CREATE TABLE smartsql_fields (id TEXT PRIMARY KEY, table_id TEXT NOT NULL, name TEXT NOT NULL, position INTEGER NOT NULL);
+                CREATE TABLE data_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa (id TEXT PRIMARY KEY, field_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb TEXT);
                 PRAGMA user_version = 1;
                 """;
             command.ExecuteNonQuery();

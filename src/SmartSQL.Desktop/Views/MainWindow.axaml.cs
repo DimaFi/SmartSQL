@@ -132,7 +132,14 @@ public partial class MainWindow : UserControl
             TablesList.SelectedItem = (TablesList.ItemsSource as IEnumerable<TableDefinition>)?
                 .FirstOrDefault(table => table.Id == tableId.Value);
         RefreshPresentation();
+        if (ManagedUpgradeMessage(workspace) is { Length: > 0 } upgradeMessage)
+            StatusText.Text = upgradeMessage;
     }
+
+    internal static string ManagedUpgradeMessage(IDataWorkspace workspace) =>
+        workspace is SqliteWorkspace { Upgrade: { } upgrade }
+            ? $"Проект обновлён со схемы {upgrade.PreviousVersion} до {upgrade.CurrentVersion}. Проверенная копия исходного состояния: {upgrade.BackupPath}"
+            : string.Empty;
 
     private void RefreshTables()
     {
@@ -192,11 +199,11 @@ public partial class MainWindow : UserControl
         try
         {
             var demo = DemoWorkspace.OpenOrCreate();
-            SetWorkspace(demo.Path);
+            SetWorkspace(demo.Workspace);
             TablesList.SelectedItem = ((IEnumerable<TableDefinition>)TablesList.ItemsSource!)
                 .First(table => table.Id == demo.MainTableId);
             WorkspaceOpened?.Invoke(demo.Path);
-            StatusText.Text = "Демонстрационная база открыта. Вы можете редактировать записи и применять сохранённые фильтры.";
+            StatusText.Text = (ManagedUpgradeMessage(demo.Workspace) + " Демонстрационная база открыта. Вы можете редактировать записи и применять сохранённые фильтры.").Trim();
         }
         catch (Exception exception)
         {

@@ -13,6 +13,7 @@ public sealed partial class SqliteWorkspace : IDataWorkspace
 
     public string FilePath { get; }
     public int SchemaVersion => CurrentSchemaVersion;
+    public ManagedProjectUpgrade? Upgrade { get; private set; }
 
     private SqliteWorkspace(string filePath, bool createMigrationBackup, bool usePooling, bool initializeNew = false)
     {
@@ -25,8 +26,11 @@ public sealed partial class SqliteWorkspace : IDataWorkspace
                 DataSource = FilePath, Mode = SqliteOpenMode.ReadOnly, Pooling = false
             }.ToString());
             probe.Open();
-            var version = ReadManagedVersion(probe);
-            ValidateManagedMetadata(probe, version);
+            using var budget = new ManagedValidationBudget(probe);
+            using var snapshot = probe.BeginTransaction(deferred: true);
+            var version = ReadManagedVersion(probe, snapshot);
+            ValidateManagedMetadata(probe, version, snapshot);
+            ValidateManagedContents(probe, version, snapshot);
             if (version == CurrentSchemaVersion)
                 return;
         }
@@ -611,8 +615,8 @@ public sealed partial class SqliteWorkspace : IDataWorkspace
             StringComparer.OrdinalIgnoreCase.Compare(left, right));
         connection.CreateCollation("SMARTSQL_NUMBER", (left, right) =>
         {
-            var leftValid = decimal.TryParse(left, NumberStyles.Number, CultureInfo.InvariantCulture, out var leftNumber);
-            var rightValid = decimal.TryParse(right, NumberStyles.Number, CultureInfo.InvariantCulture, out var rightNumber);
+            var leftValid = decimal.TryParse(left, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var leftNumber);
+            var rightValid = decimal.TryParse(right, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture, out var rightNumber);
             return leftValid && rightValid
                 ? leftNumber.CompareTo(rightNumber)
                 : StringComparer.Ordinal.Compare(left, right);

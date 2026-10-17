@@ -1,6 +1,6 @@
-# Открытие и создание проекта SmartSQL — M01.01
+# Открытие, совместимость и обновление проекта SmartSQL — M01.01/M01.02
 
-Реализован отдельный срез безопасного выбора файла. Это не мастер первого запуска, не новая product storage policy и не полная приёмка совместимости M01.02.
+Реализованы безопасный выбор файла и ограниченная проверка совместимости managed-формата перед открытием/обновлением. Мастер первого запуска и новая product storage policy остаются следующими этапами.
 
 ## Контракт
 
@@ -26,6 +26,22 @@
 
 Повторная попытка computer-use не инициализировалась (`failed to write kernel assets ... os error 3`). Новую ручную приёмку file pickers/default/demo/error text/state preservation не заявляем; чек-лист остаётся открытым.
 
-## Следующий срез и ограничения
+## Историческая граница M01.01
 
 **M01.02**: полная совместимость/целостность legacy/current/future/corrupt managed metadata и физических таблиц, сообщения upgrade и проверяемая защитная копия. M01.01 не доказывает корректность каждой строки/пользовательской таблицы и не является sandbox для произвольно подменяемого файла. Symlink/reparse/path replacement, pooling identity races и исчерпывающая файловая failure matrix остаются M01.06. Stable installed/portable paths — M01.03–M01.05; cloud snapshots/outbox — M05–M07. Старые правила хранения на D: не менялись.
+
+## M01.02 — совместимость и защитная копия (17 октября)
+
+Read-only snapshot проверяет integrity_check, metadata IDs/owners/names/positions/types, сохранённые фильтры, PK/unique indexes (BINARY, ascending, без partial/expression/лишних), FK actions/defaults и отсутствие неизвестных объектов/ограничений. Физические data_GUID/field_GUID должны точно соответствовать описанию; проверяются record IDs, storage TEXT/NULL, строгая UTF-8/UTF-16 кодировка и четыре объявленных типа без переписывания представления. Text пустота/пробелы сохраняются при проверке; новая запись по-прежнему использует прежнюю Normalize-семантику. Точные старые exponent-number значения допускаются; потеря decimal precision отклоняется. Пропуски field positions после удаления допустимы; отрицательные/повторные позиции нет. Исторический v1 без поздних field FK/unique допускается также после его штатной миграции.
+
+Нестандартные constraints/defaults/indexes/объекты не удаляются и не принимаются в managed-редактор автоматически; отказ направляет к native SQLite. Это консервативное подтверждение известного формата, не универсальный SQLite repair. Отказ до миграции не создаёт before-upgrade копию и не меняет схему/version/data. SQLite может управлять собственными WAL/SHM при чтении; гарантия не относится к отсутствию всех sidecar effects.
+
+Legacy v0/v1/v2 проверяется повторно под BEGIN IMMEDIATE. До DDL source fingerprint фиксирует schema/version и exact stored cells; отдельный read-only source и SQLite incremental backup создают уникальную соседнюю временную копию, включая committed WAL. Копия повторно открывается отдельно, проходит целостность/совместимость и сравнение fingerprint; SHA-256 рассчитывается после закрытия, затем File.Move без overwrite публикует before-upgrade .db. Только после этого выполняется прежняя миграция к v3. Ещё одна проверка предшествует COMMIT. Неуспешная поздняя миграция может оставить проверенную защитную копию; это допустимый результат, не успех upgrade.
+
+ManagedProjectUpgrade сообщает old/new version, путь и SHA-256 копии; Desktop показывает версию/путь в статусе, включая demo. Restore проверяет/обновляет собственный временный файл, не меняя выбранный исходный backup. Схема остаётся v3; пользовательские строки/форматы не преобразуются этой проверкой.
+
+Ограничения: 30 секунд progress budget на проверяющее соединение (не общий deadline/UI cancellation и не OS sandbox), 30 секунд incremental backup loop; native value/row limit 32 МиБ, decoded cell до 4 МиБ, до 32 МиБ на блок строки/metadata, 10 000 таблиц/100 000 полей/100 000 фильтров, до 20 условий в фильтре, physical columns до 2000, чтение chunk по 200 полей. Превышение — явный отказ, без обрезания/молчаливой миграции. Managed open синхронный; долгий UI, чужая подмена файла, reparse/pooling identity races и полная failure matrix остаются M01.06/M10. Это не постоянный guard против внешнего изменения уже открытого проекта.
+
+M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется.
+
+Следующий срез M01.03 — отдельное решение installed/portable root. Cloud/outbox/автокопии не реализованы. Ручная UI-проверка upgrade status/demo/restore/errors/state preservation остаётся открытой.

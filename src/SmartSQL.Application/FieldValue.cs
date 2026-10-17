@@ -5,6 +5,26 @@ namespace SmartSQL.Application;
 
 public static class FieldValue
 {
+    /// <summary>Checks an existing stored value without changing its representation or empty-text semantics.</summary>
+    public static void ValidateStored(FieldType type, string? value)
+    {
+        if (!Enum.IsDefined(type))
+            throw new ArgumentOutOfRangeException(nameof(type));
+        if (value is null || type == FieldType.Text)
+            return;
+        if (type == FieldType.Number)
+        {
+            _ = NormalizeNumber(value, allowExponent: true);
+            return;
+        }
+        if (type == FieldType.Boolean && value is "0" or "1")
+            return;
+        if (type == FieldType.Date && DateTime.TryParseExact(value, "yyyy-MM-dd",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            return;
+        throw new FormatException("Сохранённое значение не соответствует объявленному типу поля.");
+    }
+
     public static string? Normalize(FieldType type, string? value)
     {
         if (value is null || string.IsNullOrWhiteSpace(value))

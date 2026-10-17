@@ -6,7 +6,7 @@ namespace SmartSQL.Desktop;
 /// <summary>Sample data for exploring the UI; domain-specific data stays outside the core.</summary>
 internal static class DemoWorkspace
 {
-    public static (string Path, Guid MainTableId) OpenOrCreate()
+    public static (string Path, Guid MainTableId, SqliteWorkspace Workspace) OpenOrCreate()
     {
         var path = WorkspacePaths.DemoDatabasePath;
         var workspace = File.Exists(path)
@@ -14,7 +14,7 @@ internal static class DemoWorkspace
             : SqliteWorkspace.CreateNew(path);
         var existing = workspace.GetTables();
         if (existing.Count > 0)
-            return (path, existing.FirstOrDefault(table => table.Name == "Студенты и практика")?.Id ?? existing[0].Id);
+            return (path, existing.FirstOrDefault(table => table.Name == "Студенты и практика")?.Id ?? existing[0].Id, workspace);
 
         var students = workspace.CreateTable("Студенты и практика",
         [
@@ -79,7 +79,7 @@ internal static class DemoWorkspace
             new RecordFilter(studentFields["Целевик"], FilterOperator.Equals, "Да"),
             new RecordFilter(studentFields["Курс"], FilterOperator.Equals, "3")
         ]);
-        return (path, students.Id);
+        return (path, students.Id, workspace);
 
         IReadOnlyDictionary<Guid, string?> Organization(string name, string type, string city, string contact) =>
             new Dictionary<Guid, string?>

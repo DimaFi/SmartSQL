@@ -1,12 +1,12 @@
 # Матрица возможностей SmartSQL
 
-Фактическая основа на 16 октября 2026 — M01.01 поверх T12, Debug 0 warnings/errors, 638 passed/0 skipped (1/129/469/39), 60 real PG facts. Это последний кодовый прогон; будущие функции плана им не приняты. Ручная приёмка частичная: [evidence/остаток](WORKSPACE_UI_ACCEPTANCE.md). Новый screen tool не инициализировался; UI не объявляется принятым.
+Фактическая основа на 17 октября 2026 — M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется.
 
-**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). Следующий кодовый срез M01.02; M01.01 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
+**Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). Следующий кодовый срез M01.03; M01.01/M01.02 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.
 
 Gray/Light и память темы независимы от Simple/Advanced/permissions, theme button закреплена рядом с режимом. Native caption buttons явные; user подтвердил их возврат. Изменение темы сохраняет SQL/results. Общая UI/DPI/IME/Narrator-приёмка остаётся T23.
 
-Managed project OpenExisting/CreateNew теперь разделены: чужой/пустой/отсутствующий файл не инициализируется, создание без overwrite, runtime ReadWrite без recreate. [Охват и оставшиеся проверки](MANAGED_PROJECT_OPENING.md). ML knowledge/examples/holdout готовятся отдельно; модель не обучена и не интегрирована.
+Managed project OpenExisting/CreateNew теперь разделены: чужой/пустой/отсутствующий файл не инициализируется, создание без overwrite, runtime ReadWrite без recreate. M01.02 сверяет физическую схему/данные, ограничения, типы и целостность; upgrade требует сверенной standalone копии с SHA-256 и сообщает путь. Несовместимый файл не исправляется молча. [Охват и оставшиеся проверки](MANAGED_PROJECT_OPENING.md). ML knowledge/examples/holdout готовятся отдельно; модель не обучена и не интегрирована.
 
 ## Общее рабочее место
 

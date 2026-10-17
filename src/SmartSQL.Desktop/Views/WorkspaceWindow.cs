@@ -600,7 +600,7 @@ public sealed class WorkspaceWindow : Window
             var workspace = SqliteWorkspace.OpenExisting(path);
             GetManagedConnection(path, workspace.GetTables());
             foreach (var tab in _openTabs.Where(tab => tab.Connection == entry)) UpdateTabHeader(tab);
-            _status.Text = "Каталог проекта обновлён.";
+            _status.Text = (MainWindow.ManagedUpgradeMessage(workspace) + " Каталог проекта обновлён.").Trim();
         }
     }
 
@@ -689,7 +689,7 @@ public sealed class WorkspaceWindow : Window
         var demo = DemoWorkspace.OpenOrCreate();
         var existing = _connections.FirstOrDefault(entry => entry.ManagedPath == demo.Path && !entry.Closing);
         if (existing is not null) OpenManagedTable(existing, demo.MainTableId);
-        else OpenManagedView(new MainWindow(demo.Path, demo.MainTableId));
+        else OpenManagedView(new MainWindow(demo.Workspace, demo.MainTableId));
         return Task.CompletedTask;
     }
 

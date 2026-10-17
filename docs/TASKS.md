@@ -1,8 +1,8 @@
 # Задачи SmartSQL: краткий реестр
 
-**Единственный полный порядок, подзадачи и acceptance — [WORK_PLAN.md](WORK_PLAN.md): 18 этапов M01–M18, 123 конкретные подзадачи.** T01–T25 сохраняют прежние номера/URL; это соответствие, не другая очередь. Текущая следующая реализация — **M01.02** (M01.01 код/автотесты готов, UI открыт); M02/manual acceptance остаётся открытой.
+**Единственный полный порядок, подзадачи и acceptance — [WORK_PLAN.md](WORK_PLAN.md): 18 этапов M01–M18, 123 конкретные подзадачи.** T01–T25 сохраняют прежние номера/URL; это соответствие, не другая очередь. Текущая следующая реализация — **M01.03** (M01.01/M01.02 код/автотесты готовы, UI открыт); M02/manual acceptance остаётся открытой.
 
-Последний кодовый срез M01.01: Debug 0 warnings/errors, 638 passed/0 skipped (1/129/469/39), 60 реальных PG-фактов. Явные open/create проверены; UI gate открыт. Подробнее: [контракт](MANAGED_PROJECT_OPENING.md). [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
+Последний кодовый срез M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется. Подробнее: [контракт](MANAGED_PROJECT_OPENING.md). [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
 
 | ID / GitHub | Задача | Этапы | Фактический статус |
 | --- | --- | --- | --- |
