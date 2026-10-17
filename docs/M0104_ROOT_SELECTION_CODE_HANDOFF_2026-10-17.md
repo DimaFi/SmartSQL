@@ -4,7 +4,7 @@
 
 ## Изменения этой ветки
 
-- `src/SmartSQL.Desktop/Storage/StorageRootSelectionPolicy.cs`: side-effect-free selector для D056, типизированные результаты `ExplicitOverride`, `Portable`, `InstalledExisting`, `LegacySelectionRequired`, `FirstUseCandidate`; присутствующий пустой env — ошибка без fallback; portable marker relative к EXE; bootstrap schemaVersion 1 и GUID rootId; bounded JSON/duplicate/missing/unknown fields; lexical root/file/UNC guards; повторяющиеся known legacy paths не выбираются автоматически; root marker GUID парсится отдельно.
+- `src/SmartSQL.Desktop/Storage/StorageRootSelectionPolicy.cs`: side-effect-free selector для D056; **first-use candidate запрещён, пока внешний bounded legacy-probe не передал `LegacyDiscoveryCompleted=true`**. `RequireMatchingInstalledRoot` дополнительно отвергает отсутствующий/повреждённый или несовпадающий `storage-root.json` относительно выбранного installed bootstrap (не заменяет filesystem identity checks). Типизированные результаты `ExplicitOverride`, `Portable`, `InstalledExisting`, `LegacySelectionRequired`, `FirstUseCandidate`; присутствующий пустой env — ошибка без fallback; portable marker relative к EXE; bootstrap schemaVersion 1 и GUID rootId; bounded JSON/duplicate/missing/unknown fields; lexical root/file/UNC guards; повторяющиеся known legacy paths не выбираются автоматически; root marker GUID парсится отдельно.
 - `tests/SmartSQL.Desktop.Tests/StorageRootSelectionPolicyTests.cs`: positive/negative table for env/portable/bootstrap, invalid/future/duplicate/missing JSON, root identity parsing, legacy ambiguous/no overwrite, root path/files/sidecars, no-fs-side-effects. Paths randomly unique in OS temp **только как строки**; тесты НЕ создают каталоги и не изменяют пользовательский профиль.
 
 **Критическое ограничение:** `StorageRootSelectionPolicy.Select()` **ещё нигде не вызывается** в production runtime. `WorkspacePaths.InitializeRuntime()`, `Program.Main`, `Run-Published.ps1` продолжают текущий механизм; это преднамеренно, чтобы не переключить живые данные до завершения fail-closed filesystem phase, early-error UI, concurrency protocol и тестов. Путь пользователя и файлы не изменялись этим PR.
@@ -21,13 +21,20 @@
 ## Контроль перед интеграцией с runtime (следующая задача Codex)
 
 1. **Сначала исполнить реальные тесты** из branch с `scripts/Build.ps1` и `scripts/Test.ps1`, проверить C# compile/format и падения, исправить в этой же отдельной ветке. Не копировать исторические 676 тестов как новый результат.
-2. Pure selector получает **уже обнаруженные** known legacy paths; внешний bounded reader должен реально найти `<EXE>/data/local` и `run-data/local` без рекурсивного сканирования. Недостоверный или неполный probe не является доказательством first-use.
+2. Pure selector получает **уже обнаруженные** known legacy paths; внешний bounded reader обязан явно установить `LegacyDiscoveryCompleted=true` только после полного успешного probe (при exception/uncertainty не устанавливать). Он должен реально найти `<EXE>/data/local` и `run-data/local` без рекурсивного сканирования. Недостоверный или неполный probe не является доказательством first-use.
 3. Сделать filesystem stage: fail closed on path/identity/reparse/unavailable, no-overwrite `storage-root.json`/`storage.json`, atomic read/write with cross-process coordination, orphan recovery after crash, rootId recheck under lock. JSON file bytes ограничивать **до** полного UTF-8 decode из памяти; нынешний selector принимает string и сам не читает файлы.
 4. В `WorkspacePaths` сохранить выбранный root один раз за process lifetime; передать во все `ThemePreferences`, history, profiles, backups и DB paths. После проверок удалить независимый consumer-default из `Run-Published.ps1`. Не ломать намеренный explicit D:-dev launcher.
 5. Поднять безопасный early startup UI до `WorkspaceWindow`; ошибки env/portable/bootstrap показать по-русски, без fallback и пустой БД, с Retry/Select existing/Exit.
 6. Разделить dev-only D:-guard и production LocalApplicationData для theme settings с явной policy, **не** с записью в реальный профиль разработчика.
 7. Проверить реальные **два процесса**, kill/fault injection, no-D clean Windows VM, portable moved folder, legacy two roots, checksum existing files, active WAL, no accidental managed CREATE.
 8. После build/tests/review/UI gates обновить `docs/WORK_PLAN.md`, HANDOFF, CAPABILITY_MATRIX и issue bodies по факту. M01.05 copy-first и M01.06 expanded path races отдельны.
+
+
+## Дополнительное independent review текущего PR (read-only source review, не тест)
+
+- **Исправлен риск первого запуска без проверки:** пустой список legacy-кандидатов больше сам по себе не считается доказательством того, что поиск старых путей завершён. При `LegacyDiscoveryCompleted=false` pure selector отказывает, если не выбран более приоритетный env/portable/bootstrap и не найдены известные legacy data. Внешний scanner **обязан** задать true только после собственного законченного bounded поиска с обработкой IO/reparse ошибок. Если scanner сам прервётся — fail closed.
+- **Исправлено соответствие root marker и bootstrap:** `RequireMatchingInstalledRoot` проверяет, что выбран именно `InstalledExisting`, root marker валиден и rootId совпадает. Нет root marker/другой rootId/future marker → ошибка, не fallback. Тесты добавлены, но ещё **не выполнялись**.
+- **Незакрыто:** возможна физическая замена папки после lexical проверки, symlink/reparse/UNC, разрешённые каталоги под executable/version, атомарная файловая запись и concurrent initialization. Критически нужно сначала построить FS/handle-stage с lock, а затем подключать resolver в приложение. Только pure helper не доказывает отсутствие потерь данных.
 
 ## Точный prompt для Codex
 
