@@ -84,3 +84,21 @@ Threat model and offline recovery key are distinct from local OAuth secret store
 - For owner-facing reporting, use exact states: `docs prepared` / `Codex implementation pending` / `M01.04 tests pending` / `M01.05–.06 pending` / `cloud and encryption research only`.
 
 **DO NOT** close any task based only on this review, create a parallel roadmap, start AI training, install new tools, or assert a new preview/installer/cloud backup exists.
+
+
+---
+
+## Дополнение: расширенный пакет GPT-6 → Codex (17 октября 2026, после PR #27)
+
+**Единый новый исполняемый промпт:** [CODEX_EXECUTION_PROMPT_2026-10-17.md](CODEX_EXECUTION_PROMPT_2026-10-17.md). Он содержит Волны 0–4: M01.04; M01.05/.06; M02/M03/M04; M05/M06/M07/DEC-KEYS, ограничения и формат честного отчёта. **Начать Codex с нового промпта, этот файл сохранить как технический handoff.** Все нижеследующие материалы — **research only**; код этих этапов не реализован, tests/UI/live OAuth не проведены.
+
+| Область | Новая спецификация | Что именно передано |
+| --- | --- | --- |
+| M01.04–M01.06 | [M01_ROOT_RESOLVER_CONTRACT_REVIEW](audits/M01_ROOT_RESOLVER_CONTRACT_REVIEW.md) | 10 invariants, 15 test scenarios, crash/identity/concurrency/legacy decision points |
+| M05–M07 | [M05_M07_BACKUP_RECOVERY_PROTOCOL_PROPOSAL](audits/M05_M07_BACKUP_RECOVERY_PROTOCOL_PROPOSAL.md) | Local/remote/restore boundaries, durable state machine, B01–B20 tests |
+| M06 / EXT-OAUTH | [OAUTH_PROVIDER_READINESS_2026-10-17](audits/OAUTH_PROVIDER_READINESS_2026-10-17.md) | Official Google/Yandex behavior, explicit Yandex secretless-refresh **UNVERIFIED** blocker |
+| M03/M04/M10 | [M03_M04_FIRST_USE_ACCEPTANCE_PROPOSAL](audits/M03_M04_FIRST_USE_ACCEPTANCE_PROPOSAL.md) | Short Russian UX routes, raw→saved Excel audit, UX01–UX15 acceptance |
+| DEC-KEYS | [DEC_KEYS_SECURITY_RECOVERY_REVIEW](audits/DEC_KEYS_SECURITY_RECOVERY_REVIEW.md) | Threat model, real clean-PC recovery gate, key-loss/rollback/tamper limitations |
+| Original independent review | [BROWSER_GPT6_FINDINGS_2026-10-17](audits/BROWSER_GPT6_FINDINGS_2026-10-17.md) | Source-level review and original acceptance boundaries |
+
+**Для Codex строго:** не заменять WORK_PLAN второй очередью, не переносить невыполненные M01.04–M01.06 в completed, не обещать cloud/шифрование, не копировать настоящие DB/credentials в source или ML. Прежде чем начинать выполнение, сравнить actual branch/main HEAD, действующие изменения и AGENTS временные предпочтения. Любой actual код, build/test/UI acceptance и commits требуют отдельной отчётности; этот docs PR не даёт новой runtime evidence.
