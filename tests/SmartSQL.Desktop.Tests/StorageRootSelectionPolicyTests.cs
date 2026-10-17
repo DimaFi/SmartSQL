@@ -5,9 +5,11 @@ namespace SmartSQL.Desktop.Tests;
 
 public sealed class StorageRootSelectionPolicyTests
 {
-    private static readonly string AppFolder = Path.Combine(Path.GetTempPath(), "smartsql-policy-fixture", "app");
-    private static readonly string DefaultFolder = Path.Combine(Path.GetTempPath(), "smartsql-policy-fixture", "installed", "data");
-    private static readonly string OverrideFolder = Path.Combine(Path.GetTempPath(), "smartsql-policy-fixture", "override");
+    // Unique purely lexical paths: the policy and these tests never create these directories.
+    private static readonly string Fixture = Path.Combine(Path.GetTempPath(), "smartsql-policy-fixture", Guid.NewGuid().ToString("N"));
+    private static readonly string AppFolder = Path.Combine(Fixture, "app");
+    private static readonly string DefaultFolder = Path.Combine(Fixture, "installed", "data");
+    private static readonly string OverrideFolder = Path.Combine(Fixture, "override");
     private static readonly Guid Id = Guid.Parse("ebca7b93-09a8-49b7-b798-092fe674298c");
 
     private static StorageRootSelectionInput Input(
