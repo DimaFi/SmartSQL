@@ -12,7 +12,7 @@
 | Отфильтрованный native набор | Та же фильтрация/типизированные AND/native sort **до pagination**, один consistent snapshot | «Экспортировать результат фильтра», без утверждения «вся таблица» |
 | Managed проект/таблица | Существующий CSV/JSON/XLSX scope согласно действующим адаптерам | Сохранять отдельный contract, не выдавать за native SQL-result/new export |
 
-Подтверждено кодом: `SqlReadRequest` допускает `RowLimit=1..500`, результат имеет `Rows`, `Columns`, `StorageClass`, `WasTruncated` (проверить точное свойство перед кодом). SQL text ограничен 65 536 UTF-8 bytes, лимиты на columns/cells/result/time; `DatabaseQueryView` держит уже полученный `SqlReadResult`. Это **не streaming API** и не основание тайно re-run SQL ради экспорта. Native table browser ограничивает страницу 500. Отдельный streaming provider reader обязателен для consistent full-table export.
+Подтверждено кодом: `SqlReadRequest` допускает `RowLimit=1..500`, результат имеет `Rows`, `Columns`, `StorageClass`, `Truncated`. SQL text ограничен 65 536 UTF-8 bytes, лимиты на columns/cells/result/time; `DatabaseQueryView` держит уже полученный `SqlReadResult`. Это **не streaming API** и не основание тайно re-run SQL ради экспорта. Native table browser ограничивает страницу 500. Отдельный streaming provider reader обязателен для consistent full-table export.
 
 ## 2. Native values fidelity matrix
 
@@ -34,7 +34,7 @@
 ## 3. Export pipeline contract (M09.01–.04)
 
 1. User chooses `scope + format + destination`. Before actual read report provider, database/schema/table/query result snapshot scope, row estimate if known, native value caveats, and selected subset vs entire table.
-2. For already displayed SQL result: export **immutable snapshotted result rows**, including `WasTruncated`, `RowLimit`; do not silently rerun SQL or assume full DB scope.
+2. For already displayed SQL result: export **immutable snapshotted result rows**, including `Truncated`, `RowLimit`; do not silently rerun SQL or assume full DB scope.
 3. For full table/filter: Infrastructure opens a **new dedicated read-only consistent snapshot/session**, takes provider-native metadata+row cursor; fields identified with confirmed identifiers, values read with explicit UTF-8/text/native type limits. Avoid using independent pages as if one snapshot. Existing native browse sessions/handles remain isolated.
 4. Stream bounded-size chunks with cancellation/progress/backpressure. Outputs to unique sibling temp in allowed D: dev path; close+flush+validate; publish atomic no-overwrite. Destination conflicts get explicit choose-new/retry/cancel; no silent overwrite.
 5. Finish returns `row count, columns, scope, checksum, warnings, truncation status`; value conversion decisions recorded in report. Cancel/out-of-space/read failure leaves destination unchanged and preserves source DB.
