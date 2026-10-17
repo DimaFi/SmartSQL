@@ -74,8 +74,7 @@ public sealed class StorageRootSelectionPolicyTests
     public void PortableAbsolutePathIsSupportedWithoutInstalledBootstrap()
     {
         var json = System.Text.Json.JsonSerializer.Serialize(new { schemaVersion = 1, dataDirectory = OverrideFolder });
-
-
+        var result = StorageRootSelectionPolicy.Select(Input(portablePresent: true, portable: json));
         Assert.Equal(StorageSelectionKind.Portable, result.Kind);
         Assert.Equal(Path.GetFullPath(OverrideFolder), result.DataDirectory);
     }
