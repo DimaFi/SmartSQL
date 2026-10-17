@@ -135,6 +135,32 @@ public sealed class StorageRootReadOnlyPreflightTests : IDisposable
     }
 
     [Fact]
+    public void CorruptedInstalledBootstrapCannotBeInterpretedAsFirstUse()
+    {
+        Write(BootstrapPath, "{corrupted");
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootReadOnlyPreflight.Inspect(Input(legacyCompleted: true)));
+        Assert.Equal("{corrupted", File.ReadAllText(BootstrapPath));
+        Assert.False(Directory.Exists(FirstUsePath));
+    }
+
+    [Fact]
+    public void OversizedPortableFileCannotFallBackToValidInstalledRoot()
+    {
+        PrepareInstalled(Id);
+        var portablePath = Path.Combine(AppDirectory, "smartsql.portable.json");
+        Directory.CreateDirectory(AppDirectory);
+        var invalidFile = Enumerable.Repeat((byte)'x', StorageManifestReader.MaximumManifestBytes + 1).ToArray();
+        File.WriteAllBytes(portablePath, invalidFile);
+
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootReadOnlyPreflight.Inspect(Input()));
+        Assert.Equal(invalidFile, File.ReadAllBytes(portablePath));
+        Assert.True(File.Exists(BootstrapPath));
+        Assert.False(Directory.Exists(FirstUsePath));
+    }
+
+    [Fact]
     public void MissingBootstrapAndUnconfirmedLegacyScanCannotStartFresh()
     {
         Assert.Throws<StorageRootSelectionException>(() =>
