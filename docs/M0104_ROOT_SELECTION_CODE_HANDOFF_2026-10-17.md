@@ -36,6 +36,27 @@
 - **Исправлено соответствие root marker и bootstrap:** `RequireMatchingInstalledRoot` проверяет, что выбран именно `InstalledExisting`, root marker валиден и rootId совпадает. Нет root marker/другой rootId/future marker → ошибка, не fallback. Тесты добавлены, но ещё **не выполнялись**.
 - **Незакрыто:** возможна физическая замена папки после lexical проверки, symlink/reparse/UNC, разрешённые каталоги под executable/version, атомарная файловая запись и concurrent initialization. Критически нужно сначала построить FS/handle-stage с lock, а затем подключать resolver в приложение. Только pure helper не доказывает отсутствие потерь данных.
 
+## Следующий кодовый срез: bounded manifest reader и read-only preflight (продолжение 17.10.2026)
+
+**Реально добавлено в этот же Draft PR #28 (вне runtime):**
+
+- `src/SmartSQL.Desktop/Storage/StorageManifestReader.cs`: read-only открытие только трёх известных имён `smartsql.portable.json`, `storage.json`, `storage-root.json`; 4096 UTF-8 **bytes** max (не char count), invalid byte/BOM/empty/oversize отказ, missing optional отличен от required, IO/ACL errors не превращаются в new root. Читает только синтетический/выбранный caller путь, не создаёт директории и не публикует идентичность сам. Реальный json-policy parsing остаётся за `StorageRootSelectionPolicy`.
+- `src/SmartSQL.Desktop/Storage/StorageRootReadOnlyPreflight.cs`: конвейер `env-present → read portable → read installed bootstrap → read required installed root-marker and compare rootId → bounded legacy selection provided by caller`. Для отказа используется исключение, **никогда** `new empty database`. `LegacyDiscoveryCompleted` должен быть явно задан внешним, ещё не реализованным probe. Физическая идентичность root пока **не проверена**.
+- `tests/SmartSQL.Desktop.Tests/StorageManifestReaderTests.cs` и `StorageRootReadOnlyPreflightTests.cs`: синтетические файлы исключительно под `SMARTSQL_TEST_DIRECTORY` / `.workspace/test-temp`; Windows tests отказывают при пути не на D:. Проверки отсутствующего/повреждённого/mismatched/oversized файла, UTF-8 byte length, source bytes unchanged, приоритетов и запрета скрытого fallback; **тесты написаны, но ещё НЕ выполнялись**.
+
+**Кодовое ограничение:** оба новых класса **не подключены** к `Program`/`WorkspacePaths`/`App`/`Run-Published.ps1`. Их статус — read-only preflight foundation. Нельзя ставить `M01.04 = done`, публиковать preview/release или допускать reuse пользовательского root по одному совпавшему GUID.
+
+**Незакрытые и опасные случаи для Codex / gate к последующему runtime wiring:**
+
+1. `DirectoryNotFoundException` при отсутствии bootstrap parent в read-only reader трактуется как optional missing; это **не** доказательство безопасного первого запуска при пропавшем системном каталоге/диске или broken link. Внешний Windows FS validator/legacy scanner обязан fail-closed при неопределённости/ACL/symlink. `FirstUseCandidate` остаётся **условным**, требуется empty-target check и отсутствие незаявленных данных, проверенные ближе к commit.
+2. Manifest read не привязывается к неизменяемому file handle/path identity между чтением и дальнейшей записью; root может быть подменён. Нужно отдельно безопасное symlink/reparse/UNC/network/parent-ownership/TOCTOU validation, OS lock и reread под lock перед publish. `Guid` rootId — не cryptographic proof ownership.
+3. `storage-root.json` rootId пока обязателен в installed mode; explicit env/portable flow требует отдельно утвердить поведение существующего marker/old flat root (legacy/no overwrite), не auto-adopt после ошибки.
+4. Блокер `ThemePreferences` hardcoded Windows D:-guard остаётся. Не исправлять «простым разрешением C:» без предписанной изоляции разработки на D: и чистого VM тестирования product LocalApplicationData.
+5. Реальные две конкурирующие программы, fault-injected crash, filesystem write probes, atomic bootstrap no-overwrite, early startup Russian UI, launcher parity и restore проверка ещё **не** реализованы.
+6. Кодовые тесты/сборка: необходимо на Windows D:-workspace исполнить `scripts/Build.ps1`, `scripts/Test.ps1`, исправить возникающие compiler/test issues. При отсутствии SDK на машине ревью не является passed.
+
+**Новый Codex entrypoint:** прочитай этот handoff и [мастер V2 в docs PR #27](https://github.com/DimaFi/SmartSQL/blob/docs/gpt6-review-codex-handoff-20261017/docs/CODEX_EXECUTION_PROMPT_V2_2026-10-17.md). Уже существуют `StorageRootSelectionPolicy`, `StorageManifestReader`, `StorageRootReadOnlyPreflight` и **три** тестовых класса. Перед новой реализацией проверь diff/main/head, собери и выполни тесты. Далее реализуй проверяемую actual filesystem stage и startup UI, а не дублируй read-only preflight.
+
 ## Точный prompt для Codex
 
 > Прочитай `docs/M0104_ROOT_SELECTION_CODE_HANDOFF_2026-10-17.md` и [master V2 в PR #27](https://github.com/DimaFi/SmartSQL/pull/27). Проверь текущий main и отдельную кодовую ветку. Новый класс `StorageRootSelectionPolicy` уже создан, но **не подключён в runtime**: не переписывай его с нуля и не объявляй M01.04 готовой. Начни с `scripts/Build.ps1` и `scripts/Test.ps1` на D:, зафиксируй реальный статус. Затем реализуй единую fs/identity/startup стадию по D056, с fail-closed/lock/crash recovery, и заверши EXE/launcher parity без изменения существующих данных. Отдельно реши dev-only D:-ограничение `ThemePreferences` для будущего ПК без D:. Все code changes только в feature branch, fresh SHA/CI/manual acceptance нужны до merge. Далее переходи к M01.05 и M01.06 лишь после проверенного M01.04.
