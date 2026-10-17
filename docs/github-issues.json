@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "DimaFi/SmartSQL",
   "publicationStatus": "published",
-  "snapshotUpdateStatus": "PR27/PR28 integration snapshot updated locally; publication pending",
+  "snapshotUpdateStatus": "PR27/PR28 merged in main d45353c; PLAN/T02/T22/T23/T24/T25 bodies published and read-back verified; states retained 2026-10-17",
   "issues": [
     {
       "taskId": "PLAN",
