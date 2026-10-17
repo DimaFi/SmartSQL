@@ -150,6 +150,40 @@ public sealed class StorageRootSelectionPolicyTests
     }
 
     [Fact]
+    public void InstalledBootstrapAndRootMarkerMustMatchBeforeDataCanBeUsed()
+    {
+        var selection = StorageRootSelectionPolicy.Select(
+            Input(bootstrapPresent: true, bootstrap: Bootstrap(OverrideFolder)));
+        var matchingMarker = """{"schemaVersion":1,"rootId":"ebca7b93-09a8-49b7-b798-092fe674298c"}""";
+        Assert.Equal(Path.GetFullPath(OverrideFolder),
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(selection, matchingMarker));
+
+        var differentMarker = """{"schemaVersion":1,"rootId":"2a8bc081-6f96-4fd5-b16c-fb807f8891af"}""";
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(selection, differentMarker));
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(selection, null));
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(selection,
+                """{"schemaVersion":99,"rootId":"ebca7b93-09a8-49b7-b798-092fe674298c"}"""));
+        Assert.False(Directory.Exists(OverrideFolder));
+    }
+
+    [Fact]
+    public void APortableOrFirstUseCandidateCannotBeMistakenForAnInstalledRoot()
+    {
+        var marker = """{"schemaVersion":1,"rootId":"ebca7b93-09a8-49b7-b798-092fe674298c"}""";
+        var portable = StorageRootSelectionPolicy.Select(
+            Input(portablePresent: true, portable: """{"schemaVersion":1,"dataDirectory":"user-data"}"""));
+        var firstUse = StorageRootSelectionPolicy.Select(Input());
+
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(portable, marker));
+        Assert.Throws<StorageRootSelectionException>(() =>
+            StorageRootSelectionPolicy.RequireMatchingInstalledRoot(firstUse, marker));
+    }
+
+    [Fact]
     public void MultipleLegacyRootsRequireExplicitChoiceInsteadOfArbitraryWinner()
     {
         var second = Path.Combine(AppFolder, "run-data", "local");
