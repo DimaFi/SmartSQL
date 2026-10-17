@@ -102,3 +102,19 @@ Threat model and offline recovery key are distinct from local OAuth secret store
 | Original independent review | [BROWSER_GPT6_FINDINGS_2026-10-17](audits/BROWSER_GPT6_FINDINGS_2026-10-17.md) | Source-level review and original acceptance boundaries |
 
 **Для Codex строго:** не заменять WORK_PLAN второй очередью, не переносить невыполненные M01.04–M01.06 в completed, не обещать cloud/шифрование, не копировать настоящие DB/credentials в source или ML. Прежде чем начинать выполнение, сравнить actual branch/main HEAD, действующие изменения и AGENTS временные предпочтения. Любой actual код, build/test/UI acceptance и commits требуют отдельной отчётности; этот docs PR не даёт новой runtime evidence.
+
+
+## Вторая волна GPT-6 review: использовать MASTER V2 (17 октября 2026)
+
+**Новый единый исполняемый промпт для Codex:** [CODEX_EXECUTION_PROMPT_V2_2026-10-17.md](CODEX_EXECUTION_PROMPT_V2_2026-10-17.md). Он заменяет прежний `CODEX_EXECUTION_PROMPT_2026-10-17.md` как инструкцию следующего запуска (прежний сохранён для истории). **Эта запись относится только к документам; runtime/тесты не изменены.**
+
+Добавленные в Draft PR #27 исходные аналитические материалы:
+
+- [M08_POSTGRES_BACKUP_RESTORE_READINESS](audits/M08_POSTGRES_BACKUP_RESTORE_READINESS.md) — pg_dump/pg_restore версии, одна database vs globals, executable warning, PG-B01–14.
+- [M09_NATIVE_EXCHANGE_SAFE_SLICES](audits/M09_NATIVE_EXCHANGE_SAFE_SLICES.md) — SQL-result with exact `SqlReadResult.Truncated`, native stream consistency, type loss & safe batch gate, N01–18.
+- [M10_M11_UI_RELEASE_ACCEPTANCE_PACK](audits/M10_M11_UI_RELEASE_ACCEPTANCE_PACK.md) — actual `PublishSingleFile=false` Windows folder deployment; installer/update/uninstall, DPI/Narrator, R01–18.
+- [M12_EXACT_CALCULATIONS_SCOPE](audits/M12_EXACT_CALCULATIONS_SCOPE.md) — exact limited-result arithmetic/chart scope, CALC01–12.
+- [M14_M16_PROVIDER_ADMISSION_MATRIX](audits/M14_M16_PROVIDER_ADMISSION_MATRIX.md) — separate MySQL, MariaDB and SQL Server admission, migration limitations, PROV01–12.
+- [M17_M18_ACTION_PERMISSION_MODEL_BOUNDARY](audits/M17_M18_ACTION_PERMISSION_MODEL_BOUNDARY.md) — future structured action/permission/AI non-SQL boundary, ACT01–14.
+
+**Проверяемое выполнение**, а не новый план: M01.04 → M01.05/.06 → independent work according to the real WORK_PLAN; UI/release gates throughout; M05 before cloud; M09 T13 before T14, M17 before M18 integration. Не реализовано ни одно из перечисленных новых runtime направлений этим PR; все проверки в аудитах future/not-run.
