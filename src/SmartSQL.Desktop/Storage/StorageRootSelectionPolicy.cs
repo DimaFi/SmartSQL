@@ -106,10 +106,12 @@ public static class StorageRootSelectionPolicy
 
     private static string RequireAbsoluteDirectory(string? path, string purpose)
     {
-        if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
+        if (string.IsNullOrWhiteSpace(path))
             throw new StorageRootSelectionException($"{purpose}: требуется непустой абсолютный путь.");
         try
         {
+            if (!Path.IsPathFullyQualified(path))
+                throw new StorageRootSelectionException($"{purpose}: требуется абсолютный путь.");
             return RequireSafeLexicalDirectory(Path.GetFullPath(path), purpose);
         }
         catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
