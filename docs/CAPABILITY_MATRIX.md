@@ -1,5 +1,7 @@
 # Матрица возможностей SmartSQL
 
+Последний проверенный source slice: интеграция PR #27/#28 — **754 tests (1/144/492/117), 60 real PG, 0 skips/warnings/errors**. Pure selector/4-КиБ read-only manifest reader/preflight присутствуют, **не вызываются runtime**; существующий EXE/launcher root mismatch не исправлен. [Область/остаток](audits/BRANCH_INTEGRATION_2026-10-17.md). Новые cloud/providers/AI/UX исследования не равны capabilities.
+
 Фактическая основа на 17 октября 2026 — M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется.
 
 **Очередь/зависимости/123 подзадачи: только [WORK_PLAN](WORK_PLAN.md). M01.03/D056 storage decision готов; следующий кодовый срез M01.04; M01.01/M01.02 UI открыт.** [TASKS](TASKS.md) — соответствие T-ID; [HANDOFF](HANDOFF.md) — передача. Аудит не реализовал onboarding/cloud: Google+Яндекс auto/restore остаются будущими M05–M07, product paths отдельно от dev D:.

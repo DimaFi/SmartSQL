@@ -85,7 +85,7 @@ D056 / [PRODUCT_STORAGE](PRODUCT_STORAGE.md): обычный конечный Wi
 
 ## Временная остановка по просьбе пользователя — 17 октября
 
-Пользователь попросил остановиться и продолжить в чате. Новую реализацию/агентов/build/tests/UI не запускать до нового запроса. Следующий пункт **M01.04**: unified root resolver/startup errors по D056/PRODUCT_STORAGE; M01.03 — только принятое решение, runtime не менялся. Перед продолжением читать этот HANDOFF, TASKS, WORK_PLAN, PRODUCT_STORAGE и Git status/history. Не повторять полный аудит вместо реализации.
+Историческая остановка: пользователь попросил остановиться и продолжить в чате. Новый запрос 17 октября на аудит/интеграцию веток отменил остановку для этой конкретной работы. Следующий пункт **M01.04**: unified root resolver/startup errors по D056/PRODUCT_STORAGE; M01.03 — только принятое решение, runtime не менялся. Перед продолжением читать этот HANDOFF, TASKS, WORK_PLAN, PRODUCT_STORAGE и Git status/history. Не повторять полный аудит вместо реализации.
 
 M01.03 опубликован в 5a9c3beff39585091495ee678b34eacecfbdeaf5, remote SHA подтверждён. 56 local links, 123 unique M-task IDs, 18 stages, 26 issue markers проверены; Luna read-only review без блокеров, 6 issue bodies опубликованы/read-back verified без изменения state. Новый build/tests/EXE не выполнялся; кодовая база M01.02: 676 tests, preview.8, ручная UI-приёмка открыта.
 
@@ -94,3 +94,10 @@ ML knowledge локально сохранён в ddc57874b174911425cfd52db98eef
 Для GPT-6 в браузере: BROWSER_GPT6_TASKS.md — общий контекст, необходимые вложения и 4 готовых задания. Приоритет 1 storage/migration review, 2 официальный Google/Яндекс integration brief, 3 onboarding, 4 encryption/key recovery после 2. Ответы вернуть для проверки/интеграции, секреты и реальные данные не передавать.
 
 Временная экономия по-прежнему истекает 2026-10-18T04:36:50Z / 18 октября 07:36:50 Europe/Istanbul. Одноразовое напоминание smartsql только отменяет эту preference; оно не возобновляет остановленную работу.
+## Аудит и интеграция входящих веток — 17 октября
+
+По новому запросу проверены все origin heads/open PRs: #27 docs 077b8de (22 commits/15 docs), #28 code cae852f (21 commits/7 files), base 7e6aa2c. [Реестр всех 22 файлов](audits/BRANCH_INTEGRATION_2026-10-17.md), чтение PR comments/reviews/threads: пусты. History сохраняет исходные head/коммиты; сторонние предложения не принимаются автоматически как ADR.
+
+Helper-код M01.04 неактивен в production: Select/read-only preflight/4-КиБ strict UTF-8 manifests; исправлен P2 UNC/device pre-open access, добавлено 12 cases к 66 исходным. Full Build/Test Debug **754 passed/0 skipped/0 warnings/errors (1/144/492/117), 60 real PG facts**; TRX *2026-10-17_22_10_22*.trx. Own PG stopped. Нового UI/EXE/installer нет; native права/DB paths не менялись.
+
+Следующая работа всё ещё **M01.04**, использовать существующую основу: actual FS/parent/legacy checks → atomic interprocess initialization/cached root before consumers → early startup error и EXE/launcher parity. RootId/FirstUseCandidate не разрешают доверять физическому root без этой стадии. ThemePreferences D:-guard требует отдельной dev/product policy integration, не простого снятия защиты. M01.05/.06/manual UI открыты. Исследования M03–M18 брать как reference по таблице реестра; CODEX prompts — исторические guides, не альтернативная очередь или приказ выполнить все waves.

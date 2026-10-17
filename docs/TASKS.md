@@ -2,7 +2,9 @@
 
 **Единственный полный порядок, подзадачи и acceptance — [WORK_PLAN.md](WORK_PLAN.md): 18 этапов M01–M18, 123 конкретные подзадачи.** T01–T25 сохраняют прежние номера/URL; это соответствие, не другая очередь. Текущая следующая реализация — **M01.04** (M01.03/D056 storage decision готов, runtime/миграция и UI открыты); M02/manual acceptance остаётся открытой.
 
-Последний кодовый срез M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется. Подробнее: [контракт](MANAGED_PROJECT_OPENING.md). [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
+Последняя проверка интеграции PR #27/#28: **754 passed / 0 skipped (1/144/492/117), 60 real PG facts, Debug 0 warnings/errors**. В main принимается неактивная helper-основа M01.04 и исследования; runtime/storage switch, UI, облака и полная M01.04 не завершены. [Реестр всех 22 файлов](audits/BRANCH_INTEGRATION_2026-10-17.md).
+
+Исторический кодовый срез M01.02: Debug 0 warnings/errors; 676 passed / 0 skipped (Domain 1 / Application 144 / Infrastructure 492 / Desktop 39), включая 60 real PostgreSQL facts. TRX *2026-10-17_11_55_01*.trx и *2026-10-17_11_55_02*.trx; owned PostgreSQL 17 штатно остановлен. 23 новых infrastructure cases и 15 application cases. Независимый read-only review Luna: блокирующих замечаний нет. Экранная инициализация снова отказала (kernel assets/path/os error 3); новая UI-приёмка не заявляется. Подробнее: [контракт](MANAGED_PROJECT_OPENING.md). [Матрица](CAPABILITY_MATRIX.md), [UI evidence](WORKSPACE_UI_ACCEPTANCE.md), [HANDOFF](HANDOFF.md).
 
 | ID / GitHub | Задача | Этапы | Фактический статус |
 | --- | --- | --- | --- |
