@@ -101,8 +101,11 @@ public sealed class StorageManifestReaderTests : IDisposable
     {
         // Cyrillic characters take two UTF-8 bytes. A character-count guard would
         // incorrectly accept this file, even though it is over the 4 KB limit.
-        var json = """{"schemaVersion":1,"dataDirectory":"""" +
-            new string('Ж', StorageManifestReader.MaximumManifestBytes / 2) + "\"}";
+        var json = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1,
+            dataDirectory = new string('Ж', StorageManifestReader.MaximumManifestBytes / 2)
+        });
         var bytes = Encoding.UTF8.GetBytes(json);
         Assert.True(bytes.Length > StorageManifestReader.MaximumManifestBytes);
         Write(StorageManifestKind.Portable, bytes);
