@@ -16,6 +16,34 @@ public sealed class WorkspaceSourceLabelsTests
     }
 
     [Fact]
+    public void FirstConnectionUsesTheOriginalFriendlyName()
+    {
+        var name = WorkspaceSourceLabels.UniqueDisplayName("Учёт практики", ["Другая база"]);
+        Assert.Equal("Учёт практики", name);
+    }
+
+    [Fact]
+    public void DuplicateNameGetsAnExplicitSessionQualifierAndDoesNotClashAgain()
+    {
+        var names = new[] { "Данные", "Данные (сеанс 2)", "DATA" };
+        Assert.Equal("Данные (сеанс 3)", WorkspaceSourceLabels.UniqueDisplayName("Данные", names));
+        Assert.Equal("data (сеанс 2)", WorkspaceSourceLabels.UniqueDisplayName("data", ["DATA"]));
+    }
+
+    [Fact]
+    public void UnrelatedConnectionsNeverGetArbitrarySequenceNumbers()
+    {
+        Assert.Equal("Продажи", WorkspaceSourceLabels.UniqueDisplayName("Продажи", ["Сотрудники", "Клиенты"]));
+    }
+
+    [Fact]
+    public void BlankNameAndNullActiveCollectionAreRejected()
+    {
+        Assert.Throws<ArgumentException>(() => WorkspaceSourceLabels.UniqueDisplayName(" ", []));
+        Assert.Throws<ArgumentNullException>(() => WorkspaceSourceLabels.UniqueDisplayName("Имя", null!));
+    }
+
+    [Fact]
     public void AdvancedModeCannotGrantEditingAndLabelsDoNotClaimUnlimitedWrites()
     {
         Assert.Equal("Только чтение", WorkspaceSourceLabels.Access(false, false));
