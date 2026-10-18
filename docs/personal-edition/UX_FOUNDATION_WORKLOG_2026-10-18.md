@@ -43,6 +43,13 @@
 - Смена Simple/Advanced и темы сохраняет SQL, текущее выделение/результат.
 - Операция SQL in progress + Cancel/close, табы одного и разных соединений, DPI/keyboard/Narrator и отсутствие accidental execution.
 
+## Продолжение 18 октября: дополнительные независимые PR
+
+- **[PR #32 — managed Boolean](https://github.com/DimaFi/SmartSQL/pull/32):** локальная таблица получает ComboBox «Да/Нет/Не задано (NULL)» с текущим безопасным `EditableCell` механизмом, откатом UI после ошибки и xUnit-тестами. Детальный source/acceptance: [UX_FOUNDATION_BOOLEAN](https://github.com/DimaFi/SmartSQL/blob/feat/ux-managed-boolean-choices-20261018/docs/personal-edition/UX_FOUNDATION_BOOLEAN_2026-10-18.md).
+- **[PR #33 — navigation](https://github.com/DimaFi/SmartSQL/pull/33):** видимые типы «проект/SQLite-файл/PostgreSQL-сервер», понятные действия, пустой экран без открытых вкладок, source-label tests. Не меняет существующее начальное auto-open managed проекта; M03 welcome остаётся будущей работой. Детальный source/acceptance: [UX_FOUNDATION_NAVIGATION](https://github.com/DimaFi/SmartSQL/blob/feat/ux-workspace-empty-actions-20261018/docs/personal-edition/UX_FOUNDATION_NAVIGATION_2026-10-18.md).
+
+**На момент записи:** все четыре PR #30–#33 открыты; изменения source-файлов у них не пересекаются и GitHub отмечает их как mergeable. .NET build, xUnit, Windows GUI и пользовательская приёмка **не выполнялись**. Нельзя закрывать UF09-01–05 целиком или утверждать, что это рабочий релиз. Проверить каждый PR через `scripts/Build.ps1`, `scripts/Test.ps1` и соответствующий ручной сценарий, затем интегрировать независимо с повторным полным регрессионным прогоном.
+
 ## Следующие работы после проверок
 
 1. После acceptance merge подходящих PR отдельно в `main`, read-back exact remote SHA, обновление WORK_PLAN/HANDOFF/CAPABILITY_MATRIX/USER_FEEDBACK с доказательствами.
