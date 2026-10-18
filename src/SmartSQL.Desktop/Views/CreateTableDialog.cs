@@ -114,6 +114,7 @@ public sealed class CreateTableDialog : Window
         row.Children.Add(remove);
 
         var controls = new FieldRow(name, type, row, up, down, remove);
+        name.TextChanged += (_, _) => RefreshFieldActions();
         up.Click += (_, _) => MoveField(controls, -1);
         down.Click += (_, _) => MoveField(controls, 1);
         remove.Click += (_, _) => RemoveField(controls);
