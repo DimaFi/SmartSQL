@@ -17,6 +17,26 @@ public static class WorkspaceSourceLabels
         };
     }
 
+    /// <summary>
+    /// Keep the first connection's friendly name intact; a second identical
+    /// display name gets a session qualifier, not a meaningless global counter.
+    /// Connection identity remains its Guid/path and is never derived from this label.
+    /// </summary>
+    public static string UniqueDisplayName(string preferred, IEnumerable<string> currentNames)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(preferred);
+        ArgumentNullException.ThrowIfNull(currentNames);
+        var name = preferred.Trim();
+        var taken = currentNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!taken.Contains(name)) return name;
+        for (var number = 2; number < int.MaxValue; number++)
+        {
+            var candidate = $"{name} (сеанс {number})";
+            if (!taken.Contains(candidate)) return candidate;
+        }
+        throw new InvalidOperationException("Слишком много подключений с одинаковыми названиями.");
+    }
+
     public static string Access(bool isManaged, bool editingEnabled)
     {
         if (isManaged) return "Редактирование проекта";
