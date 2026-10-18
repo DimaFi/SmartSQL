@@ -97,7 +97,9 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
                 e.Handled = true;
                 FindInSql(backwards: e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             }
-            else if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Control && !_findText.IsFocused)
+            else if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Control
+                && !_findText.IsFocused && !_findPrevious.IsFocused
+                && !_findNext.IsFocused && !_closeFind.IsFocused)
             {
                 e.Handled = true;
                 await RunAsync();
