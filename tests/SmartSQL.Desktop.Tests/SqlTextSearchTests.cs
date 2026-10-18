@@ -13,7 +13,7 @@ public sealed class SqlTextSearchTests
         Assert.Equal(new SqlFindMatch(0, 6), first);
 
         var second = SqlTextSearch.Find(sql, "SELECT", first!.Value.Start, first.Value.Start + first.Value.Length);
-        Assert.Equal(new SqlFindMatch(27, 6), second);
+        Assert.Equal(new SqlFindMatch(29, 6), second);
 
         var wrapped = SqlTextSearch.Find(sql, "select", second!.Value.Start, second.Value.Start + second.Value.Length);
         Assert.Equal(first, wrapped);
