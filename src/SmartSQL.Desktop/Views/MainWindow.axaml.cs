@@ -1,3 +1,4 @@
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
@@ -517,6 +518,12 @@ public partial class MainWindow : UserControl
         for (var index = 0; index < _currentTable.Fields.Count; index++)
         {
             var field = _currentTable.Fields[index];
+            if (field.Type == FieldType.Boolean)
+            {
+                RecordsGrid.Columns.Add(CreateManagedBooleanColumn(field, index));
+                continue;
+            }
+
             RecordsGrid.Columns.Add(new DataGridTextColumn
             {
                 Header = CreateFieldHeader(field, index),
@@ -540,6 +547,55 @@ public partial class MainWindow : UserControl
         RefreshRecords();
         SelectedTableChanged?.Invoke();
     }
+
+    /// <summary>
+    /// Present managed Boolean values as explicit choices instead of a free-text
+    /// cell. Existing EditableCell writes and FieldValue.Normalize remain the
+    /// authoritative save/validation path, including the nullable state.
+    /// </summary>
+    private DataGridTemplateColumn CreateManagedBooleanColumn(FieldDefinition field, int index) => new()
+    {
+        Header = CreateFieldHeader(field, index),
+        IsReadOnly = true, // The embedded ComboBox is the editing surface.
+        MinWidth = 160,
+        Width = new DataGridLength(170),
+        CellTemplate = new FuncDataTemplate<EditableRow>((row, _) =>
+        {
+            if (row is null || index >= row.Cells.Count)
+                return new TextBlock { Text = "Нет данных" };
+
+            var cell = row.Cells[index];
+            var initial = ManagedBooleanChoices.FromDisplay(cell.Value);
+            var editor = new ComboBox
+            {
+                ItemsSource = ManagedBooleanChoices.Items,
+                SelectedItem = initial,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                MinWidth = 130,
+                Margin = new Avalonia.Thickness(4, 2)
+            };
+            AutomationProperties.SetName(editor, $"Поле {field.Name}: выбрать Да, Нет или Не задано");
+            ToolTip.SetTip(editor, initial is null
+                ? "Значение не распознано. Проверьте исходные данные до изменения."
+                : "Выберите Да, Нет или Не задано (NULL). Изменение сохраняется сразу.");
+
+            editor.SelectionChanged += (_, _) =>
+            {
+                if (editor.SelectedItem is not ManagedBooleanChoice selected)
+                    return;
+                if (string.Equals(cell.Value, selected.DisplayValue, StringComparison.Ordinal))
+                    return;
+
+                // EditableCell leaves Value unchanged and reports the error
+                // when the workspace refuses the update. Restore the visual
+                // selection rather than showing an unsaved state as committed.
+                cell.Value = selected.DisplayValue;
+                if (!string.Equals(cell.Value, selected.DisplayValue, StringComparison.Ordinal))
+                    editor.SelectedItem = ManagedBooleanChoices.FromDisplay(cell.Value);
+            };
+            return editor;
+        })
+    };
 
     private void RefreshRecords()
     {
