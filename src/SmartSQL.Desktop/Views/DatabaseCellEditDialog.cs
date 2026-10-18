@@ -27,6 +27,11 @@ public sealed class DatabaseCellEditDialog : Window
         MinHeight = 72, MaxHeight = 160
     };
     private readonly CheckBox _setNull = new() { Content = "Сохранить NULL (отсутствующее значение)" };
+    private readonly ComboBox _booleanValue = new()
+    {
+        MinWidth = 180, IsVisible = false,
+        HorizontalAlignment = HorizontalAlignment.Stretch
+    };
     private readonly TextBlock _typeHint = new() { Classes = { "caption" }, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _preview = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _error = new() { Classes = { "error" }, TextWrapping = TextWrapping.Wrap };
@@ -71,6 +76,7 @@ public sealed class DatabaseCellEditDialog : Window
         _column.SelectedItem = firstEditable;
         _column.SelectionChanged += (_, _) => LoadColumn();
         _newValue.TextChanged += (_, _) => UpdatePreview();
+        _booleanValue.SelectionChanged += (_, _) => UpdatePreview();
         _setNull.IsCheckedChanged += (_, _) =>
         {
             _newValue.IsEnabled = _column.SelectedItem is ColumnChoice { Column.CanEdit: true }
@@ -88,6 +94,7 @@ public sealed class DatabaseCellEditDialog : Window
         form.Children.Add(_oldValue);
         form.Children.Add(new TextBlock { Text = "Новое значение" });
         form.Children.Add(_newValue);
+        form.Children.Add(_booleanValue);
         form.Children.Add(_setNull);
         form.Children.Add(_typeHint);
         form.Children.Add(new Border
@@ -161,9 +168,24 @@ public sealed class DatabaseCellEditDialog : Window
                 : _old.Length == 0 ? "Пустая строка — значение существует, но не содержит символов"
                 : "Полное текущее значение";
             _newValue.Text = _old ?? string.Empty;
+            var isBoolean = choice.Column.Kind == DatabaseEditValueKind.Boolean;
+            _newValue.IsVisible = !isBoolean;
+            _booleanValue.IsVisible = isBoolean;
+            _setNull.IsVisible = !isBoolean && choice.Column.IsNullable;
             _setNull.IsEnabled = choice.Column.CanEdit && choice.Column.IsNullable;
             _setNull.IsChecked = _old is null && choice.Column.IsNullable;
             _newValue.IsEnabled = choice.Column.CanEdit && _setNull.IsChecked != true;
+            if (isBoolean)
+            {
+                var available = DatabaseBooleanChoices.ForColumn(choice.Column);
+                _booleanValue.ItemsSource = available;
+                var initial = DatabaseBooleanChoices.FromStored(_old);
+                _booleanValue.SelectedItem = initial is not null && available.Contains(initial) ? initial : null;
+                _booleanValue.IsEnabled = choice.Column.CanEdit;
+                ToolTip.SetTip(_booleanValue, initial is null
+                    ? "Исходное логическое значение не распознано; выберите новое явно."
+                    : "Выберите Да, Нет или Не задано (NULL), если поле это допускает.");
+            }
             _save.IsEnabled = choice.Column.CanEdit;
             _typeHint.Text = TypeHint(choice.Column);
             _error.Text = choice.Column.CanEdit
@@ -189,17 +211,19 @@ public sealed class DatabaseCellEditDialog : Window
         }
         try
         {
-            var normalized = DatabaseEditValueValidation.Normalize(choice.Column,
-                _setNull.IsChecked == true ? null : _newValue.Text ?? string.Empty);
+            var normalized = NormalizedInput(choice.Column);
             _preview.Text = $"Будет изменено: {Preview(_old)}  →  {Preview(normalized)}";
-            if (normalized != _newValue.Text && normalized is not null)
+            if (choice.Column.Kind != DatabaseEditValueKind.Boolean
+                && normalized != _newValue.Text && normalized is not null)
                 _preview.Text += $"\nНормализованное значение: {Preview(normalized)}";
             _error.Text = string.Empty;
+            _save.IsEnabled = true;
         }
         catch (ArgumentException exception)
         {
             _preview.Text = $"Текущее значение: {Preview(_old)}";
             _error.Text = exception.Message;
+            _save.IsEnabled = false;
         }
     }
 
@@ -208,10 +232,14 @@ public sealed class DatabaseCellEditDialog : Window
         try
         {
             var column = SelectedColumn;
-            var normalized = DatabaseEditValueValidation.Normalize(column,
-                _setNull.IsChecked == true ? null : _newValue.Text ?? string.Empty);
+            var normalized = NormalizedInput(column);
             _preview.Text = $"Будет изменено: {Preview(_old)}  →  {Preview(normalized)}";
-            if (string.Equals(_old, normalized, StringComparison.Ordinal))
+            var oldBoolean = column.Kind == DatabaseEditValueKind.Boolean
+                ? DatabaseBooleanChoices.FromStored(_old) : null;
+            var unchanged = oldBoolean is not null
+                ? string.Equals(oldBoolean.InputValue, normalized, StringComparison.Ordinal)
+                : string.Equals(_old, normalized, StringComparison.Ordinal);
+            if (unchanged)
             {
                 _error.Text = "Значение не изменилось. Укажите новое значение или нажмите «Отмена».";
                 return;
@@ -223,6 +251,12 @@ public sealed class DatabaseCellEditDialog : Window
             _error.Text = exception.Message;
         }
     }
+
+    private string? NormalizedInput(EditableDatabaseColumn column) =>
+        column.Kind == DatabaseEditValueKind.Boolean
+            ? DatabaseBooleanChoices.NormalizeChoice(column, _booleanValue.SelectedItem as DatabaseBooleanChoice)
+            : DatabaseEditValueValidation.Normalize(column,
+                _setNull.IsChecked == true ? null : _newValue.Text ?? string.Empty);
 
     private static string TypeHint(EditableDatabaseColumn column)
     {
@@ -237,7 +271,9 @@ public sealed class DatabaseCellEditDialog : Window
             DatabaseEditValueKind.Integer => "целое число; необязательный знак и цифры от 0 до 9",
             DatabaseEditValueKind.Decimal => "число с точкой; точность и экспонента сохраняются без округления",
             DatabaseEditValueKind.Date => "дата в формате ГГГГ-ММ-ДД",
-            DatabaseEditValueKind.Boolean => "логическое значение: Да/Нет, true/false или 1/0",
+            DatabaseEditValueKind.Boolean => column.IsNullable
+                ? "логическое значение: выберите Да, Нет или Не задано (NULL)"
+                : "логическое значение: выберите Да или Нет",
             _ => "редактируемое значение"
         };
         return $"Тип СУБД: {column.NativeType} · ввод: {input}.";
