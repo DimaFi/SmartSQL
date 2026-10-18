@@ -45,7 +45,6 @@ public sealed class WorkspaceWindow : Window
     private Window? _activeDialog;
     private bool _shuttingDown;
     private bool _shutdownFinished;
-    private int _connectionNumber;
     private int _sqlNumber;
     private readonly string? _themeStartupWarning;
 
@@ -392,7 +391,7 @@ public sealed class WorkspaceWindow : Window
     {
         var entry = new ConnectionEntry
         {
-            Id = connection.Id, Name = $"{connection.Name} · {++_connectionNumber}", Endpoint = connection.Endpoint,
+            Id = connection.Id, Name = WorkspaceSourceLabels.UniqueDisplayName(connection.Name, _connections.Select(item => item.Name)), Endpoint = connection.Endpoint,
             Provider = connection.ProviderLabel, Database = connection.DatabaseName, Native = connection,
             Node = new TreeViewItem { IsExpanded = true }
         };
@@ -412,13 +411,12 @@ public sealed class WorkspaceWindow : Window
             Children =
             {
                 new TextBlock { Text = entry.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = $"{entry.Provider} · {entry.Database}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = WorkspaceSourceLabels.Access(entry.ManagedPath is not null, entry.Native?.AllowsEditing == true), Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis }
+                new TextBlock { Text = $"{WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)} · {entry.Database}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis },
+                new TextBlock { Text = $"{WorkspaceSourceLabels.Access(entry.ManagedPath is not null, entry.Native?.AllowsEditing == true)} · {entry.Endpoint}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis }
             }
         };
-        ToolTip.SetTip(label, $"{entry.Name}\n{entry.Endpoint}");
-        AutomationProperties.SetName(label, $"{entry.Name}, {entry.Provider}, {entry.Endpoint}");
+        ToolTip.SetTip(label, $"{entry.Name}\n{WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)}\n{entry.Endpoint}");
+        AutomationProperties.SetName(label, $"{entry.Name}, {WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)}, {WorkspaceSourceLabels.Access(entry.ManagedPath is not null, entry.Native?.AllowsEditing == true)}, {entry.Endpoint}");
         return label;
     }
 
@@ -511,7 +509,7 @@ public sealed class WorkspaceWindow : Window
         {
             entry = new ConnectionEntry
             {
-                Name = $"{Path.GetFileNameWithoutExtension(path)} · {++_connectionNumber}", Endpoint = fullPath,
+                Name = WorkspaceSourceLabels.UniqueDisplayName(Path.GetFileNameWithoutExtension(path), _connections.Select(item => item.Name)), Endpoint = fullPath,
                 Provider = "SQLite", Database = Path.GetFileName(path), ManagedPath = fullPath,
                 Node = new TreeViewItem { IsExpanded = true }
             };
