@@ -36,6 +36,7 @@ public sealed class CreateTableDialog : Window
     public CreateTableDialog(IDataWorkspace workspace)
     {
         _workspace = workspace;
+        Classes.Add("dialog");
         Title = "Новая таблица · SmartSQL";
         Width = 660;
         Height = 560;
@@ -43,11 +44,11 @@ public sealed class CreateTableDialog : Window
         MinHeight = 380;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
 
-        var addField = new Button { Content = "+ Добавить поле", HorizontalAlignment = HorizontalAlignment.Left };
+        var addField = new Button { Content = "+ Добавить поле", HorizontalAlignment = HorizontalAlignment.Left, Classes = { "secondary" } };
         addField.Click += (_, _) => AddField();
-        var cancel = new Button { Content = "Отмена" };
+        var cancel = new Button { Content = "Отмена", Classes = { "quiet" } };
         cancel.Click += (_, _) => Close(null);
-        var create = new Button { Content = "Создать таблицу" };
+        var create = new Button { Content = "Создать таблицу", Classes = { "primary" } };
         create.Click += (_, _) => CreateTable();
 
         var layout = new Grid
@@ -56,7 +57,7 @@ public sealed class CreateTableDialog : Window
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*,Auto,Auto"),
             RowSpacing = 12
         };
-        layout.Children.Add(new TextBlock { Text = "Создать таблицу", FontSize = 24, FontWeight = FontWeight.SemiBold });
+        layout.Children.Add(new TextBlock { Text = "Создать таблицу", Classes = { "pageTitle" } });
         var namePanel = new StackPanel { Spacing = 6, Children = { new TextBlock { Text = "Название" }, _tableName } };
         Grid.SetRow(namePanel, 1);
         layout.Children.Add(namePanel);
@@ -95,9 +96,9 @@ public sealed class CreateTableDialog : Window
     {
         var name = new TextBox { PlaceholderText = "Название поля" };
         var type = new ComboBox { ItemsSource = Types, SelectedIndex = 0, MinWidth = 125 };
-        var up = new Button { Content = "↑", MinWidth = 30 };
-        var down = new Button { Content = "↓", MinWidth = 30 };
-        var remove = new Button { Content = "×", MinWidth = 30 };
+        var up = new Button { Content = "↑", Classes = { "iconButton" } };
+        var down = new Button { Content = "↓", Classes = { "iconButton" } };
+        var remove = new Button { Content = "×", Classes = { "iconButton", "danger" } };
         var row = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("*,Auto,Auto,Auto,Auto"),
