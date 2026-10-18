@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -77,6 +78,7 @@ public sealed class DatabaseCellEditDialog : Window
         _column.SelectionChanged += (_, _) => LoadColumn();
         _newValue.TextChanged += (_, _) => UpdatePreview();
         _booleanValue.SelectionChanged += (_, _) => UpdatePreview();
+        AutomationProperties.SetName(_booleanValue, "Новое логическое значение: Да, Нет или NULL");
         _setNull.IsCheckedChanged += (_, _) =>
         {
             _newValue.IsEnabled = _column.SelectedItem is ColumnChoice { Column.CanEdit: true }
@@ -205,14 +207,14 @@ public sealed class DatabaseCellEditDialog : Window
             return;
         if (!choice.Column.CanEdit)
         {
-            _preview.Text = $"Текущее значение: {Preview(_old)}";
+            _preview.Text = $"Текущее значение: {ValuePreview(choice.Column, _old)}";
             _error.Text = choice.Column.ReadOnlyReason ?? "Этот столбец доступен только для чтения.";
             return;
         }
         try
         {
             var normalized = NormalizedInput(choice.Column);
-            _preview.Text = $"Будет изменено: {Preview(_old)}  →  {Preview(normalized)}";
+            _preview.Text = $"Будет изменено: {ValuePreview(choice.Column, _old)}  →  {ValuePreview(choice.Column, normalized)}";
             if (choice.Column.Kind != DatabaseEditValueKind.Boolean
                 && normalized != _newValue.Text && normalized is not null)
                 _preview.Text += $"\nНормализованное значение: {Preview(normalized)}";
@@ -221,7 +223,7 @@ public sealed class DatabaseCellEditDialog : Window
         }
         catch (ArgumentException exception)
         {
-            _preview.Text = $"Текущее значение: {Preview(_old)}";
+            _preview.Text = $"Текущее значение: {ValuePreview(choice.Column, _old)}";
             _error.Text = exception.Message;
             _save.IsEnabled = false;
         }
@@ -233,7 +235,7 @@ public sealed class DatabaseCellEditDialog : Window
         {
             var column = SelectedColumn;
             var normalized = NormalizedInput(column);
-            _preview.Text = $"Будет изменено: {Preview(_old)}  →  {Preview(normalized)}";
+            _preview.Text = $"Будет изменено: {ValuePreview(column, _old)}  →  {ValuePreview(column, normalized)}";
             var oldBoolean = column.Kind == DatabaseEditValueKind.Boolean
                 ? DatabaseBooleanChoices.FromStored(_old) : null;
             var unchanged = oldBoolean is not null
@@ -278,6 +280,11 @@ public sealed class DatabaseCellEditDialog : Window
         };
         return $"Тип СУБД: {column.NativeType} · ввод: {input}.";
     }
+
+    private static string ValuePreview(EditableDatabaseColumn column, string? value) =>
+        column.Kind == DatabaseEditValueKind.Boolean
+            ? DatabaseBooleanChoices.FromStored(value)?.Label ?? Preview(value)
+            : Preview(value);
 
     private static string Preview(string? value)
     {
