@@ -36,6 +36,13 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
     private readonly Button _load = new() { Content = "Открыть .sql…" };
     private readonly Button _save = new() { Content = "Сохранить .sql…" };
     private readonly Button _historyButton = new() { Content = "История…" };
+    private readonly Button _findButton = new() { Content = "Найти · Ctrl+F" };
+    private readonly WrapPanel _findBar = new() { Orientation = Orientation.Horizontal, IsVisible = false };
+    private readonly TextBox _findText = new() { PlaceholderText = "Найти в тексте SQL…", Width = 225 };
+    private readonly Button _findPrevious = new() { Content = "↑ Назад" };
+    private readonly Button _findNext = new() { Content = "↓ Далее" };
+    private readonly Button _closeFind = new() { Content = "Закрыть поиск" };
+    private readonly TextBlock _findStatus = new() { Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center };
     private readonly NumericUpDown _limit = new() { Minimum = 1, Maximum = 500, Value = 100, Width = 110, FormatString = "0" };
     private readonly TextBlock _status = new() { Text = "Запрос ещё не выполнялся. SQL-сеанс всегда только для чтения.", TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _diagnostics = new() { TextWrapping = TextWrapping.Wrap };
@@ -60,24 +67,69 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
         _load.Click += async (_, _) => await FileAsync(save: false);
         _save.Click += async (_, _) => await FileAsync(save: true);
         _historyButton.Click += async (_, _) => await ShowHistoryAsync();
+        _findButton.Click += (_, _) => ShowFind();
+        _findPrevious.Click += (_, _) => FindInSql(backwards: true);
+        _findNext.Click += (_, _) => FindInSql(backwards: false);
+        _closeFind.Click += (_, _) => CloseFind();
+        _findText.TextChanged += (_, _) =>
+        {
+            _findStatus.Text = "Enter — найти далее, Shift+Enter — назад.";
+            _findPrevious.IsEnabled = _findNext.IsEnabled = !string.IsNullOrEmpty(_findText.Text);
+        };
+        _findText.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape) { e.Handled = true; CloseFind(); }
+            else if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                FindInSql(backwards: e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            }
+        };
         AddHandler(KeyDownEvent, async (_, e) =>
         {
-            if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Control)
-            { e.Handled = true; await RunAsync(); }
+            if (e.Key == Key.F && e.KeyModifiers == KeyModifiers.Control)
+            {
+                e.Handled = true;
+                ShowFind();
+            }
+            else if (e.Key == Key.F3 && _findBar.IsVisible)
+            {
+                e.Handled = true;
+                FindInSql(backwards: e.KeyModifiers.HasFlag(KeyModifiers.Shift));
+            }
+            else if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.Control
+                && !_findText.IsFocused && !_findPrevious.IsFocused
+                && !_findNext.IsFocused && !_closeFind.IsFocused)
+            {
+                e.Handled = true;
+                await RunAsync();
+            }
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
         AutomationProperties.SetName(_sql, "Текст SQL-запроса");
+        AutomationProperties.SetName(_findText, "Текст для поиска в SQL");
+        AutomationProperties.SetName(_findPrevious, "Найти предыдущее совпадение в тексте SQL");
+        AutomationProperties.SetName(_findNext, "Найти следующее совпадение в тексте SQL");
         AutomationProperties.SetName(_limit, "Лимит строк результата SQL");
         AutomationProperties.SetName(_results, "Результат SQL только для чтения");
         var actions = new WrapPanel { Orientation = Orientation.Horizontal, Children =
         {
             _run, _cancel, new TextBlock { Text = "Лимит строк", VerticalAlignment = VerticalAlignment.Center },
-            _limit, _load, _save, _historyButton
+            _limit, _load, _save, _historyButton, _findButton
         } };
         foreach (var control in actions.Children) control.Margin = new Thickness(0, 0, 8, 6);
-        var editor = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*"), RowSpacing = 6 };
+        _findBar.Children.Add(_findText);
+        _findBar.Children.Add(_findPrevious);
+        _findBar.Children.Add(_findNext);
+        _findBar.Children.Add(_closeFind);
+        _findBar.Children.Add(_findStatus);
+        foreach (var control in _findBar.Children) control.Margin = new Thickness(0, 0, 8, 6);
+        _findPrevious.IsEnabled = _findNext.IsEnabled = false;
+
+        var editor = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"), RowSpacing = 6 };
         editor.Children.Add(new TextBlock { Text = $"SQL · {connectionName}", FontSize = 21, FontWeight = FontWeight.SemiBold });
         Grid.SetRow(actions, 1); editor.Children.Add(actions);
-        Grid.SetRow(_sql, 2); editor.Children.Add(_sql);
+        Grid.SetRow(_findBar, 2); editor.Children.Add(_findBar);
+        Grid.SetRow(_sql, 3); editor.Children.Add(_sql);
         ToolTip.SetTip(editor, $"{provider} · {endpoint}");
         var layout = new Grid { Margin = new Thickness(16), RowDefinitions = new RowDefinitions("220,5,*,Auto,Auto,Auto"), RowSpacing = 8 };
         layout.Children.Add(editor);
@@ -93,6 +145,46 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
         } };
         Grid.SetRow(note, 5); layout.Children.Add(note); Content = layout;
         _diagnostics.Text = "Одна команда чтения, максимум 500 строк и 15 секунд. Права редактирования таблиц не распространяются на SQL. Запрос запускается только кнопкой или Ctrl+Enter.";
+    }
+
+    private void ShowFind()
+    {
+        if (_closed || _busy) return;
+        _findBar.IsVisible = true;
+        _findText.Focus();
+        _findText.SelectAll();
+    }
+
+    private void CloseFind()
+    {
+        _findBar.IsVisible = false;
+        if (!_closed) _sql.Focus();
+    }
+
+    private void FindInSql(bool backwards)
+    {
+        if (_closed || _busy) return;
+        if (string.IsNullOrEmpty(_findText.Text))
+        {
+            _findStatus.Text = "Введите текст для поиска.";
+            _findText.Focus();
+            return;
+        }
+
+        var match = SqlTextSearch.Find(_sql.Text, _findText.Text,
+            _sql.SelectionStart, _sql.SelectionEnd, backwards);
+        if (match is not { } found)
+        {
+            _findStatus.Text = "Совпадений нет. SQL не изменён.";
+            return;
+        }
+
+        // Editor indices and match offsets both use UTF-16; selection is visual only.
+        _sql.CaretIndex = found.Start + found.Length;
+        _sql.SelectionStart = found.Start;
+        _sql.SelectionEnd = found.Start + found.Length;
+        _sql.Focus();
+        _findStatus.Text = "Совпадение выделено. F3 / Shift+F3 — следующее / предыдущее.";
     }
 
     public void SetPresentationMode(WorkspacePresentationMode mode) => _mode.Text = mode == WorkspacePresentationMode.Advanced
@@ -259,7 +351,9 @@ public sealed class DatabaseQueryView : UserControl, IAsyncDisposable
 
     private void UpdateControls()
     {
-        _run.IsEnabled = _load.IsEnabled = _save.IsEnabled = _historyButton.IsEnabled = !_busy && !_closed;
+        _run.IsEnabled = _load.IsEnabled = _save.IsEnabled = _historyButton.IsEnabled = _findButton.IsEnabled = !_busy && !_closed;
+        _findText.IsEnabled = !_busy && !_closed;
+        _findPrevious.IsEnabled = _findNext.IsEnabled = !_busy && !_closed && !string.IsNullOrEmpty(_findText.Text);
         _sql.IsReadOnly = _busy || _closed; _limit.IsEnabled = !_busy && !_closed;
         _cancel.IsEnabled = _busy && !_closed && !_pickingFile;
     }
