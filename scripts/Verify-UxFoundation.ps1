@@ -14,6 +14,13 @@ if (!$sourceRoot.StartsWith('D:\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'SmartSQL verification must run from a D:\ workspace, never C:\.'
 }
 
+if ($null -eq (Get-Command git -ErrorAction SilentlyContinue)) {
+    throw 'Git is required for isolated PR integration.'
+}
+if ($null -eq (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+    throw '.NET 10 SDK is required; no verification has been performed.'
+}
+
 $verificationRoot = $sourceRoot
 if ($Combined) {
     $worktreeParent = Join-Path $sourceRoot '.workspace\ux-foundation'
