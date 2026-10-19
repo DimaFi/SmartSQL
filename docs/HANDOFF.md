@@ -1,5 +1,12 @@
 # Продолжение SmartSQL
 
+## UX Foundation — проверочный контур 19 октября 2026
+
+**Документация/CI подготовлены; UI НЕ интегрирован и НЕ принят.** PR [#30](https://github.com/DimaFi/SmartSQL/pull/30), [#31](https://github.com/DimaFi/SmartSQL/pull/31), [#32](https://github.com/DimaFi/SmartSQL/pull/32), [#33](https://github.com/DimaFi/SmartSQL/pull/33), [#34](https://github.com/DimaFi/SmartSQL/pull/34) открыты: порядок полей/скролл, SQL-find, managed Boolean, навигация, native Boolean. Не закрывать UF09-01–05 по одному факту появления кода.
+
+Через [PR #35](https://github.com/DimaFi/SmartSQL/pull/35) в main добавлены только scripts/Verify-UxFoundation.ps1, ручной .github/workflows/ux-foundation-manual.yml и [инструкция](personal-edition/UX_INTEGRATION_VERIFICATION.md). На Windows/D: скрипт в отдельном worktree объединяет PR #30–34, запускает полный build и фильтр пяти новых xUnit-классов, но не меняет main, не пушит и не принимает PR. GitHub Actions запускается только вручную (workflow_dispatch; может расходовать минуты аккаунта). На 19 октября нет нового результата build/xUnit или реальной Windows UI-приёмки этого кода; прежние 771 тестов относятся только к M01.04 baseline. После зелёного автоматического прогона и ручной приёмки интегрировать PR по одному и обновлять статусы только фактически. M01.05 по-прежнему ждёт пользовательского acceptance M01.04.
+
+
 ## Прочитать перед работой
 
 `AGENTS.md` → [WORK_PLAN](WORK_PLAN.md) → [TASKS](TASKS.md) → [CAPABILITY_MATRIX](CAPABILITY_MATRIX.md) и относящиеся [DECISIONS](DECISIONS.md), затем Git status/history. WORK_PLAN — единственный порядок: **M01–M18, 123 подзадачи**, T01–T25 — постоянные GitHub identities. Старые Stage/N/A — история/группы, не конкурентная очередь.
