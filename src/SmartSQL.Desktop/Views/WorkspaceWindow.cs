@@ -31,10 +31,9 @@ public sealed class WorkspaceWindow : Window
     private readonly ToggleSwitch _mode = new() { OffContent = "Простой режим", OnContent = "Расширенный режим", IsEnabled = false };
     private readonly Button _newSql = new() { Content = "SQL…", IsVisible = false };
     private readonly SqlQueryHistoryStore _sqlHistory = new(Path.Combine(WorkspacePaths.DataDirectory, "queries", "history.json"));
-    private readonly TextBlock _empty = new()
+    private readonly StackPanel _empty = new()
     {
-        Text = "Выберите таблицу в дереве подключений и нажмите Enter или откройте её двойным щелчком.",
-        TextWrapping = TextWrapping.Wrap, MaxWidth = 430, Margin = new Thickness(24),
+        Spacing = 14, MaxWidth = 610, Margin = new Thickness(24),
         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
     };
     private IWorkspacePreferencesStore? _preferences;
@@ -46,7 +45,6 @@ public sealed class WorkspaceWindow : Window
     private Window? _activeDialog;
     private bool _shuttingDown;
     private bool _shutdownFinished;
-    private int _connectionNumber;
     private int _sqlNumber;
     private readonly string? _themeStartupWarning;
 
@@ -126,12 +124,12 @@ public sealed class WorkspaceWindow : Window
                 _tabs.SelectedIndex = (_tabs.SelectedIndex + 1) % _tabItems.Count;
             }
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
-        AutomationProperties.SetName(_tree, "Подключения, схемы и таблицы");
+        AutomationProperties.SetName(_tree, "Источники данных: локальные проекты, подключения, схемы и таблицы");
         AutomationProperties.SetName(_tabs, "Открытые таблицы");
         AutomationProperties.SetName(_mode, "Режим интерфейса");
         var actions = new WrapPanel { Orientation = Orientation.Horizontal };
-        AddAction(actions, "PostgreSQL…", OpenPostgresAsync, "Подключиться к PostgreSQL");
-        AddAction(actions, "SQLite…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу");
+        AddAction(actions, "Подключить PostgreSQL…", OpenPostgresAsync, "Подключиться к серверу PostgreSQL");
+        AddAction(actions, "Открыть SQLite-файл…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу без изменения её формата");
         _newSql.Click += (_, _) =>
         {
             try { OpenSqlTab(); }
@@ -140,8 +138,8 @@ public sealed class WorkspaceWindow : Window
         AutomationProperties.SetName(_newSql, "Открыть SQL-вкладку выбранного подключения только для чтения");
         ToolTip.SetTip(_newSql, "SQL только для чтения для подключения, выбранного в дереве или активной вкладке");
         actions.Children.Add(_newSql);
-        AddAction(actions, "Открыть проект…", OpenManagedAsync, "Открыть проект SmartSQL");
-        AddAction(actions, "Новый проект…", CreateManagedAsync, "Создать проект SmartSQL");
+        AddAction(actions, "Открыть проект…", OpenManagedAsync, "Открыть существующий проект SmartSQL");
+        AddAction(actions, "Создать проект…", CreateManagedAsync, "Создать новую локальную базу SmartSQL");
         AddAction(actions, "Демонстрация", OpenDemoAsync, "Открыть демонстрационный проект");
         AddAction(actions, "Обновить каталог", RefreshSelectedAsync, "Обновить каталог выбранного подключения");
         AddAction(actions, "Отключить", DisconnectSelectedAsync, "Закрыть выбранное подключение и его вкладки");
@@ -186,7 +184,7 @@ public sealed class WorkspaceWindow : Window
         heading.Children.Add(_mode);
         var toolbar = new StackPanel { Spacing = 8, Children = { heading, actions } };
         var navigator = new Grid { RowDefinitions = new RowDefinitions("Auto,*"), RowSpacing = 8 };
-        navigator.Children.Add(new TextBlock { Text = "ПОДКЛЮЧЕНИЯ", Classes = { "navsection" } });
+        navigator.Children.Add(new TextBlock { Text = "ИСТОЧНИКИ ДАННЫХ", Classes = { "navsection" } });
         Grid.SetRow(_tree, 1);
         navigator.Children.Add(_tree);
         var body = new Grid { ColumnDefinitions = new ColumnDefinitions("250,5,*") };
@@ -194,6 +192,7 @@ public sealed class WorkspaceWindow : Window
         var splitter = new GridSplitter { ResizeDirection = GridResizeDirection.Columns, HorizontalAlignment = HorizontalAlignment.Stretch };
         Grid.SetColumn(splitter, 1);
         body.Children.Add(splitter);
+        BuildEmptyWorkspace();
         var center = new Grid();
         center.Children.Add(_empty);
         center.Children.Add(_tabs);
@@ -221,6 +220,40 @@ public sealed class WorkspaceWindow : Window
         try { OpenManagedView(new MainWindow()); }
         catch (Exception) { _status.Text = "Не удалось открыть проект по умолчанию. Выберите другой файл или подключение."; }
         UpdateActiveContext();
+    }
+
+    /// <summary>Empty workspace actions reuse the existing open/create paths; no new DB is created by this view.</summary>
+    private void BuildEmptyWorkspace()
+    {
+        _empty.Children.Add(new TextBlock
+        {
+            Text = "С чего начнём?",
+            Classes = { "pageTitle" },
+            TextAlignment = TextAlignment.Center
+        });
+        _empty.Children.Add(new TextBlock
+        {
+            Text = "Создайте локальный проект, откройте прежнюю базу или подключитесь к PostgreSQL. Если слева уже есть источник, откройте его таблицу двойным щелчком или клавишей Enter.",
+            TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center,
+            Classes = { "muted" }
+        });
+        var entryActions = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center };
+        AddAction(entryActions, "Создать локальный проект…", CreateManagedAsync, "Создать новый локальный проект SmartSQL");
+        AddAction(entryActions, "Открыть проект…", OpenManagedAsync, "Открыть существующий проект SmartSQL");
+        AddAction(entryActions, "Открыть SQLite-файл…", OpenNativeSqliteAsync, "Открыть существующую SQLite-базу");
+        AddAction(entryActions, "Подключить PostgreSQL…", OpenPostgresAsync, "Подключить сервер PostgreSQL");
+        if (entryActions.Children.FirstOrDefault() is Button primary)
+        {
+            primary.Classes.Remove("secondary");
+            primary.Classes.Add("primary");
+        }
+        _empty.Children.Add(entryActions);
+        _empty.Children.Add(new TextBlock
+        {
+            Text = "Локальный проект работает без сервера. PostgreSQL требует доступ к работающему серверу. Открытие существующей базы не преобразует её в проект SmartSQL.",
+            TextWrapping = TextWrapping.Wrap, TextAlignment = TextAlignment.Center, Classes = { "caption" }
+        });
+        AutomationProperties.SetName(_empty, "Начало работы с источниками данных");
     }
 
     private WorkspaceTab? ActiveTab => _openTabs.FirstOrDefault(tab => tab.Item == _tabs.SelectedItem);
@@ -358,7 +391,7 @@ public sealed class WorkspaceWindow : Window
     {
         var entry = new ConnectionEntry
         {
-            Id = connection.Id, Name = $"{connection.Name} · {++_connectionNumber}", Endpoint = connection.Endpoint,
+            Id = connection.Id, Name = WorkspaceSourceLabels.UniqueDisplayName(connection.Name, _connections.Select(item => item.Name)), Endpoint = connection.Endpoint,
             Provider = connection.ProviderLabel, Database = connection.DatabaseName, Native = connection,
             Node = new TreeViewItem { IsExpanded = true }
         };
@@ -378,12 +411,12 @@ public sealed class WorkspaceWindow : Window
             Children =
             {
                 new TextBlock { Text = entry.Name, FontWeight = FontWeight.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = $"{entry.Provider} · {entry.Database}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = entry.ManagedPath is not null ? "Проект SmartSQL" : entry.Native?.AllowsEditing == true ? "Редактирование разрешено" : "Только чтение", Classes = { "caption" } }
+                new TextBlock { Text = $"{WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)} · {entry.Database}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis },
+                new TextBlock { Text = $"{WorkspaceSourceLabels.Access(entry.ManagedPath is not null, entry.Native?.AllowsEditing == true)} · {entry.Endpoint}", Classes = { "caption" }, TextTrimming = TextTrimming.CharacterEllipsis }
             }
         };
-        ToolTip.SetTip(label, $"{entry.Name}\n{entry.Endpoint}");
-        AutomationProperties.SetName(label, $"{entry.Name}, {entry.Provider}, {entry.Endpoint}");
+        ToolTip.SetTip(label, $"{entry.Name}\n{WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)}\n{entry.Endpoint}");
+        AutomationProperties.SetName(label, $"{entry.Name}, {WorkspaceSourceLabels.Kind(entry.ManagedPath is not null, entry.Provider)}, {WorkspaceSourceLabels.Access(entry.ManagedPath is not null, entry.Native?.AllowsEditing == true)}, {entry.Endpoint}");
         return label;
     }
 
@@ -476,7 +509,7 @@ public sealed class WorkspaceWindow : Window
         {
             entry = new ConnectionEntry
             {
-                Name = $"{Path.GetFileNameWithoutExtension(path)} · {++_connectionNumber}", Endpoint = fullPath,
+                Name = WorkspaceSourceLabels.UniqueDisplayName(Path.GetFileNameWithoutExtension(path), _connections.Select(item => item.Name)), Endpoint = fullPath,
                 Provider = "SQLite", Database = Path.GetFileName(path), ManagedPath = fullPath,
                 Node = new TreeViewItem { IsExpanded = true }
             };
