@@ -1,0 +1,34 @@
+name: SmartSQL UX Foundation (manual)
+
+# Explicit opt-in only: no unrequested hosted-runner minutes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  combined-ux:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET 10 SDK in disposable CI runner
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Enforce D drive workspace
+        shell: pwsh
+        run: |
+          if (!(Get-Location).Path.StartsWith('D:\', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Expected a D:\ workspace. Refusing to create SmartSQL data or build files on C:.'
+          }
+
+      - name: Combine PR 30-34 in isolated worktree, build and run focused tests
+        shell: pwsh
+        run: ./scripts/Verify-UxFoundation.ps1 -Combined
