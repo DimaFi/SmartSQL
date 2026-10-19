@@ -37,7 +37,6 @@
 | [ACCEPTANCE.md](ACCEPTANCE.md) | Детальные тесты, UX-задачи, ручные и автоматические release gates; юридическая и supply-chain гигиена |
 | [TEAM_FUTURE.md](TEAM_FUTURE.md) | Что намеренно отложено до Team и какие тонкие швы желательно предусмотреть без преждевременного backend |
 | [CODEX_EXECUTION.md](CODEX_EXECUTION.md) | Рабочая инструкция Codex для продолжения; первая безопасная последовательность срезов |
-| [UX_INTEGRATION_VERIFICATION.md](UX_INTEGRATION_VERIFICATION.md) | Сборка и целевые тесты PR #30–34 в изолированном worktree; ручной GitHub Actions workflow |
 | [REFERENCES.md](REFERENCES.md) | Официальные внешние источники, границы сравнений и авторского подхода |
 
 ## 4. Приоритеты личной редакции
